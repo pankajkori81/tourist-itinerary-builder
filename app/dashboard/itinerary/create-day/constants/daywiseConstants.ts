@@ -137,6 +137,8 @@ export interface Transport {
   vehicleType: string;
   vehicleCount: number; // New Multiplier
   flightNumber?: string; // Optional for Flight/Train
+  // This is where "From Barcelona, journey to Montserrat..." goes.
+  serviceDescription?: string;
 
   // 3. Logistics
   pickupLocation: string;
@@ -343,18 +345,130 @@ export const TRANSPORT_MODES = [
   { id: 'ferry', label: 'Ferry', icon: Ship },
 ];
 
+// export const VEHICLE_TYPES = [
+//   'Sedan Car', 'SUV / Crossover', 'Hatchback', 'Convertible', 'Coupe', 
+//   'Mini Van', 'Van', 'Pick-up Truck', 'Wagon', 'Mini Coach', 'Coach', 'Limousine'
+// ];
+
+
+// export const VEHICLE_SPECS: Record<string, { seats: number, guests: number, luggageCheck: string, luggageCarry: string }> = {
+//   'Sedan Car': { seats: 4, guests: 3, luggageCheck: '2 (L75, W47, D30)', luggageCarry: '2 (L56, W45, D10)' },
+//   'SUV / Crossover': { seats: 6, guests: 4, luggageCheck: '3 (L75, W47, D30)', luggageCarry: '3 (L56, W45, D10)' },
+//   'Mini Van': { seats: 7, guests: 5, luggageCheck: '4 (L75, W47, D30)', luggageCarry: '4 (L56, W45, D10)' },
+//   'Coach': { seats: 20, guests: 18, luggageCheck: '15 (L75, W47, D30)', luggageCarry: '15 (L56, W45, D10)' },
+//   'default': { seats: 4, guests: 3, luggageCheck: '2 Standard', luggageCarry: '2 Small' }
+// };
+
+
 export const VEHICLE_TYPES = [
   'Sedan Car', 'SUV / Crossover', 'Hatchback', 'Convertible', 'Coupe', 
   'Mini Van', 'Van', 'Pick-up Truck', 'Wagon', 'Mini Coach', 'Coach', 'Limousine'
 ];
 
-
 export const VEHICLE_SPECS: Record<string, { seats: number, guests: number, luggageCheck: string, luggageCarry: string }> = {
-  'Sedan Car': { seats: 4, guests: 3, luggageCheck: '2 (L75, W47, D30)', luggageCarry: '2 (L56, W45, D10)' },
-  'SUV / Crossover': { seats: 6, guests: 4, luggageCheck: '3 (L75, W47, D30)', luggageCarry: '3 (L56, W45, D10)' },
-  'Mini Van': { seats: 7, guests: 5, luggageCheck: '4 (L75, W47, D30)', luggageCarry: '4 (L56, W45, D10)' },
-  'Coach': { seats: 20, guests: 18, luggageCheck: '15 (L75, W47, D30)', luggageCarry: '15 (L56, W45, D10)' },
-  'default': { seats: 4, guests: 3, luggageCheck: '2 Standard', luggageCarry: '2 Small' }
+  // Standard 4-door vehicle
+  'Sedan Car': { 
+    seats: 5, 
+    guests: 3, // 3 adults comfortable, 4 is tight
+    luggageCheck: '2 (L75, W47, D30)', 
+    luggageCarry: '2 (L56, W45, D10)' 
+  },
+
+  // Larger vehicle with more vertical space
+  'SUV / Crossover': { 
+    seats: 5, // Can range to 7, but standard SUV is 5
+    guests: 4, 
+    luggageCheck: '3 (L75, W47, D30)', 
+    luggageCarry: '3 (L56, W45, D10)' 
+  },
+
+  // Compact car with liftgate
+  'Hatchback': { 
+    seats: 5, 
+    guests: 3, 
+    luggageCheck: '1 (L75, W47, D30)', 
+    luggageCarry: '2 (L56, W45, D10)' 
+  },
+
+  // Roof down, significantly reduced trunk space
+  'Convertible': { 
+    seats: 4, 
+    guests: 2, 
+    luggageCheck: '1 (L75, W47, D30)', 
+    luggageCarry: '1 (L56, W45, D10)' 
+  },
+
+  // 2-door sporty car
+  'Coupe': { 
+    seats: 4, 
+    guests: 2, 
+    luggageCheck: '1 (L75, W47, D30)', 
+    luggageCarry: '1 (L56, W45, D10)' 
+  },
+
+  // Family hauler (MPV)
+  'Mini Van': { 
+    seats: 7, 
+    guests: 6, 
+    luggageCheck: '4 (L75, W47, D30)', 
+    luggageCarry: '4 (L56, W45, D10)' 
+  },
+
+  // Large passenger van (e.g., Ford Transit, Mercedes Sprinter)
+  'Van': { 
+    seats: 12, 
+    guests: 10, 
+    luggageCheck: '10 (L75, W47, D30)', 
+    luggageCarry: '10 (L56, W45, D10)' 
+  },
+
+  // Truck with open bed (assuming double cab for passengers)
+  'Pick-up Truck': { 
+    seats: 5, 
+    guests: 4, 
+    luggageCheck: '5 (L75, W47, D30)', // Large capacity in bed
+    luggageCarry: '2 (L56, W45, D10)' 
+  },
+
+  // Estate car (Long Sedan)
+  'Wagon': { 
+    seats: 5, 
+    guests: 4, 
+    luggageCheck: '3 (L75, W47, D30)', 
+    luggageCarry: '3 (L56, W45, D10)' 
+  },
+
+  // Small bus
+  'Mini Coach': { 
+    seats: 25, 
+    guests: 20, 
+    luggageCheck: '20 (L75, W47, D30)', 
+    luggageCarry: '20 (L56, W45, D10)' 
+  },
+
+  // Full size bus
+  'Coach': { 
+    seats: 50, 
+    guests: 45, 
+    luggageCheck: '45 (L75, W47, D30)', 
+    luggageCarry: '45 (L56, W45, D10)' 
+  },
+
+  // Stretch Limo (High passenger count, surprisingly low luggage space)
+  'Limousine': { 
+    seats: 8, 
+    guests: 8, 
+    luggageCheck: '2 (L75, W47, D30)', // Trunk does not stretch
+    luggageCarry: '2 (L56, W45, D10)' 
+  },
+
+  // Fallback
+  'default': { 
+    seats: 4, 
+    guests: 3, 
+    luggageCheck: '2 Standard', 
+    luggageCarry: '2 Small' 
+  }
 };
 
 

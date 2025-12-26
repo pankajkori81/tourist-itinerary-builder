@@ -1006,28 +1006,7 @@ export const saveItineraryToStorage = (data: StoredItineraryData): boolean => {
   }
 };
 
-// // Load draft
-// export const loadItineraryFromStorage = (): StoredItineraryData | null => {
-//   try {
-//     const stored = localStorage.getItem(STORAGE_KEY);
-//     if (!stored) {
-//       return null;
-//     }
-    
-//     const data = JSON.parse(stored);
 
-//     // SAFETY FIX: If the draft is missing currency, force it to USD.
-//     // This prevents the system from defaulting to INR and multiplying the values.
-//     if (!data.selectedCurrency) {
-//         data.selectedCurrency = 'USD';
-//     }
-
-//     return data;
-//   } catch (error) {
-//     console.error('❌ Error loading itinerary:', error);
-//     return null;
-//   }
-// };
 
 export const loadItineraryFromStorage = (): StoredItineraryData | null => {
   try {

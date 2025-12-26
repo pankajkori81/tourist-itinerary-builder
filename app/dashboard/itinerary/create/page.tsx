@@ -466,7 +466,8 @@ export default function CreateItineraryPage() {
               </label>
               <input
                 type="text"
-                value={itineraryData.tripId}
+                // value={itineraryData.tripId}
+                
                 disabled
                 className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-600 rounded-lg text-gray-400 font-mono text-sm cursor-not-allowed"
               />

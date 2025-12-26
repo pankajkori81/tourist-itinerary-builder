@@ -1,0 +1,369 @@
+// "use client";
+
+// import React, { useState, useEffect } from 'react';
+// import { useRouter, usePathname } from 'next/navigation';
+// import { Loader2, Check, AlertCircle } from 'lucide-react';
+// import { useItinerary } from '@/app/context/ItineraryContext';
+
+// export default function ItineraryBuilderWrapper({ children }: { children: React.ReactNode }) {
+//   const router = useRouter();
+//   const pathname = usePathname();
+  
+//   // Logic to hide Builder Header/Sidebar on specific pages
+//   const isLibraryPage = pathname?.includes('/library');
+//   const isPreviewDetailsPage = pathname ? /\/preview\/.+/.test(pathname) : false;
+  
+//   // If we are on Library or Preview, we act as a "Full Width" page inside the builder
+//   const isFullWidthPage = isLibraryPage || isPreviewDetailsPage;
+
+//   const { 
+//     itineraryData, 
+//     saveItinerary, 
+//     isSaving, 
+//     saveError 
+//   } = useItinerary();
+
+//   // Tab Navigation Logic
+//   const [activeTab, setActiveTab] = useState('INTRO');
+//   const [showErrorPopup, setShowErrorPopup] = useState(false);
+//   const [errorMessage, setErrorMessage] = useState('');
+
+//   // Update active tab based on URL
+//   useEffect(() => {
+//     if (pathname?.includes('/routing')) setActiveTab('ROUTING');
+//     else if (pathname?.includes('/create-day')) setActiveTab('CREATE DAY');
+//     else if (pathname?.includes('/preview') && !isPreviewDetailsPage) setActiveTab('PREVIEW');
+//     else setActiveTab('INTRO');
+//   }, [pathname, isPreviewDetailsPage]);
+
+//   // Define your tabs
+//   const tabs = [
+//     { id: 'INTRO', label: 'INTRO', path: '/dashboard/itinerary/create' },
+//     { id: 'ROUTING', label: 'ROUTING', path: '/dashboard/itinerary/routing' },
+//     { id: 'CREATE DAY', label: 'CREATE DAY', path: '/dashboard/itinerary/create-day' },
+//     { id: 'COSTING', label: 'COSTING', path: '/dashboard/itinerary/costing' },
+//     { id: 'PREVIEW', label: 'PREVIEW', path: '/dashboard/itinerary/preview' },
+//   ];
+
+//   // Error handling from Context
+//   useEffect(() => {
+//     if (saveError) {
+//       setErrorMessage(saveError);
+//       setShowErrorPopup(true);
+//     }
+//   }, [saveError]);
+
+//   const handleTabChange = (path: string) => {
+//     router.push(path);
+//   };
+
+//   const handleQuickSave = async () => {
+//     await saveItinerary('quick');
+//   };
+
+//   const handleSaveAndExit = async () => {
+//     const success = await saveItinerary('exit');
+//     if (success) {
+//       // You might want to redirect to SRM or Dashboard instead of library depending on workflow
+//       setTimeout(() => {
+//         router.push('/dashboard/itinerary/library'); 
+//       }, 1000);
+//     }
+//   };
+
+//   const libraryPage = async () => {
+//    router.push('/dashboard/itinerary/library');
+//   }
+
+//   return (
+//     // CHANGED: Height calculation to fit below Global Header (64px)
+//     <div className="h-[calc(100vh-64px)] relative overflow-hidden bg-gray-50 flex flex-col">
+      
+//       {/* Background Styling */}
+//       <div className="absolute inset-0 z-0 bg-slate-900"/>
+//       <div 
+//         className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+//         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1600')", backgroundSize: 'cover' }}
+//       />
+
+//       {/* --- CONTENT LAYER --- */}
+      
+//       {/* 1. BUILDER HEADER (Quick Save, etc.) - Hidden on Library/Preview */}
+//       {!isFullWidthPage && (
+//         <div className="relative z-10 bg-[#0f172a]/90 backdrop-blur-md border-b border-gray-700 px-4 py-3 flex items-center justify-between shrink-0">
+//           {/* <div className="text-white font-bold text-lg tracking-wide">
+//             Travdek<span className="text-blue-400"> Itinerary Builder</span>
+//           </div> */}
+
+//           <div className='hidden md:block'>
+//               <button onClick={libraryPage} className="px-4 py-2 bg-blue-600 text-blue-100 hover:bg-blue-600/60 rounded-sm text-sm font-medium transition-all flex gap-2 border border-blue-500/30">
+//                 Library
+//              </button>
+//           </div>
+          
+//           <div className="flex items-center gap-3">
+//             <button 
+//               onClick={handleQuickSave} 
+//               disabled={isSaving} 
+//               className="px-4 py-2 bg-blue-600 text-blue-100 hover:bg-blue-600/60 rounded-sm text-sm font-medium transition-all flex items-center gap-2 border border-blue-500/30"
+//             >
+//               {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
+//               {isSaving ? 'Saving...' : 'Quick Save'}
+//             </button>
+            
+//             <button 
+//               onClick={handleSaveAndExit} 
+//               disabled={isSaving}
+//               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-sm text-sm font-medium transition-all shadow-lg"
+//             >
+//               Save & Exit
+//             </button>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* 2. BUILDER BODY (Sidebar + Content) */}
+//       <div className="relative z-10 flex flex-1 overflow-hidden">
+        
+//         {/* Builder Sidebar Tabs - Hidden on Library/Preview */}
+//         {!isFullWidthPage && (
+//           <div className="w-64 bg-[#1e293b]/90 backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
+//             {/* Trip Summary Card */}
+//             <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
+//               <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
+//               <p className="text-blue-300 text-xs font-mono">Ref No.{'********'}</p>
+//             </div>
+
+//             {/* Navigation Links */}
+//             <nav className="space-y-1">
+//               {tabs.map((tab) => (
+//                 <button
+//                   key={tab.id}
+//                   onClick={() => handleTabChange(tab.path)}
+//                   className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between group ${
+//                     activeTab === tab.id
+//                       ? 'bg-blue-600 text-white shadow-lg'
+//                       : 'text-gray-400 hover:bg-white/5 hover:text-white'
+//                   }`}
+//                 >
+//                   {tab.label}
+//                   {activeTab === tab.id && <div className="w-1.5 h-1.5 rounded-full bg-white"/>}
+//                 </button>
+//               ))}
+//             </nav>
+//           </div>
+//         )}
+
+//         {/* Main Page Content */}
+//         <main className={`flex-1 overflow-y-auto bg-gray-50/5 ${!isFullWidthPage ? 'p-0' : ''}`}>
+//           {children}
+//         </main>
+//       </div>
+
+//       {/* Notifications */}
+//       {showErrorPopup && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+//           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl animate-in fade-in zoom-in duration-200">
+//             <div className="flex items-start gap-3">
+//               <AlertCircle className="text-red-500 w-6 h-6 shrink-0"/>
+//               <div>
+//                 <h3 className="font-bold text-gray-900">Error</h3>
+//                 <p className="text-sm text-gray-600 mt-1">{errorMessage}</p>
+//               </div>
+//             </div>
+//             <button onClick={() => setShowErrorPopup(false)} className="mt-4 w-full py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">Close</button>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// } 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Loader2, Check, AlertCircle } from 'lucide-react';
+import { useItinerary } from '@/app/context/ItineraryContext';
+
+export default function ItineraryBuilderWrapper({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  const isLibraryPage = pathname?.includes('/library');
+  const isPreviewDetailsPage = pathname ? /\/preview\/.+/.test(pathname) : false;
+  const isFullWidthPage = isLibraryPage || isPreviewDetailsPage;
+
+  const { 
+    itineraryData, 
+    saveItinerary, 
+    isSaving, 
+    saveError 
+  } = useItinerary();
+
+  const [activeTab, setActiveTab] = useState('INTRO');
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (pathname?.includes('/routing')) setActiveTab('ROUTING');
+    else if (pathname?.includes('/create-day')) setActiveTab('CREATE DAY');
+    else if (pathname?.includes('/preview') && !isPreviewDetailsPage) setActiveTab('PREVIEW');
+    else setActiveTab('INTRO');
+  }, [pathname, isPreviewDetailsPage]);
+
+  // Error handling
+  useEffect(() => {
+    if (saveError) {
+      setErrorMessage(saveError);
+      setShowErrorPopup(true);
+    }
+  }, [saveError]);
+
+  const tabs = [
+    { id: 'INTRO', label: 'INTRO', path: '/dashboard/itinerary/create' },
+    { id: 'ROUTING', label: 'ROUTING', path: '/dashboard/itinerary/routing' },
+    { id: 'CREATE DAY', label: 'CREATE DAY', path: '/dashboard/itinerary/create-day' },
+    { id: 'COSTING', label: 'COSTING', path: '/dashboard/itinerary/costing' },
+    { id: 'PREVIEW', label: 'PREVIEW', path: '/dashboard/itinerary/preview' },
+  ];
+
+  const handleTabChange = (path: string) => router.push(path);
+  const handleQuickSave = async () => await saveItinerary('quick');
+  const handleSaveAndExit = async () => {
+    const success = await saveItinerary('exit');
+    if (success) setTimeout(() => router.push('/dashboard/itinerary/library'), 1000);
+  };
+  const libraryPage = async () => router.push('/dashboard/itinerary/library');
+
+  return (
+    // FIX: Use h-full to fill the space provided by dashboard/layout.tsx
+    <div className="h-full relative flex flex-col bg-gray-50">
+      
+      {/* Background Styling */}
+      <div className="absolute inset-0 z-0 bg-slate-900"/>
+      <div 
+        className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1600')", backgroundSize: 'cover' }}
+      />
+
+      {/* --- 1. BUILDER HEADER (No Logo, Just Title + Actions) --- */}
+      {!isFullWidthPage && (
+        <div className="relative z-10 bg-[#0f172a]/90 backdrop-blur-md border-b border-gray-700 px-4 py-3 flex items-center justify-between shrink-0 h-16">
+          
+          {/* LEFT: Builder Title (Logo removed) */}
+          <div className="flex items-center gap-4">
+             <h2 className="text-white font-bold text-lg tracking-wide">
+               Itinerary <span className="text-blue-400">Builder</span>
+             </h2>
+             
+             {/* Library Button moved near title for better UX */}
+             <button onClick={libraryPage} className="hidden ml-11 md:flex px-7 py-2 bg-blue-600 text-blue-100 hover:bg-blue-600/40 rounded text-sm font-medium transition-all border border-blue-500/30">
+                Library
+             </button>
+          </div>
+          
+          {/* RIGHT: Action Buttons */}
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleQuickSave} 
+              disabled={isSaving} 
+              className="px-4 py-2 bg-blue-600 text-blue-100 hover:bg-blue-500 rounded-sm text-sm font-medium transition-all flex items-center gap-2 shadow-sm"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
+              {isSaving ? 'Saving...' : 'Quick Save'}
+            </button>
+            
+            <button 
+              onClick={handleSaveAndExit} 
+              disabled={isSaving}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-sm text-sm font-medium transition-all shadow-sm"
+            >
+              Save & Exit
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- 2. BUILDER CONTENT AREA --- */}
+      <div className="relative z-10 flex flex-1 overflow-hidden">
+        
+        {/* Inner Sidebar (Tabs) */}
+        {!isFullWidthPage && (
+          <div className="w-55 bg-[#1e293b]/95 backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
+            <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
+              <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
+              {/* {itineraryData.tripId ? itineraryData.tripId.slice(-6) : '****'} */}
+              <p className="text-blue-300 text-xs font-mono">Ref No. ####### </p>
+            </div>
+
+            <nav className="space-y-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.path)}
+                  className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between group ${
+                    activeTab === tab.id
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                  {activeTab === tab.id && <div className="w-1.5 h-1.5 rounded-full bg-white"/>}
+                </button>
+              ))}
+            </nav>
+          </div>
+        )}
+
+        {/* Dynamic Page Content */}
+        <main className={`flex-1 overflow-y-auto bg-gray-50/5 relative ${!isFullWidthPage ? 'p-0' : ''}`}>
+          {children}
+        </main>
+      </div>
+
+      {/* Error Popup */}
+      {showErrorPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-red-500 w-6 h-6 shrink-0"/>
+              <div>
+                <h3 className="font-bold text-gray-900">Error</h3>
+                <p className="text-sm text-gray-600 mt-1">{errorMessage}</p>
+              </div>
+            </div>
+            <button onClick={() => setShowErrorPopup(false)} className="mt-4 w-full py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

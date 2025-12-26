@@ -1254,10 +1254,10 @@ export default function DaywisePage() {
 
 
                     {/* --- TRANSPORT CARD (NEW DESIGN) --- */}
-                    {item.type === 'transport' && (
+                     {/* {item.type === 'transport' && (
                       <div className={`bg-white rounded-xl p-5 shadow-lg border-l-4 ${item.inclusionType === 'excluded' ? 'border-red-500' : 'border-green-500'} flex gap-5 group`}>
                          
-                         {/* Left: Dynamic Icon based on Mode */}
+                  
                          <div className={`w-24 rounded-lg flex-shrink-0 flex flex-col items-center justify-center border ${item.inclusionType === 'excluded' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
                                {item.mode === 'flight' ? <Plane size={24}/> : 
                                 item.mode === 'rail' ? <Train size={24}/> : 
@@ -1266,17 +1266,17 @@ export default function DaywisePage() {
                                <span className="text-[10px] font-bold uppercase mt-1 tracking-wider">{item.mode}</span>
                          </div>
 
-                         {/* Right: Content */}
+                       
                          <div className="flex-1 flex flex-col justify-between">
                             
-                            {/* Header Row */}
+                         
                             <div className="flex justify-between items-start">
                                <div>
                                   <div className="flex items-center gap-3">
                                       <h4 className="font-bold text-xl text-gray-800 flex items-center gap-2">
                                          {item.vehicleType || 'Transport'}
                                       </h4>
-                                      {/* NEW: Status Badge */}
+                                     
                                       <StatusBadge status={item.inclusionType} />
                                   </div>
                                   
@@ -1290,17 +1290,17 @@ export default function DaywisePage() {
                                   </div>
                                </div>
 
-                               {/* Actions */}
+                           
                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button onClick={() => openEdit(item, 'add_transport')} className="text-green-600 hover:bg-green-50 p-1.5 rounded-md"><Edit size={16}/></button>
                                   <button onClick={() => handleDeleteItem('transport', item.id)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16}/></button>
                                </div>
                             </div>
 
-                            {/* Info Grid */}
+                         
                             <div className="mt-4 grid grid-cols-12 gap-3 mb-2">
                                 
-                                {/* Logistics Block */}
+                    
                                 <div className="col-span-9 bg-gray-50 p-4 rounded-lg border border-gray-100 flex flex-col justify-center">
                                     <div className="flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></div>
@@ -1336,7 +1336,6 @@ export default function DaywisePage() {
                                     )}
                                 </div>
 
-                                {/* Total Cost */}
                                 <div className={`col-span-3 rounded-lg border flex flex-col justify-center items-end pr-3 ${item.inclusionType === 'excluded' ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
                                     <div className={`text-[10px] uppercase font-bold flex items-center gap-1 ${item.inclusionType === 'excluded' ? 'text-red-600' : 'text-green-600'}`}>
                                       <DollarSign size={10} /> Total Cost 
@@ -1349,7 +1348,119 @@ export default function DaywisePage() {
                             </div>
                          </div>
                       </div>
+                    )}  */} 
+
+
+
+
+                    {/* --- TRANSPORT CARD (UPDATED WITH DESCRIPTION) --- */}
+{item.type === 'transport' && (
+    <div className={`bg-white rounded-xl p-5 shadow-lg border-l-4 ${item.inclusionType === 'excluded' ? 'border-red-500' : 'border-green-500'} flex gap-5 group`}>
+        
+        {/* Left: Dynamic Icon based on Mode */}
+        <div className={`w-24 rounded-lg flex-shrink-0 flex flex-col items-center justify-center border ${item.inclusionType === 'excluded' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
+            {item.mode === 'flight' ? <Plane size={24}/> : 
+             item.mode === 'rail' ? <Train size={24}/> : 
+             item.mode === 'ferry' ? <Ship size={24}/> : 
+             <Car size={24}/>}
+            <span className="text-[10px] font-bold uppercase mt-1 tracking-wider">{item.mode}</span>
+        </div>
+
+        {/* Right: Content */}
+        <div className="flex-1 flex flex-col justify-between">
+            
+            {/* 1. Header Row */}
+            <div className="flex justify-between items-start">
+                <div>
+                    <div className="flex items-center gap-3">
+                        <h4 className="font-bold text-xl text-gray-800 flex items-center gap-2">
+                            {item.vehicleType || 'Transport'}
+                        </h4>
+                        {/* Status Badge */}
+                        <StatusBadge status={item.inclusionType} />
+                    </div>
+                    
+                    <span className="text-[10px] bg-gray-100 text-gray-600 px-5 py-0.5 mt-2 rounded-full border border-gray-200 font-bold uppercase inline-block">
+                        {item.subType}
+                    </span>
+
+                    <div className="text-xs text-gray-600 mt-2 font-medium flex gap-3">
+                        <span>Vehicle Qty: <strong>{item.vehicleCount || 1}</strong></span>
+                        {item.flightNumber && <span>• Ref: {item.flightNumber}</span>}
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEdit(item, 'add_transport')} className="text-green-600 hover:bg-green-50 p-1.5 rounded-md"><Edit size={16}/></button>
+                    <button onClick={() => handleDeleteItem('transport', item.id)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16}/></button>
+                </div>
+            </div>
+
+            {/* 2. NEW: Service Description (Journey Narrative) */}
+            {/* Added here between Header and Logistics */}
+            {item.serviceDescription && (
+                <div className="mt-2 mb-1">
+                    <p className="text-sm text-gray-600  leading-relaxed border-l-2 border-gray-200 pl-3 py-1">
+                        “{item.serviceDescription}”
+                    </p>
+                </div>
+            )}
+
+            {/* 3. Info Grid (Logistics & Cost) */}
+            <div className="mt-2 grid grid-cols-12 gap-3 mb-1">
+                
+                {/* Logistics Block */}
+                <div className="col-span-9 bg-gray-50 p-4 rounded-lg border border-gray-100 flex flex-col justify-center">
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></div>
+                        <div className="flex items-center justify-start w-full overflow-hidden">
+                            <span className="text-xs font-bold text-gray-700 truncate mr-2" title={item.pickupLocation}>
+                                Pickup: {item.pickupLocation || 'Not set'}
+                            </span>
+                            <span className="text-xs font-bold text-gray-700 whitespace-nowrap ml-5">
+                                Time: {item.pickupTime}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {item.subType === 'disposal' ? (
+                        <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0 mt-2"></div>
+                            <span className="text-xs font-bold text-gray-700 truncate mt-2">
+                                Duration: {item.duration || 'N/A'}
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center mt-2 gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0 mt-2"></div>
+                            <div className="flex items-center justify-start w-full overflow-hidden">
+                                <span className="text-xs font-bold text-gray-700 truncate mr-2 mt-2" title={item.dropoffLocation}>
+                                    Drop: {item.dropoffLocation || 'Not set'}
+                                </span>
+                                <span className="text-xs font-bold text-gray-700 whitespace-nowrap ml-8 mt-2">
+                                    Time: {item.dropoffTime || '--:--'}
+                                </span>
+                            </div>
+                        </div>
                     )}
+                </div>
+
+                {/* Total Cost */}
+                <div className={`col-span-3 rounded-lg border flex flex-col justify-center items-end pr-3 ${item.inclusionType === 'excluded' ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+                    <div className={`text-[10px] uppercase font-bold flex items-center gap-1 ${item.inclusionType === 'excluded' ? 'text-red-600' : 'text-green-600'}`}>
+                        <DollarSign size={10} /> Total Cost 
+                    </div>
+                    <div className={`text-sm font-bold ${item.inclusionType === 'excluded' ? 'text-red-700' : 'text-green-700'}`}>
+                        {item.inclusionType === 'excluded' ? 'Excluded' : `$${((item.price || 0) * (item.vehicleCount || 1)).toLocaleString()}`}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+)}
+
 
 
                     {/* --- MEAL CARD (NEW) --- */}

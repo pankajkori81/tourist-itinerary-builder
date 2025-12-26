@@ -1423,7 +1423,7 @@ return (
                                                     </div>
                                                 )}
 
-                                                {item.category === 'Transport' && (
+                                                {/* {item.category === 'Transport' && (
                                                     <div>
                                                         <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                             {item.vehicleType}
@@ -1435,8 +1435,80 @@ return (
                                                             <div>{item.subType === 'transfer' ? `Drop: ${item.dropoffLocation}` : `Duration: ${item.duration}`}</div>
                                                         </div>
                                                     </div>
-                                                )}
+                                                )} */}
 
+
+
+{item.category === 'Transport' && (
+    <div>
+        {/* 1. Header (Vehicle & Type) */}
+        <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {item.vehicleType}
+            <span style={{ 
+                backgroundColor: '#f0fdf4', 
+                color: '#15803d', 
+                fontSize: '10px', 
+                textTransform: 'uppercase', 
+                padding: '2px 6px', 
+                borderRadius: '4px', 
+                fontWeight: '600',
+                border: '1px solid #dcfce7'
+            }}>
+                {item.subType}
+            </span>
+        </div>
+
+        {/* 2. NEW: Service Description (The "From Barcelona..." text) */}
+        {/* THIS IS THE PART YOU ARE MISSING */}
+        {item.serviceDescription && (
+            <div style={{ 
+                marginTop: '6px', 
+                marginBottom: '8px',
+                fontSize: '13px', 
+                color: '#4b5563', 
+                lineHeight: '1.4',
+                paddingBottom: '6px',
+                borderBottom: '1px dashed #e5e7eb'
+            }}>
+                {item.serviceDescription}
+            </div>
+        )}
+
+        {/* 3. Logistics (Pickup, Time, Drop) - Better Styled */}
+        <div style={{ 
+            marginTop: '4px', 
+            fontSize: '12px', 
+            color: '#1f2937', 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '8px' 
+        }}>
+            {/* Pickup */}
+            <div>
+                <span style={{color:'#4e4e4eff', fontWeight:'700', fontSize:'10px', textTransform:'uppercase'}}>Pickup: </span> 
+                {item.pickupLocation} 
+            </div>
+            
+            {/* Time */}
+            <div>
+                {item.pickupTime ? (
+                    <>
+                    <span style={{color:'#4e4e4eff', fontWeight:'700', fontSize:'10px', textTransform:'uppercase'}}>Start: </span> 
+                    {item.pickupTime}
+                    </>
+                ) : ''}
+            </div>
+
+            {/* Drop / Duration */}
+            <div style={{ gridColumn: 'span 2' }}>
+                <span style={{color:'#4e4e4eff', fontWeight:'700', fontSize:'10px', textTransform:'uppercase'}}>
+                    {item.subType === 'transfer' ? 'Drop: ' : 'Duration: '}
+                </span> 
+                {item.subType === 'transfer' ? item.dropoffLocation : item.duration}
+            </div>
+        </div>
+    </div>
+)}
                                                 {item.category === 'Meal' && (
                                                     <div>
                                                         <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
