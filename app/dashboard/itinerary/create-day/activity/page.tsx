@@ -2795,6 +2795,9 @@
 
 
 
+ 
+
+
 
 
 
@@ -2804,10 +2807,11 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Save, MapPin, FileText, PlusCircle, 
   Wallet, Ban, CheckCircle2, PlusSquare, 
-  Clock, User, Image as ImageIcon, Star
+  Clock, User, Image as ImageIcon, Star, Briefcase, // Added Briefcase
+  Phone, Mail // Added Phone/Mail icons
 } from 'lucide-react';
 import { Activity, TIME_SLOTS } from '../constants/daywiseConstants';
-import { useSRM } from '@/app/context/SRMContext';
+import { useSRM } from '@/app/context/SRMContext'; // Ensure this path is correct
 
 interface ActivityFormProps {
   initialData?: Activity;
@@ -2828,11 +2832,19 @@ export default function ActivityForm({
 }: ActivityFormProps) {
   
   // --- SRM INTEGRATION ---
-  const { attractions } = useSRM();
+  const { attractions, suppliers } = useSRM(); // Ensure 'suppliers' is destructured
 
   // 1. Base Filter: Get all activities for the current City
   const cityAttractions = attractions.filter(a => 
     (a.city || "").toLowerCase().trim() === city.toLowerCase().trim()
+  );
+
+  // 2. Smart Supplier Filter
+  const availableSuppliers = suppliers.filter(s => 
+      s.status === 'Active' && 
+      s.services.includes('Activity') &&
+      // Loose matching for city
+      (s.city.toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(s.city.toLowerCase()))
   );
 
   // --- STATE ---
@@ -2856,9 +2868,25 @@ export default function ActivityForm({
     dropoffDate: dayDate || '',
     dropoffTime: '11:00',
     activityType: 'attractions',
+    linkedSupplierId: '' // Ensure this field exists in your Activity type
   });
 
   const [showSidebar, setShowSidebar] = useState(false);
+
+  // --- AUTO SELECT SUPPLIER LOGIC ---
+  useEffect(() => {
+      // Only auto-select if no supplier is currently set
+      if (!formData.linkedSupplierId) {
+          const preferred = availableSuppliers.find(s => s.isPreferred);
+          if (preferred) {
+              setFormData(prev => ({ ...prev, linkedSupplierId: preferred.id }));
+          }
+      }
+  }, [availableSuppliers]); // Only re-run when available suppliers change
+
+  // Find selected supplier details
+  const selectedSupplier = suppliers.find(s => s.id === formData.linkedSupplierId);
+
 
   // --- AUTO OPEN SIDEBAR ON SLOT CHANGE ---
   useEffect(() => {
@@ -2882,11 +2910,15 @@ export default function ActivityForm({
       ? existingActivities.filter(a => a.id !== initialData.id) 
       : existingActivities;
 
-    const hasFullDayTaken = otherActivities.some(a => a.slot === 'Full Day');
-    if (hasFullDayTaken) return true;
+    const hasFullDayActivity = otherActivities.some(a => a.slot === 'Full Day');
+    if (hasFullDayActivity) return true;
 
-    if (slotToCheck === 'Full Day') return otherActivities.length > 0;
-
+    if (slotToCheck === 'Full Day') {
+        const anyPartialSlotTaken = otherActivities.some(a => 
+            ['Early Morning', 'Morning', 'Afternoon', 'Evening'].includes(a.slot)
+        );
+        return anyPartialSlotTaken; 
+    }
     return otherActivities.some(a => a.slot === slotToCheck);
   };
 
@@ -2896,32 +2928,23 @@ export default function ActivityForm({
   };
 
   const handleSRMSelect = (srmItem: any) => {
-    // Optional: Warn if slot taken (logic exists in render)
-    
     setFormData(prev => ({
       ...prev,
       heading: srmItem.name,
       description: srmItem.description || '',
-      
-      // Auto-fill Timing
       startTime: srmItem.startTime || prev.startTime,
       duration: srmItem.duration || '2 Hours',
-      slot: srmItem.suggestedSlot || prev.slot, // Auto-select the slot if defined
-      
+      slot: srmItem.suggestedSlot || prev.slot,
       pickupLocation: srmItem.pickupLocation || prev.pickupLocation,
-      
-      // Map Financials
       entranceFeePP: srmItem.entranceFee || 0,
       activityFeePP: srmItem.activityFee || 0,
       activityType: srmItem.type.toLowerCase(),
-      
-      // Guide Logic
       guideType: srmItem.isGuideRequired ? 'guided' : 'self_guided',
       guideFee: srmItem.isGuideRequired ? (srmItem.guideFee || 0) : 0,
-      
-      inclusionType: 'included'
+      inclusionType: 'included',
+      // If the SRM item has a preferred supplier link saved (future feature), use it here.
+      // For now, we rely on the City Logic.
     }));
-    
     if (window.innerWidth < 768) setShowSidebar(false);
   };
 
@@ -2930,7 +2953,6 @@ export default function ActivityForm({
         alert("Please enter an activity name");
         return;
     }
-    
     const finalData = {
         ...formData,
         guideFee: formData.guideType === 'self_guided' ? 0 : formData.guideFee
@@ -2963,7 +2985,7 @@ export default function ActivityForm({
         {/* FORM BODY */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
           
-          {/* SECTION A: ACTIVITY DETAILS (Restored Layout) */}
+          {/* SECTION A: ACTIVITY DETAILS */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-blue-600 mb-2">
               <FileText size={18} />
@@ -2971,6 +2993,46 @@ export default function ActivityForm({
             </div>
 
             <div className="space-y-4">
+                
+                {/* --- [INSERT: SUPPLIER SECTION] --- */}
+                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-4 flex gap-4 items-start">
+                    <div className="flex-1">
+                        <label className="block text-xs font-bold text-blue-900 mb-2 flex items-center gap-1">
+                            <Briefcase size={14} /> Fulfillment Partner (DMC)
+                        </label>
+                        <select 
+                            className="w-full p-2.5 border border-blue-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            value={formData.linkedSupplierId || ""}
+                            onChange={(e) => handleChange('linkedSupplierId', e.target.value)}
+                        >
+                            <option value="">-- Direct / Unknown --</option>
+                            {availableSuppliers.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    {s.name} ({s.city}) {s.isPreferred ? '★ Preferred' : ''}
+                                </option>
+                            ))}
+                        </select>
+                        {availableSuppliers.length === 0 && (
+                             <p className="text-[10px] text-gray-400 mt-1">No suppliers found for {city}.</p>
+                        )}
+                    </div>
+                    
+                    {/* Intelligence Box */}
+                    {selectedSupplier && (
+                        <div className="flex-1 bg-white p-3 rounded-lg border border-blue-100 shadow-sm text-xs">
+                            <div className="font-bold text-gray-800 mb-1 flex justify-between">
+                                <span>{selectedSupplier.contactPerson}</span>
+                                <span className="text-blue-600 bg-blue-50 px-1.5 rounded">{selectedSupplier.paymentTerms}</span>
+                            </div>
+                            <div className="text-gray-500 space-y-1">
+                                <div className="flex items-center gap-1"><Phone size={10}/> {selectedSupplier.phone}</div>
+                                <div className="truncate"><Mail size={10} className="inline mr-1"/>{selectedSupplier.email}</div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                {/* --- [END INSERT] --- */}
+
                 <div className="flex gap-2">
                     <div className="flex-1">
                     <label className="block text-xs font-semibold text-gray-500 mb-1">Activity Name *</label>
@@ -3025,7 +3087,7 @@ export default function ActivityForm({
 
           <hr className="border-gray-100" />
 
-          {/* SECTION B: INCLUSIONS (Restored Layout) */}
+          {/* SECTION B: INCLUSIONS (Restored) */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-green-600 mb-2">
               <Wallet size={18} />
@@ -3033,8 +3095,6 @@ export default function ActivityForm({
             </div>
 
             <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 space-y-6">
-                
-                {/* Inclusion Toggles */}
                 <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-3">Packaging Status</label>
                     <div className="grid grid-cols-3 gap-3">
@@ -3068,14 +3128,6 @@ export default function ActivityForm({
                         
                         <div>
                             <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Guide Option</label>
-                            
-                            {/* Visual Feedback for Guide Logic */}
-                            {formData.guideType === 'guided' && (
-                                <div className="mb-3 text-xs bg-orange-50 text-orange-800 px-3 py-2 rounded border border-orange-100 flex items-center gap-2">
-                                    <User size={14}/> Guide is set to required based on SRM selection.
-                                </div>
-                            )}
-
                             <div className="flex gap-4 items-center">
                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="guideType" checked={formData.guideType === 'guided'} onChange={() => handleChange('guideType', 'guided')} className="w-4 h-4 text-blue-600 focus:ring-blue-500"/><span className="text-sm font-semibold text-gray-700">Guided</span></label>
                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="guideType" checked={formData.guideType === 'self_guided'} onChange={() => handleChange('guideType', 'self_guided')} className="w-4 h-4 text-blue-600 focus:ring-blue-500"/><span className="text-sm font-semibold text-gray-700">Self Guided</span></label>
@@ -3096,7 +3148,7 @@ export default function ActivityForm({
 
           <hr className="border-gray-100" />
 
-          {/* SECTION C: LOGISTICS (Restored Layout) */}
+          {/* SECTION C: LOGISTICS (Restored) */}
           <section className="space-y-4">
              <div className="flex items-center gap-2 text-purple-600 mb-2">
               <MapPin size={18} />
@@ -3159,7 +3211,7 @@ export default function ActivityForm({
              {sidebarList.length === 0 ? (
                 <div className="text-center p-6 text-gray-400 text-xs">
                     <p>No activities found in SRM for <strong>{city}</strong>.</p>
-                    <p className="mt-2">Go to SRM  Activity to add some.</p>
+                    <p className="mt-2">Go to SRM Activity to add some.</p>
                 </div>
              ) : (
                  sidebarList.map((item, i) => (

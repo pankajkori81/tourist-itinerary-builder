@@ -77,6 +77,7 @@ export interface Activity {
 
   // Defaults
   activityType: string;
+  linkedSupplierId?: string;
 }
 
 
@@ -117,6 +118,8 @@ export interface Stay {
   isGhost?: boolean;
   
   customImage?: string;
+
+  linkedSupplierId?: string;
 }
 
 
@@ -151,6 +154,8 @@ export interface Transport {
   
   // 4. Costing
   price: number;
+
+  linkedSupplierId?: string;
 }
 
 
@@ -177,6 +182,12 @@ export interface Meal {
   adultCost: number;
   childCost: number;
 
+
+  
+  // --- NEW FIELDS TO ADD ---
+  paxAdult: number; // The Quantity (e.g. 10)
+  paxChild: number; // The Quantity (e.g. 2)
+
   // Description / Notes
   description: string;
 
@@ -184,6 +195,7 @@ export interface Meal {
   requiresTransfer: boolean;
   pickupLocation?: string;
   dropoffLocation?: string;
+  linkedSupplierId?: string;
 }
 
 
@@ -201,7 +213,10 @@ export interface DayPlan {
 // 3. CONSTANTS DATA
 // ==========================================
 
+
+
 export const TIME_SLOTS = [
+  { value: 'Early Morning', label: 'Early Morning', timeRange: '(05:00 - 08:00)' }, // <--- Added this
   { value: 'Morning', label: 'Morning', timeRange: '(08:00 - 11:00)' },
   { value: 'Afternoon', label: 'Afternoon', timeRange: '(13:00 - 15:00)' },
   { value: 'Evening', label: 'Evening', timeRange: '(16:00 - 18:00)' },
@@ -345,19 +360,6 @@ export const TRANSPORT_MODES = [
   { id: 'ferry', label: 'Ferry', icon: Ship },
 ];
 
-// export const VEHICLE_TYPES = [
-//   'Sedan Car', 'SUV / Crossover', 'Hatchback', 'Convertible', 'Coupe', 
-//   'Mini Van', 'Van', 'Pick-up Truck', 'Wagon', 'Mini Coach', 'Coach', 'Limousine'
-// ];
-
-
-// export const VEHICLE_SPECS: Record<string, { seats: number, guests: number, luggageCheck: string, luggageCarry: string }> = {
-//   'Sedan Car': { seats: 4, guests: 3, luggageCheck: '2 (L75, W47, D30)', luggageCarry: '2 (L56, W45, D10)' },
-//   'SUV / Crossover': { seats: 6, guests: 4, luggageCheck: '3 (L75, W47, D30)', luggageCarry: '3 (L56, W45, D10)' },
-//   'Mini Van': { seats: 7, guests: 5, luggageCheck: '4 (L75, W47, D30)', luggageCarry: '4 (L56, W45, D10)' },
-//   'Coach': { seats: 20, guests: 18, luggageCheck: '15 (L75, W47, D30)', luggageCarry: '15 (L56, W45, D10)' },
-//   'default': { seats: 4, guests: 3, luggageCheck: '2 Standard', luggageCarry: '2 Small' }
-// };
 
 
 export const VEHICLE_TYPES = [

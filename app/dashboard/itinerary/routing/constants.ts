@@ -16,20 +16,7 @@ export interface RouteCityData {
 
 // GROUPED BY COUNTRY (Important for Dynamic Filter)
 export const CITIES_BY_COUNTRY: Record<string, RouteCityData[]> = {
-  // "India": [
-  //   { name: 'New Delhi', type: 'city' },
-  //   { name: 'Delhi Airport (DEL)', type: 'airport' },
-  //   { name: 'Mumbai', type: 'city' },
-  //   { name: 'Mumbai Airport (BOM)', type: 'airport' },
-  //   { name: 'Jaipur', type: 'city' },
-  //   { name: 'Agra', type: 'city' },
-  //   { name: 'Bangalore', type: 'city' },
-  //   { name: 'Goa', type: 'city' },
-  //   { name: 'Udaipur', type: 'city' },
-  //   { name: 'Varanasi', type: 'city' },
-  //   { name: 'Kochi', type: 'city' },
-  // ],
-
+ 
   'India': [
     { name: 'New Delhi', type: 'city', state: 'Delhi' },
     { name: 'Indira Gandhi International Airport (DEL)', type: 'airport', airportCode: 'DEL', state: 'Delhi' },
