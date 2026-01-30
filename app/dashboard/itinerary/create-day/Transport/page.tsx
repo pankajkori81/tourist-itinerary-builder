@@ -524,6 +524,9 @@ import {
   Stay, 
   Activity
 } from '../constants/daywiseConstants';
+
+// --- [CHANGE 1: IMPORT CONTEXT] ---
+import { useItinerary } from '@/app/context/ItineraryContext';
 import { useSRM } from '@/app/context/SRMContext'; // Import SRM Context
 
 // Default Factory
@@ -535,6 +538,7 @@ const createDefaultTransport = (id: number): Transport => ({
     inclusionType: 'included',
     vehicleType: 'Sedan Car',
     vehicleCount: 1,
+    paxCount: 1,
     pickupLocation: '',
     pickupTime: '09:00',
     dropoffLocation: '', 
@@ -563,6 +567,15 @@ export default function TransportForm({
   onSave, 
   onCancel 
 }: TransportFormProps) {
+
+
+    // --- [CHANGE 2: GET GLOBAL PAX] ---
+  const { itineraryData } = useItinerary();
+  // Safe fallback to 2 if undefined
+  const globalPax = (itineraryData && typeof itineraryData.numberOfTravelers === 'number') 
+    ? itineraryData.numberOfTravelers 
+    : 2;
+  // ----------------------------------
   
   // --- 1. GET SRM DATA ---
   const { transports, suppliers } = useSRM(); // [CHANGE 3: Access Suppliers]
@@ -577,12 +590,34 @@ export default function TransportForm({
   }, [transports, city]);
 
   // --- STATE ---
-  const [formData, setFormData] = useState<Transport>(
-      initialData || { 
-        ...createDefaultTransport(Date.now()),
-        pickupLocation: currentStay ? currentStay.hotelName : ''
-      }
-  );
+//   const [formData, setFormData] = useState<Transport>(
+//       initialData || { 
+//         ...createDefaultTransport(Date.now()),
+//         pickupLocation: currentStay ? currentStay.hotelName : ''
+//       }
+//   );
+
+
+// --- [CHANGE: SAFE STATE INITIALIZATION] ---
+  const [formData, setFormData] = useState<Transport>(() => {
+    // 1. If Editing: Use existing data, backfill paxCount if missing (prevents crash)
+    if (initialData) {
+      return {
+        ...initialData,
+        paxCount: (initialData.paxCount !== undefined && initialData.paxCount !== null) 
+                  ? initialData.paxCount 
+                  : globalPax // Fallback for old items
+      };
+    }
+    
+    // 2. If New: Use Defaults + Global Pax
+    return { 
+      ...createDefaultTransport(Date.now()),
+      paxCount: globalPax, 
+      pickupLocation: currentStay ? currentStay.hotelName : ''
+    };
+  });
+  // ---------------------------------------------
 
   // --- [CHANGE 4: SMART SUPPLIER LOGIC] ---
   
@@ -612,6 +647,12 @@ export default function TransportForm({
   const selectedSupplier = suppliers.find(s => s.id === formData.linkedSupplierId);
   // ----------------------------------------
   
+  // --- [CHANGE 5: DEFINE TICKET MODE] ---
+  const isTicketMode = useMemo(() => {
+    return ['flight', 'rail', 'bus'].includes(formData.mode);
+  }, [formData.mode]);
+  // ----------------------------------------
+
   // --- 3. DYNAMIC VISUAL SPECS ---
   const currentSpecs = useMemo(() => {
     const srmMatch = availableSrmVehicles.find(t => t.vehicleType === formData.vehicleType);
@@ -717,14 +758,16 @@ export default function TransportForm({
             </div>
         </section>
 
+
+
         {/* 2. VEHICLE SELECTION */}
-        {formData.mode === 'vehicle' && (
-            <section className="grid grid-cols-12 gap-6">
+        {/* 2. VEHICLE SELECTION */}
+        <section className="grid grid-cols-12 gap-6">
                 
-                {/* Inputs */}
+                {/* Inputs Column */}
                 <div className="col-span-7 space-y-4">
                     
-                     {/* --- [CHANGE 5: SUPPLIER SECTION INJECTED HERE] --- */}
+                     {/* Supplier Section (Unchanged) */}
                     <div className="bg-green-50/50 p-4 rounded-xl border border-green-100 flex gap-4 items-start">
                         <div className="flex-1">
                             <label className="block text-xs font-bold text-green-900 mb-2 flex items-center gap-1">
@@ -732,9 +775,7 @@ export default function TransportForm({
                             </label>
                             <select 
                                 className="w-full p-2.5 border border-green-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-500 outline-none"
-                                // @ts-ignore
                                 value={formData.linkedSupplierId || ""}
-                                // @ts-ignore
                                 onChange={(e) => updateField('linkedSupplierId', e.target.value)}
                             >
                                 <option value="">-- Direct / Unknown --</option>
@@ -758,30 +799,37 @@ export default function TransportForm({
                                 </div>
                                 <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-gray-600">
                                     <div className="flex items-center gap-1"><Phone size={10}/> {selectedSupplier.phone}</div>
-                                    <div className="flex items-center gap-1"><DollarSign size={10}/> {selectedSupplier.currency || 'USD'}</div>
-                                    <div className="col-span-2 flex items-center gap-1 truncate" title={selectedSupplier.email}><Mail size={10}/> {selectedSupplier.email}</div>
+                                    <div className="col-span-2 flex items-center gap-1 truncate"><Mail size={10}/> {selectedSupplier.email}</div>
                                 </div>
                             </div>
                         )}
                     </div>
-                    {/* --- [END CHANGE] --- */}
 
+                    {/* Vehicle Type Selection (Unchanged) */}
                     <div>
                         <label className="block text-xs font-bold text-gray-500 mb-1 flex justify-between">
-                            Vehicle Type
-                            {availableSrmVehicles.some(v => v.vehicleType === formData.vehicleType) && (
+                            {isTicketMode ? 'Transport Type' : 'Vehicle Type'}
+                            
+                            {!isTicketMode && availableSrmVehicles.some(v => v.vehicleType === formData.vehicleType) && (
                                 <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                                     SRM Price Linked
                                 </span>
                             )}
                         </label>
-                        <select 
-                            value={formData.vehicleType}
-                            onChange={handleVehicleChange} // Updated Handler
-                            className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 outline-none focus:border-green-500"
-                        >
-                            {/* Option Group 1: SRM Vehicles (Prioritized) */}
-                            {availableSrmVehicles.length > 0 && (
+
+                        {isTicketMode ? (
+                            <input 
+                                type="text" placeholder="e.g. Economy Class, 2nd AC"
+                                value={formData.vehicleType}
+                                onChange={(e) => updateField('vehicleType', e.target.value)}
+                                className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold outline-none focus:border-green-500"
+                            />
+                        ) : (
+                            <select 
+                                value={formData.vehicleType}
+                                onChange={handleVehicleChange} 
+                                className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 outline-none focus:border-green-500"
+                            >
                                 <optgroup label={`Available in ${city}`}>
                                     {availableSrmVehicles.map(v => (
                                         <option key={v.id} value={v.vehicleType}>
@@ -789,41 +837,87 @@ export default function TransportForm({
                                         </option>
                                     ))}
                                 </optgroup>
-                            )}
+                                <optgroup label="Standard Vehicle Types">
+                                    {VEHICLE_TYPES
+                                        .filter(t => !availableSrmVehicles.find(srm => srm.vehicleType === t))
+                                        .map(t => <option key={t} value={t}>{t}</option>)
+                                    }
+                                </optgroup>
+                            </select>
+                        )}
+                    </div>
 
-                            {/* Option Group 2: Standard Fallbacks */}
-                            <optgroup label="Standard Vehicle Types">
-                                {VEHICLE_TYPES
-                                    // Don't show duplicates if already in SRM list
-                                    .filter(t => !availableSrmVehicles.find(srm => srm.vehicleType === t))
-                                    .map(t => <option key={t} value={t}>{t}</option>)
-                                }
-                            </optgroup>
-                        </select>
-                    </div>
+                    {/* --- [UPDATED INPUTS GRID] --- */}
                     <div className="grid grid-cols-2 gap-4">
+                        
+                        {/* 1. QUANTITY (Vehicles or Tickets) */}
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 mb-1">No. of Vehicles</label>
-                            <input 
-                                type="number" min="1"
-                                value={formData.vehicleCount}
-                                onChange={(e) => updateField('vehicleCount', parseInt(e.target.value) || 1)}
-                                className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold outline-none focus:border-green-500"
-                            />
+                             <label className="block text-xs font-bold text-gray-500 mb-1">
+                                {isTicketMode ? 'No. of Tickets' : 'No. of Vehicles'}
+                             </label>
+                             
+                             {isTicketMode ? (
+                                 <input 
+                                    type="number" min="1"
+                                    value={formData.paxCount}
+                                    onChange={(e) => updateField('paxCount', parseInt(e.target.value) || 1)}
+                                    className="w-full p-2.5 bg-yellow-50 border border-yellow-200 text-gray-800 rounded-lg text-sm font-bold outline-none focus:border-green-500"
+                                />
+                             ) : (
+                                 <input 
+                                    type="number" min="1"
+                                    value={formData.vehicleCount}
+                                    onChange={(e) => updateField('vehicleCount', parseInt(e.target.value) || 1)}
+                                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold outline-none focus:border-green-500"
+                                />
+                             )}
                         </div>
-                        <div>
-                             <label className="block text-xs font-bold text-gray-500 mb-1">Ref No. (Optional)</label>
-                             <input 
-                                type="text" placeholder="Flight/Train No."
-                                value={formData.flightNumber || ''}
-                                onChange={(e) => updateField('flightNumber', e.target.value)}
-                                className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-green-500"
-                            />
-                        </div>
+
+                        {/* 2. SECOND SLOT LOGIC */}
+                        {isTicketMode ? (
+                            // If Ticket mode, show Ref No here to save space
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1">Ref No. (Optional)</label>
+                                <input 
+                                    type="text" placeholder="Flight/Train No."
+                                    value={formData.flightNumber || ''}
+                                    onChange={(e) => updateField('flightNumber', e.target.value)}
+                                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-green-500"
+                                />
+                            </div>
+                        ) : (
+                            // If Vehicle mode, show PAX COUNT here so you can do ($100 / 4 pax)
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1">
+                                    Total Passengers
+                                </label>
+                                <input 
+                                    type="number" min="1"
+                                    value={formData.paxCount}
+                                    onChange={(e) => updateField('paxCount', parseInt(e.target.value) || 1)}
+                                    className="w-full p-2.5 bg-yellow-50 border border-yellow-200 text-gray-800 rounded-lg text-sm font-bold outline-none focus:border-green-500"
+                                />
+                            </div>
+                        )}
+
+                        {/* 3. REF NO (Vehicle Mode Only - Moves to new line) */}
+                        {!isTicketMode && (
+                            <div className="col-span-2">
+                                <label className="block text-xs font-bold text-gray-500 mb-1">Ref No. (Optional)</label>
+                                <input 
+                                    type="text" placeholder="Flight/Train No."
+                                    value={formData.flightNumber || ''}
+                                    onChange={(e) => updateField('flightNumber', e.target.value)}
+                                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-green-500"
+                                />
+                            </div>
+                        )}
                     </div>
+                    {/* --- [END UPDATED INPUTS] --- */}
                 </div>
 
-                {/* Visual Spec Card */}
+                {/* Visual Spec Card - Only show for Vehicles (Unchanged) */}
+                {!isTicketMode && (
                 <div className="col-span-5">
                     <div className="bg-green-50 border border-green-200 rounded-xl p-4 h-full flex flex-col justify-between">
                         <div className="flex justify-between items-start">
@@ -837,18 +931,20 @@ export default function TransportForm({
                                 <span className="font-bold">{currentSpecs.guests} Pax</span>
                             </div>
                             <div className="flex items-center justify-between text-xs text-green-900 border-b border-green-200 pb-2">
-                                <span className="flex items-center gap-1"><Briefcase size={12}/> Check-in Bags</span>
+                                <span className="flex items-center gap-1"><Briefcase size={12}/> Luggage</span>
                                 <span className="font-bold">{currentSpecs.luggageCheck}</span>
                             </div>
-                            <div className="flex items-center justify-between text-xs text-green-900">
+                             <div className="flex items-center justify-between text-xs text-green-900">
                                 <span className="flex items-center gap-1"><Briefcase size={12}/> Carry-on</span>
                                 <span className="font-bold">{currentSpecs.luggageCarry}</span>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section>
-        )}
+                )}
+        </section>
+
+    
 
         {/* --- NEW SECTION: JOURNEY DESCRIPTION --- */}
         <section className="mt-6">
@@ -966,68 +1062,48 @@ export default function TransportForm({
         </section>
 
         {/* 4. COSTING & STATUS (UPDATED) */}
+   {/* 4. COSTING & STATUS (UPDATED) */}
         <section className="space-y-4 border-t border-gray-100 pt-4">
             
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-12 gap-6 items-center">
                 
-                {/* A. PACKAGING STATUS SELECTOR */}
+                {/* PACKAGING SELECTOR (Unchanged) */}
                 <div className="col-span-5">
                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Packaging Status</label>
                     <div className="grid grid-cols-3 gap-2">
-                        {/* Included */}
-                        <div 
-                            onClick={() => updateField('inclusionType', 'included')}
-                            className={`cursor-pointer border rounded-lg p-2 flex flex-col items-center justify-center gap-1 transition-all ${
-                                formData.inclusionType === 'included' 
-                                ? 'bg-green-50 border-green-500 shadow-sm' 
-                                : 'bg-white border-gray-200 hover:border-gray-300'
-                            }`}
-                        >
-                            <CheckCircle2 size={16} className={formData.inclusionType === 'included' ? "text-green-600" : "text-gray-400"} />
-                            <span className={`text-[10px] font-bold ${formData.inclusionType === 'included' ? "text-green-700" : "text-gray-500"}`}>Included</span>
-                        </div>
-
-                        {/* Excluded */}
-                        <div 
-                            onClick={() => updateField('inclusionType', 'excluded')}
-                            className={`cursor-pointer border rounded-lg p-2 flex flex-col items-center justify-center gap-1 transition-all ${
-                                formData.inclusionType === 'excluded' 
-                                ? 'bg-red-50 border-red-500 shadow-sm' 
-                                : 'bg-white border-gray-200 hover:border-gray-300'
-                            }`}
-                        >
-                            <Ban size={16} className={formData.inclusionType === 'excluded' ? "text-red-600" : "text-gray-400"} />
-                            <span className={`text-[10px] font-bold ${formData.inclusionType === 'excluded' ? "text-red-700" : "text-gray-500"}`}>Excluded</span>
-                        </div>
-
-                        {/* Optional */}
-                        <div 
-                            onClick={() => updateField('inclusionType', 'optional')}
-                            className={`cursor-pointer border rounded-lg p-2 flex flex-col items-center justify-center gap-1 transition-all ${
-                                formData.inclusionType === 'optional' 
-                                ? 'bg-blue-50 border-blue-500 shadow-sm' 
-                                : 'bg-white border-gray-200 hover:border-gray-300'
-                            }`}
-                        >
-                            <PlusSquare size={16} className={formData.inclusionType === 'optional' ? "text-blue-600" : "text-gray-400"} />
-                            <span className={`text-[10px] font-bold ${formData.inclusionType === 'optional' ? "text-blue-700" : "text-gray-500"}`}>Optional</span>
-                        </div>
+                        {['included', 'excluded', 'optional'].map(type => (
+                            <div 
+                                key={type}
+                                // @ts-ignore
+                                onClick={() => updateField('inclusionType', type)}
+                                className={`cursor-pointer border rounded-lg p-2 flex flex-col items-center justify-center gap-1 transition-all ${
+                                    formData.inclusionType === type 
+                                    ? (type === 'included' ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500')
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                }`}
+                            >
+                                <CheckCircle2 size={16} className={formData.inclusionType === type ? "text-green-600" : "text-gray-400"} />
+                                <span className="text-[10px] font-bold capitalize">{type}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* B. COSTING INPUTS (CONDITIONAL) */}
+                {/* COSTING INPUTS (UPDATED LAYOUT) */}
                 <div className="col-span-7 flex flex-col justify-end">
                     {formData.inclusionType === 'excluded' ? (
-                        <div className="h-full flex items-center p-3 bg-red-50 border border-red-100 rounded-lg gap-3">
+                         <div className="h-full flex items-center p-3 bg-red-50 border border-red-100 rounded-lg gap-3">
                             <Ban className="text-red-400 shrink-0" size={16} />
-                            <p className="text-xs text-red-600 leading-tight">
-                                This transport is <strong>excluded</strong>. <br/> No costs will be calculated.
-                            </p>
+                            <p className="text-xs text-red-600 leading-tight">Excluded from Total.</p>
                         </div>
                     ) : (
-                        <div className="flex gap-4 items-start justify-end ">
-                            <div className="text-right">
-                                <label className="block text-xs font-bold text-gray-500 mb-1">Vehicle Price</label>
+                        <div className="flex flex-col gap-3 w-full">
+                            
+                            {/* Row 1: Price Input */}
+                            <div className="flex justify-end items-center gap-3">
+                                <label className="text-xs font-bold text-gray-500">
+                                    {isTicketMode ? 'Price Per Ticket' : 'Price Per Vehicle'}
+                                </label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-2.5 text-gray-700 text-sm">$</span>
                                     <input 
@@ -1038,19 +1114,42 @@ export default function TransportForm({
                                     />
                                 </div>
                             </div>
-                            <div className="bg-green-50 px-4 py-2 rounded-lg border border-green-200 w-28">
-                                <div className="text-[10px] text-green-600 font-bold uppercase">Total Cost</div>
-                                <div className="text-xl font-bold text-green-800">
-                                    ${(formData.price * formData.vehicleCount).toLocaleString()}
-                                </div>
+
+                            {/* Row 2: The Logic Box (Total vs PP) */}
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex justify-between items-center px-4">
+                               <div>
+                                   <div className="text-[10px] font-bold text-green-600 uppercase">Total Transport Cost</div>
+                                   <div className="text-lg font-bold text-green-800">
+                                       ${(
+                                           isTicketMode 
+                                           ? (formData.price * (formData.paxCount || 1)) 
+                                           : (formData.price * (formData.vehicleCount || 1))
+                                       ).toLocaleString()}
+                                   </div>
+                               </div>
+                               
+                               {/* VISUAL SEPARATOR */}
+                               <div className="h-8 w-px bg-green-200 mx-4"></div>
+
+                               <div className="text-right">
+                                   <div className="text-[10px] font-bold text-green-600 uppercase">Per Person ({formData.paxCount || 1} Pax)</div>
+                                   <div className="text-sm font-bold text-green-800">
+                                       ${(
+                                           (isTicketMode 
+                                            ? (formData.price * (formData.paxCount || 1)) 
+                                            : (formData.price * (formData.vehicleCount || 1))) 
+                                           / (formData.paxCount || 1)
+                                       ).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                   </div>
+                               </div>
                             </div>
+
                         </div>
                     )}
                 </div>
 
             </div>
         </section>
-
       </div>
     </div>
   );

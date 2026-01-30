@@ -317,7 +317,7 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
         
         {/* Inner Sidebar (Tabs) */}
         {!isFullWidthPage && (
-          <div className="w-55 bg-[#1e293b]/95 backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
+          <div className="w-55 bg-gradient-to-br from-[#0f172a]  to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
             <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
               <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
               {/* {itineraryData.tripId ? itineraryData.tripId.slice(-6) : '****'} */}

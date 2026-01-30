@@ -2810,8 +2810,18 @@ import {
   Clock, User, Image as ImageIcon, Star, Briefcase, // Added Briefcase
   Phone, Mail // Added Phone/Mail icons
 } from 'lucide-react';
+
+
+// Import your custom hooks and types
+import { useItinerary } from '@/app/context/ItineraryContext'; // <--- Import here
+import { useSRM } from '@/app/context/SRMContext'; 
 import { Activity, TIME_SLOTS } from '../constants/daywiseConstants';
-import { useSRM } from '@/app/context/SRMContext'; // Ensure this path is correct
+
+
+
+
+
+
 
 interface ActivityFormProps {
   initialData?: Activity;
@@ -2831,8 +2841,17 @@ export default function ActivityForm({
   onCancel 
 }: ActivityFormProps) {
   
-  // --- SRM INTEGRATION ---
-  const { attractions, suppliers } = useSRM(); // Ensure 'suppliers' is destructured
+    // 3. DEFINE HOOKS HERE (INSIDE THE FUNCTION)
+  const { itineraryData } = useItinerary(); 
+  const { attractions, suppliers } = useSRM();
+
+  // 4. DEFINE VARIABLES BASED ON HOOKS
+  // Safety check: if itineraryData is undefined, default to 2
+  const globalPax = (itineraryData && typeof itineraryData.numberOfTravelers === 'number') 
+    ? itineraryData.numberOfTravelers 
+    : 2;
+
+
 
   // 1. Base Filter: Get all activities for the current City
   const cityAttractions = attractions.filter(a => 
@@ -2847,10 +2866,28 @@ export default function ActivityForm({
       (s.city.toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(s.city.toLowerCase()))
   );
 
-  // --- STATE ---
-  const [formData, setFormData] = useState<Activity>(initialData || {
+
+
+  // [FIND THIS SECTION AND REPLACE IT]
+
+// 5. NOW USE STATE
+const [formData, setFormData] = useState<Activity>(() => {
+  // Scenario A: Editing an Existing Item
+  if (initialData) {
+    return {
+      ...initialData,
+      // CRITICAL FIX: If editing an old item without paxCount, backfill it with globalPax
+      paxCount: (initialData.paxCount !== undefined && initialData.paxCount !== null) 
+                ? initialData.paxCount 
+                : globalPax
+    };
+  }
+  
+  // Scenario B: Creating a New Item
+  return {
     id: Date.now(),
     type: 'activity',
+    paxCount: globalPax, // Default for new item
     heading: '',
     description: '',
     slot: '',
@@ -2868,8 +2905,40 @@ export default function ActivityForm({
     dropoffDate: dayDate || '',
     dropoffTime: '11:00',
     activityType: 'attractions',
-    linkedSupplierId: '' // Ensure this field exists in your Activity type
-  });
+    linkedSupplierId: ''
+  };
+});
+
+
+//   // --- STATE ---
+//   const [formData, setFormData] = useState<Activity>(initialData || {
+
+
+    
+//     id: Date.now(),
+//     type: 'activity',
+//     // If editing, use saved pax. If new, default to Global Travelers (passed via props/context) or 1.
+    
+//     paxCount: globalPax,
+//     heading: '',
+//     description: '',
+//     slot: '',
+//     startTime: '',
+//     duration: '',
+//     inclusionType: 'included', 
+//     entranceFeePP: 0,
+//     activityFeePP: 0,
+//     guideType: 'guided',
+//     guideFee: 0,
+//     pickupLocation: '',
+//     pickupDate: dayDate || '',
+//     pickupTime: '09:00',
+//     dropoffLocation: '',
+//     dropoffDate: dayDate || '',
+//     dropoffTime: '11:00',
+//     activityType: 'attractions',
+//     linkedSupplierId: '' // Ensure this field exists in your Activity type
+//   });
 
   const [showSidebar, setShowSidebar] = useState(false);
 
@@ -3115,6 +3184,53 @@ export default function ActivityForm({
 
                 {formData.inclusionType !== 'excluded' && (
                     <div className="space-y-5 animate-in">
+
+                        <div className="grid grid-cols-12 gap-4 items-end">
+            
+            {/* 1. Pax Input */}
+            <div className="col-span-4">
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                    No. of Pax (Participating)
+                </label>
+                <input 
+                    type="number" 
+                    min="1"
+                    value={formData.paxCount} 
+                    onChange={(e) => handleChange('paxCount', parseInt(e.target.value) || 1)} 
+                    className="w-full p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm font-bold text-gray-800 focus:ring-2 focus:ring-yellow-400 outline-none" 
+                />
+            </div>
+
+            {/* 2. Dynamic Cost Calculation Box (The "Stay Part" Style) */}
+            <div className="col-span-8">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-2 flex justify-between items-center px-4">
+                   <div>
+                       <div className="text-[10px] font-bold text-green-600 uppercase">Total Activity Cost</div>
+                       <div className="text-lg font-bold text-green-800">
+                           ${(
+                               ((formData.entranceFeePP || 0) + (formData.activityFeePP || 0)) * (formData.paxCount || 1) + 
+                               (formData.guideType === 'guided' ? (formData.guideFee || 0) : 0)
+                           ).toLocaleString()}
+                       </div>
+                   </div>
+                   <div className="text-right">
+                       <div className="text-[10px] font-bold text-green-600 uppercase">Per Person</div>
+                       <div className="text-sm font-bold text-green-800">
+                           ${(
+                               (((formData.entranceFeePP || 0) + (formData.activityFeePP || 0)) * (formData.paxCount || 1) + 
+                               (formData.guideType === 'guided' ? (formData.guideFee || 0) : 0)) / (formData.paxCount || 1)
+                           ).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                       </div>
+                   </div>
+                </div>
+            </div>
+        </div>
+        
+        <p className="text-[10px] text-gray-400 mt-1 mb-2">
+           *Entrance & Activity fees are multiplied by Pax. Guide Fee is added as a fixed total.
+        </p>
+        {/* --- [NEW CODE END] --- */}
+        
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-medium text-gray-600 mb-1">Entrance Fee (PP)</label>

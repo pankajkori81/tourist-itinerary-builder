@@ -51,7 +51,6 @@ export interface Activity {
   type: 'activity';
   heading: string;
   description: string;
-  
   // Timing
   slot: string; // Morning, Afternoon, etc.
   startTime?: string;
@@ -77,6 +76,7 @@ export interface Activity {
 
   // Defaults
   activityType: string;
+  paxCount: number;
   linkedSupplierId?: string;
 }
 
@@ -139,6 +139,11 @@ export interface Transport {
   // 2. Vehicle Details
   vehicleType: string;
   vehicleCount: number; // New Multiplier
+
+  // --- [THIS IS THE REQUIRED CHANGE] ---
+  paxCount: number; // Required for Flight/Rail/Ferry costing
+  // ------------------------------------
+
   flightNumber?: string; // Optional for Flight/Train
   // This is where "From Barcelona, journey to Montserrat..." goes.
   serviceDescription?: string;

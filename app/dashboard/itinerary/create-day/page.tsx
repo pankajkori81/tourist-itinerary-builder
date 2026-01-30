@@ -937,11 +937,29 @@ export default function DaywisePage() {
   const openAdd = (mode: ViewMode) => { setEditingItem(null); setViewMode(mode); };
   const openEdit = (item: any, mode: ViewMode) => { setEditingItem(item); setViewMode(mode); };
 
+  // const calculateTotalActivityCost = (item: any) => {
+  //   if (item.inclusionType === 'excluded') return 0;
+  //   const entrance = item.entranceFeePP || 0;
+  //   const activity = item.activityFeePP || 0;
+  //   const guide = (item.guideType === 'guided' ? item.guideFee : 0) || 0;
+  //   return entrance + activity + guide;
+  // };
+
+
+  // --- [UPDATED FUNCTION] ---
   const calculateTotalActivityCost = (item: any) => {
     if (item.inclusionType === 'excluded') return 0;
-    const entrance = item.entranceFeePP || 0;
-    const activity = item.activityFeePP || 0;
+    
+    // 1. Get Pax (Fallback to 1 to prevent zero multiplication error)
+    const pax = item.paxCount || 1; 
+    
+    // 2. Variable Costs (Multiplied by Pax)
+    const entrance = (item.entranceFeePP || 0) * pax;
+    const activity = (item.activityFeePP || 0) * pax;
+    
+    // 3. Fixed Costs (Guide Fee is usually per group/tour, not per person)
     const guide = (item.guideType === 'guided' ? item.guideFee : 0) || 0;
+    
     return entrance + activity + guide;
   };
 
@@ -1092,13 +1110,31 @@ export default function DaywisePage() {
                                   </div>
                                </div>
 
-                               <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                               {/* <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
                                   <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
                                    <DollarSign size={10} /> Per Person Fee
                                   </div>
                                   <div className={`text-sm font-bold ${item.inclusionType === 'excluded' ? 'text-red-500' : 'text-green-700'}`}>
                                     {item.inclusionType === 'excluded' ? 'Excluded' : `$${calculateTotalActivityCost(item).toLocaleString()}`}
                                   </div>
+                               </div> */}
+
+                               {/* --- [UPDATED ACTIVITY COST BLOCK] --- */}
+                               <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                  <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
+                                   <DollarSign size={10} /> Total Cost
+                                  </div>
+                                  <div className={`text-sm font-bold ${item.inclusionType === 'excluded' ? 'text-red-500' : 'text-green-700'}`}>
+                                    {item.inclusionType === 'excluded' 
+                                        ? 'Excluded' 
+                                        : `$${calculateTotalActivityCost(item).toLocaleString()}`
+                                    }
+                                  </div>
+                                  {item.inclusionType !== 'excluded' && (
+                                      <div className="text-[9px] text-gray-400 mt-0.5 font-medium">
+                                          For {item.paxCount || 1} Pax
+                                      </div>
+                                  )}
                                </div>
                             </div>
                          </div>
@@ -1288,11 +1324,36 @@ export default function DaywisePage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className={`col-span-3 rounded-lg border flex flex-col justify-center items-end pr-3 ${item.inclusionType === 'excluded' ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+                                    {/* <div className={`col-span-3 rounded-lg border flex flex-col justify-center items-end pr-3 ${item.inclusionType === 'excluded' ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
                                         <div className={`text-[10px] uppercase font-bold flex items-center gap-1 ${item.inclusionType === 'excluded' ? 'text-red-600' : 'text-green-600'}`}><DollarSign size={10} /> Total Cost</div>
                                         <div className={`text-sm font-bold ${item.inclusionType === 'excluded' ? 'text-red-700' : 'text-green-700'}`}>
                                             {item.inclusionType === 'excluded' ? 'Excluded' : `$${((item.price || 0) * (item.vehicleCount || 1)).toLocaleString()}`}
                                         </div>
+                                    </div> */}
+
+                                    {/* --- [UPDATED TRANSPORT COST BLOCK] --- */}
+                                    <div className={`col-span-3 rounded-lg border flex flex-col justify-center items-end pr-3 ${item.inclusionType === 'excluded' ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+                                        <div className={`text-[10px] uppercase font-bold flex items-center gap-1 ${item.inclusionType === 'excluded' ? 'text-red-600' : 'text-green-600'}`}>
+                                            <DollarSign size={10} /> Total Cost
+                                        </div>
+                                        <div className={`text-sm font-bold ${item.inclusionType === 'excluded' ? 'text-red-700' : 'text-green-700'}`}>
+                                            {item.inclusionType === 'excluded' ? 'Excluded' : (
+                                                // LOGIC: If Ticket Mode -> Price * Pax. If Vehicle Mode -> Price * Vehicles
+                                                ['flight', 'rail', 'ferry'].includes(item.mode)
+                                                ? `$${((item.price || 0) * (item.paxCount || 1)).toLocaleString()}`
+                                                : `$${((item.price || 0) * (item.vehicleCount || 1)).toLocaleString()}`
+                                            )}
+                                        </div>
+                                        
+                                        {/* Helper Text to show what was multiplied */}
+                                        {item.inclusionType !== 'excluded' && (
+                                            <div className="text-[9px] opacity-70 mt-0.5">
+                                                {['flight', 'rail', 'ferry'].includes(item.mode)
+                                                    ? `(${item.paxCount || 1} Tix)`
+                                                    : `(${item.vehicleCount || 1} Veh)`
+                                                }
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

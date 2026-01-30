@@ -1423,19 +1423,7 @@ return (
                                                     </div>
                                                 )}
 
-                                                {/* {item.category === 'Transport' && (
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            {item.vehicleType}
-                                                            <span style={{ backgroundColor: '#f0fdf4', color: '#292d33ff', fontSize: '10px', textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', fontWeight: 'normal' }}>{item.subType}</span>
-                                                        </div>
-                                                        <div style={{ marginTop: '4px', fontSize: '12px', color: '#292d33ff', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                                            <div>Pickup: {item.pickupLocation} </div>
-                                                            <div>{item.pickupTime ? `Start Time: ${item.pickupTime}` : ''}</div>
-                                                            <div>{item.subType === 'transfer' ? `Drop: ${item.dropoffLocation}` : `Duration: ${item.duration}`}</div>
-                                                        </div>
-                                                    </div>
-                                                )} */}
+                                        
 
 
 
@@ -1515,7 +1503,7 @@ return (
                                                              {item.mealType}: {item.restaurantName}
                                                         </div>
                                                         <div style={{ fontSize: '12px', color: '#292d33ff', marginTop: '4px' }}>
-                                                            {item.cuisine} | {item.menuType}
+                                                            {item.cuisine}  {item.menuType}
                                                         </div>
                                                     </div>
                                                 )}
