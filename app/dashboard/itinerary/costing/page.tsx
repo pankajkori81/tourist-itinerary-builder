@@ -1627,8 +1627,10 @@ import { useRouter } from 'next/navigation';
 import { 
   Calculator, Download, FileText, 
   ArrowLeft, Calendar, Sparkles, User, Printer, Save, 
-  Plus, Trash2, Check, DollarSign, Briefcase
+  Plus, Trash2, Check, DollarSign, Briefcase,
+  CheckCircle2
 } from 'lucide-react';
+import { useUser } from '@/app/context/UserContext';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable'; // <--- THIS WAS MISSING OR BROKEN
@@ -1637,6 +1639,7 @@ import { useSRM } from '@/app/context/SRMContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { DayPlan } from '../create-day/constants/daywiseConstants';
 import { FixedDeparture } from '@/utils/itineraryStorage';
+
 
 // --- HELPERS ---
 const isItemIncluded = (status?: string) => !status || status.toLowerCase() === 'included';
@@ -1656,7 +1659,8 @@ const getShareLabel = (pax: number) => {
 
 export default function CostingPage() {
   const router = useRouter();
-  const { itineraryData, updateItineraryData, saveItinerary } = useItinerary();
+  const { user } = useUser();
+  const { itineraryData, updateItineraryData, saveItinerary , approveCosting } = useItinerary();
   const { suppliers } = useSRM();
   
   const rawDayPlans = (itineraryData?.dayWiseActivities || []) as DayPlan[];
@@ -1668,6 +1672,23 @@ export default function CostingPage() {
   const [roundingMode, setRoundingMode] = useState<string>('none'); 
   const [fixedDepartures, setFixedDepartures] = useState<FixedDeparture[]>([]);
   
+  // SECURITY GUARD
+  useEffect(() => {
+    if (user?.role !== 'admin') {
+       alert("Access Denied: Only Admins can access Costing.");
+       router.push('/dashboard/itinerary/create-day'); // Send back
+    }
+  }, [user, router]);
+
+  // If checking or not admin, show nothing or loading
+  if (!user || user.role !== 'admin') {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-gray-500">
+           <p className="mb-2">Verifying Permissions...</p>
+        </div>
+      );
+  }
+
   // SYNC STATE
   useEffect(() => {
     if (itineraryData.selectedCurrency && itineraryData.selectedCurrency !== currency) {
@@ -2072,6 +2093,15 @@ export default function CostingPage() {
         </div>
         <div className="flex gap-3">
              <button onClick={() => router.push('/dashboard/itinerary/create-day')} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg flex items-center gap-2"><ArrowLeft size={16} /> Edit</button>
+        
+        {user?.role === 'admin' && itineraryData.status === 'pending_costing' && (
+         <button 
+            onClick={approveCosting} 
+            className="px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-2 shadow-sm animate-pulse"
+         >
+            <CheckCircle2 size={16} /> Approve & Release
+         </button>
+     )}
         </div>
       </header>
 

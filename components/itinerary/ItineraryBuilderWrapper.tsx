@@ -206,11 +206,218 @@
 
 
 
+// "use client";
+
+// import React, { useState, useEffect } from 'react';
+// import { useRouter, usePathname } from 'next/navigation';
+// import { Loader2, Check, AlertCircle } from 'lucide-react';
+// import { useItinerary } from '@/app/context/ItineraryContext';
+
+// export default function ItineraryBuilderWrapper({ children }: { children: React.ReactNode }) {
+//   const router = useRouter();
+//   const pathname = usePathname();
+  
+//   const isLibraryPage = pathname?.includes('/library');
+//   const isPreviewDetailsPage = pathname ? /\/preview\/.+/.test(pathname) : false;
+//   const isFullWidthPage = isLibraryPage || isPreviewDetailsPage;
+
+//   const { 
+//     itineraryData, 
+//     saveItinerary, 
+//     isSaving, 
+//     saveError 
+//   } = useItinerary();
+
+//   const [activeTab, setActiveTab] = useState('INTRO');
+//   const [showErrorPopup, setShowErrorPopup] = useState(false);
+//   const [errorMessage, setErrorMessage] = useState('');
+
+//   useEffect(() => {
+//     if (pathname?.includes('/routing')) setActiveTab('ROUTING');
+//     else if (pathname?.includes('/create-day')) setActiveTab('CREATE DAY');
+//     else if (pathname?.includes('/preview') && !isPreviewDetailsPage) setActiveTab('PREVIEW');
+//     else setActiveTab('INTRO');
+//   }, [pathname, isPreviewDetailsPage]);
+
+//   // Error handling
+//   useEffect(() => {
+//     if (saveError) {
+//       setErrorMessage(saveError);
+//       setShowErrorPopup(true);
+//     }
+//   }, [saveError]);
+
+//   const tabs = [
+//     { id: 'INTRO', label: 'INTRO', path: '/dashboard/itinerary/create' },
+//     { id: 'ROUTING', label: 'ROUTING', path: '/dashboard/itinerary/routing' },
+//     { id: 'CREATE DAY', label: 'CREATE DAY', path: '/dashboard/itinerary/create-day' },
+//     { id: 'COSTING', label: 'COSTING', path: '/dashboard/itinerary/costing' },
+//     { id: 'PREVIEW', label: 'PREVIEW', path: '/dashboard/itinerary/preview' },
+//   ];
+
+//   const handleTabChange = (path: string) => router.push(path);
+//   const handleQuickSave = async () => await saveItinerary('quick');
+//   const handleSaveAndExit = async () => {
+//     const success = await saveItinerary('exit');
+//     if (success) setTimeout(() => router.push('/dashboard/itinerary/library'), 1000);
+//   };
+//   const libraryPage = async () => router.push('/dashboard/itinerary/library');
+
+//   return (
+//     // FIX: Use h-full to fill the space provided by dashboard/layout.tsx
+//     <div className="h-full relative flex flex-col bg-gray-50">
+      
+//       {/* Background Styling */}
+//       <div className="absolute inset-0 z-0 bg-slate-900"/>
+//       <div 
+//         className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+//         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1600')", backgroundSize: 'cover' }}
+//       />
+
+//       {/* --- 1. BUILDER HEADER (No Logo, Just Title + Actions) --- */}
+//       {!isFullWidthPage && (
+//         <div className="relative z-10 bg-[#0f172a]/90 backdrop-blur-md border-b border-gray-700 px-4 py-3 flex items-center justify-between shrink-0 h-16">
+          
+//           {/* LEFT: Builder Title (Logo removed) */}
+//           <div className="flex items-center gap-4">
+//              <h2 className="text-white font-bold text-lg tracking-wide">
+//                Itinerary <span className="text-blue-400">Builder</span>
+//              </h2>
+             
+//              {/* Library Button moved near title for better UX */}
+//              <button onClick={libraryPage} className="hidden ml-11 md:flex px-7 py-2 bg-blue-600 text-blue-100 hover:bg-blue-600/40 rounded text-sm font-medium transition-all border border-blue-500/30">
+//                 Library
+//              </button>
+//           </div>
+          
+//           {/* RIGHT: Action Buttons */}
+//           <div className="flex items-center gap-3">
+//             <button 
+//               onClick={handleQuickSave} 
+//               disabled={isSaving} 
+//               className="px-4 py-2 bg-blue-600 text-blue-100 hover:bg-blue-500 rounded-sm text-sm font-medium transition-all flex items-center gap-2 shadow-sm"
+//             >
+//               {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
+//               {isSaving ? 'Saving...' : 'Quick Save'}
+//             </button>
+            
+//             <button 
+//               onClick={handleSaveAndExit} 
+//               disabled={isSaving}
+//               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-sm text-sm font-medium transition-all shadow-sm"
+//             >
+//               Save & Exit
+//             </button>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* --- 2. BUILDER CONTENT AREA --- */}
+//       <div className="relative z-10 flex flex-1 overflow-hidden">
+        
+//         {/* Inner Sidebar (Tabs) */}
+//         {!isFullWidthPage && (
+//           <div className="w-55 bg-gradient-to-br from-[#0f172a]  to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
+//             <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
+//               <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
+//               {/* {itineraryData.tripId ? itineraryData.tripId.slice(-6) : '****'} */}
+//               <p className="text-blue-300 text-xs font-mono">Ref No. ####### </p>
+//             </div>
+
+//             <nav className="space-y-1">
+//               {tabs.map((tab) => (
+//                 <button
+//                   key={tab.id}
+//                   onClick={() => handleTabChange(tab.path)}
+//                   className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between group ${
+//                     activeTab === tab.id
+//                       ? 'bg-blue-600 text-white shadow-lg'
+//                       : 'text-gray-400 hover:bg-white/5 hover:text-white'
+//                   }`}
+//                 >
+//                   {tab.label}
+//                   {activeTab === tab.id && <div className="w-1.5 h-1.5 rounded-full bg-white"/>}
+//                 </button>
+//               ))}
+//             </nav>
+//           </div>
+//         )}
+
+//         {/* Dynamic Page Content */}
+//         <main className={`flex-1 overflow-y-auto bg-gray-50/5 relative ${!isFullWidthPage ? 'p-0' : ''}`}>
+//           {children}
+//         </main>
+//       </div>
+
+//       {/* Error Popup */}
+//       {showErrorPopup && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+//           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
+//             <div className="flex items-start gap-3">
+//               <AlertCircle className="text-red-500 w-6 h-6 shrink-0"/>
+//               <div>
+//                 <h3 className="font-bold text-gray-900">Error</h3>
+//                 <p className="text-sm text-gray-600 mt-1">{errorMessage}</p>
+//               </div>
+//             </div>
+//             <button onClick={() => setShowErrorPopup(false)} className="mt-4 w-full py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">Close</button>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// } 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Loader2, Check, AlertCircle } from 'lucide-react';
+import { Loader2, Check, AlertCircle, Lock, CheckCircle2 , Bell } from 'lucide-react'; // Added Icons
+
 import { useItinerary } from '@/app/context/ItineraryContext';
 
 export default function ItineraryBuilderWrapper({ children }: { children: React.ReactNode }) {
@@ -225,16 +432,27 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
     itineraryData, 
     saveItinerary, 
     isSaving, 
-    saveError 
+    saveError ,
+    toastMessage,
   } = useItinerary();
 
   const [activeTab, setActiveTab] = useState('INTRO');
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Tab Definitions mapped to Status Keys
+  const tabs = [
+    { id: 'INTRO', label: 'INTRO', path: '/dashboard/itinerary/create', statusKey: 'intro' },
+    { id: 'ROUTING', label: 'ROUTING', path: '/dashboard/itinerary/routing', statusKey: 'routing' },
+    { id: 'CREATE DAY', label: 'CREATE DAY', path: '/dashboard/itinerary/create-day', statusKey: 'createDay' },
+    { id: 'COSTING', label: 'COSTING', path: '/dashboard/itinerary/costing', statusKey: 'costing' },
+    { id: 'PREVIEW', label: 'PREVIEW', path: '/dashboard/itinerary/preview', statusKey: 'preview' },
+  ];
+
   useEffect(() => {
     if (pathname?.includes('/routing')) setActiveTab('ROUTING');
     else if (pathname?.includes('/create-day')) setActiveTab('CREATE DAY');
+    else if (pathname?.includes('/costing')) setActiveTab('COSTING');
     else if (pathname?.includes('/preview') && !isPreviewDetailsPage) setActiveTab('PREVIEW');
     else setActiveTab('INTRO');
   }, [pathname, isPreviewDetailsPage]);
@@ -247,15 +465,19 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
     }
   }, [saveError]);
 
-  const tabs = [
-    { id: 'INTRO', label: 'INTRO', path: '/dashboard/itinerary/create' },
-    { id: 'ROUTING', label: 'ROUTING', path: '/dashboard/itinerary/routing' },
-    { id: 'CREATE DAY', label: 'CREATE DAY', path: '/dashboard/itinerary/create-day' },
-    { id: 'COSTING', label: 'COSTING', path: '/dashboard/itinerary/costing' },
-    { id: 'PREVIEW', label: 'PREVIEW', path: '/dashboard/itinerary/preview' },
-  ];
+  const handleTabChange = (tab: any) => {
+    // LOCK LOGIC: Check Context status
+    // @ts-ignore
+    const status = itineraryData.stepperStatus?.[tab.statusKey];
+    
+    // Always allow Intro. For others, check if unlocked or completed.
+    if (tab.id === 'INTRO' || status === 'unlocked' || status === 'completed') {
+        router.push(tab.path);
+    } else {
+        alert("Please complete the previous step to unlock this section.");
+    }
+  };
 
-  const handleTabChange = (path: string) => router.push(path);
   const handleQuickSave = async () => await saveItinerary('quick');
   const handleSaveAndExit = async () => {
     const success = await saveItinerary('exit');
@@ -264,7 +486,6 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
   const libraryPage = async () => router.push('/dashboard/itinerary/library');
 
   return (
-    // FIX: Use h-full to fill the space provided by dashboard/layout.tsx
     <div className="h-full relative flex flex-col bg-gray-50">
       
       {/* Background Styling */}
@@ -274,23 +495,17 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1600')", backgroundSize: 'cover' }}
       />
 
-      {/* --- 1. BUILDER HEADER (No Logo, Just Title + Actions) --- */}
       {!isFullWidthPage && (
         <div className="relative z-10 bg-[#0f172a]/90 backdrop-blur-md border-b border-gray-700 px-4 py-3 flex items-center justify-between shrink-0 h-16">
-          
-          {/* LEFT: Builder Title (Logo removed) */}
           <div className="flex items-center gap-4">
              <h2 className="text-white font-bold text-lg tracking-wide">
                Itinerary <span className="text-blue-400">Builder</span>
              </h2>
-             
-             {/* Library Button moved near title for better UX */}
              <button onClick={libraryPage} className="hidden ml-11 md:flex px-7 py-2 bg-blue-600 text-blue-100 hover:bg-blue-600/40 rounded text-sm font-medium transition-all border border-blue-500/30">
                 Library
              </button>
           </div>
           
-          {/* RIGHT: Action Buttons */}
           <div className="flex items-center gap-3">
             <button 
               onClick={handleQuickSave} 
@@ -312,33 +527,45 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
         </div>
       )}
 
-      {/* --- 2. BUILDER CONTENT AREA --- */}
       <div className="relative z-10 flex flex-1 overflow-hidden">
         
-        {/* Inner Sidebar (Tabs) */}
+        {/* Inner Sidebar (Tabs) with Locking Logic */}
         {!isFullWidthPage && (
           <div className="w-55 bg-gradient-to-br from-[#0f172a]  to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
             <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
               <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
-              {/* {itineraryData.tripId ? itineraryData.tripId.slice(-6) : '****'} */}
               <p className="text-blue-300 text-xs font-mono">Ref No. ####### </p>
             </div>
 
             <nav className="space-y-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.path)}
-                  className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between group ${
-                    activeTab === tab.id
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  {tab.label}
-                  {activeTab === tab.id && <div className="w-1.5 h-1.5 rounded-full bg-white"/>}
-                </button>
-              ))}
+              {tabs.map((tab) => {
+                // @ts-ignore
+                const status = itineraryData.stepperStatus?.[tab.statusKey];
+                const isLocked = tab.id !== 'INTRO' && status !== 'unlocked' && status !== 'completed';
+                const isActive = activeTab === tab.id;
+
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab)}
+                    disabled={isLocked}
+                    className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between group 
+                    ${isActive 
+                        ? 'bg-blue-600 text-white shadow-lg' 
+                        : isLocked 
+                            ? 'text-gray-500 cursor-not-allowed opacity-60' 
+                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                        {isLocked && <Lock size={12} />}
+                        {status === 'completed' && !isLocked && <CheckCircle2 size={12} className="text-green-400" />}
+                        {tab.label}
+                    </div>
+                    {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white"/>}
+                  </button>
+                );
+              })}
             </nav>
           </div>
         )}
@@ -349,7 +576,7 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
         </main>
       </div>
 
-      {/* Error Popup */}
+      {/* Error Popup Code (Unchanged) */}
       {showErrorPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
@@ -361,6 +588,27 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
               </div>
             </div>
             <button onClick={() => setShowErrorPopup(false)} className="mt-4 w-full py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">Close</button>
+          </div>
+        </div>
+      )}
+
+
+      {toastMessage && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-5 fade-in duration-300">
+          <div className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-2xl border ${
+            toastMessage.type === 'success' 
+              ? 'bg-white border-green-500 text-gray-800' 
+              : 'bg-red-50 border-red-500 text-red-800'
+          }`}>
+            <div className={`p-2 rounded-full ${toastMessage.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+               {toastMessage.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+            </div>
+            <div>
+              <h4 className={`font-bold text-sm ${toastMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
+                {toastMessage.type === 'success' ? 'Success' : 'Error'}
+              </h4>
+              <p className="text-xs text-gray-600 font-medium">{toastMessage.message}</p>
+            </div>
           </div>
         </div>
       )}

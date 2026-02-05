@@ -221,11 +221,14 @@ export interface DayPlan {
 
 
 export const TIME_SLOTS = [
-  { value: 'Early Morning', label: 'Early Morning', timeRange: '(05:00 - 08:00)' }, // <--- Added this
+   
   { value: 'Morning', label: 'Morning', timeRange: '(08:00 - 11:00)' },
   { value: 'Afternoon', label: 'Afternoon', timeRange: '(13:00 - 15:00)' },
   { value: 'Evening', label: 'Evening', timeRange: '(16:00 - 18:00)' },
   { value: 'Full Day', label: 'Full Day', timeRange: '(09:00 - 17:00)' },
+  { value: 'Day Excursion', label: 'Day Excursion', timeRange: '(09:00 - 22:00)' },
+
+  
 ];
 
 // --- CONSTANTS ---

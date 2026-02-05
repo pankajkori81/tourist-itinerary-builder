@@ -548,7 +548,8 @@ export interface StoredItineraryData {
   lastSaved?: string;
   createdAt?: string;
   updatedAt?: string;
-  status?: 'draft' | 'active' | 'archived';
+
+  status?: 'draft' | 'pending_costing' | 'approved' | 'active' | 'archived';
 }
 
 // --- 4. DATE HELPER (CRITICAL FIX) ---
