@@ -37,17 +37,19 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+
   // 3. RBAC: Role-Based Access Control (Admin Routes)
   if (token && isAdminRoute) {
     try {
       const { payload } = await jwtVerify(token, SECRET);
       
-      // Strict Check: Must explicitly be 'admin'
       const role = payload.role as string;
       
-      if (role !== 'admin') {
-         console.warn(`[Security] User ${payload.userId} (Role: ${role}) tried to access Admin Route.`);
-         // Employee trying to access Costing -> Send back to safe zone
+      // 👇 FIX: We now allow BOTH 'admin' and 'employee' to access the Costing route!
+      // (The Costing page itself will handle showing them different views)
+      if (role !== 'admin' && role !== 'employee' && role !== 'agent' ) {
+         console.warn(`[Security] User ${payload.userId} (Role: ${role}) tried to access Restricted Route.`);
+         // Someone unauthorized trying to access Costing -> Send back to safe zone
          return NextResponse.redirect(new URL(UNAUTHORIZED_REDIRECT, req.url));
       }
       

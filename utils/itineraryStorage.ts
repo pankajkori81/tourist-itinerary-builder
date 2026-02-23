@@ -401,10 +401,10 @@ export interface RoutingData {
 
 export interface FixedDeparture {
   id: string;
-  date: string;       
-  label: string;      
+  month: string;       // 👈 REPLACED date with month
+  occupancy: string;   // 👈 REPLACED label with occupancy
   price: number;      
-  status: 'Open' | 'Filling Fast' | 'Sold Out';
+  status: 'Available' | 'Limited Seat' | 'Sold';
   isSelected: boolean; 
 }
 
@@ -493,6 +493,12 @@ export interface OperationsData {
 }
 
 
+export interface PricingMatrix {
+  [month: string]: { 
+    [itemId: string]: number // Stores 'Net Total' for every item by ID
+  }
+}
+
 
 
 // --- 2. STORAGE CONSTANTS ---
@@ -532,6 +538,8 @@ export interface StoredItineraryData {
   bookingStatus?: 'quote' | 'confirmed' | 'cancelled' | 'completed'; 
   leadGuestName?: string; 
   finalSellPrice?: number; 
+
+  assignedAgentId?: string;
   // -----------------------------------
 
   operations?: OperationsData; // <--- NEW FIELD
@@ -549,7 +557,17 @@ export interface StoredItineraryData {
   createdAt?: string;
   updatedAt?: string;
 
-  status?: 'draft' | 'pending_costing' | 'approved' | 'active' | 'archived';
+  status?: 'draft' | 'pending_costing' | 'approved' | 'reedit_requested' | 'active' | 'archived';
+
+  adminComment?: string;
+  reEditReason?: string;
+
+  // 👇 ADD THIS NEW FIELD
+  pricingMatrix?: PricingMatrix;
+
+  // 👇 ADD THESE
+  seasonStartDate?: string; // e.g. "2026-01-01"
+  seasonEndDate?: string;
 }
 
 // --- 4. DATE HELPER (CRITICAL FIX) ---
@@ -683,7 +701,34 @@ export const deleteFromLibrary = (id: string): boolean => {
   } catch (error) { return false; }
 };
 
-export const cloneItinerary = (id: string, asQuote = false): StoredItineraryData | null => {
+// export const cloneItinerary = (id: string, asQuote = false): StoredItineraryData | null => {
+//   try {
+//     const library = getLibrary();
+//     const original = library.find(item => item.id === id);
+//     if (!original) return null;
+    
+//     const cloned: StoredItineraryData = {
+//       ...original,
+//       id: generateId(),
+//       tripId: `COPY-${Date.now().toString().slice(-6)}`,
+//       tripName: `${original.tripName} (Copy)`,
+//       isMasterItinerary: asQuote ? false : original.isMasterItinerary, // If asQuote is true, it becomes a regular trip
+//       bookingStatus: 'quote', // Always starts as quote
+//       createdAt: new Date().toISOString(),
+//       updatedAt: new Date().toISOString(),
+//       status: 'active',
+//       selectedCurrency: original.selectedCurrency || 'USD'
+//     };
+    
+//     library.push(cloned);
+//     localStorage.setItem(LIBRARY_KEY, JSON.stringify(library));
+//     return cloned;
+//   } catch (error) { return null; }
+// };
+
+
+// 👇 UPDATED: Added agentId as the 3rd parameter
+export const cloneItinerary = (id: string, asQuote = false, agentId?: string): StoredItineraryData | null => {
   try {
     const library = getLibrary();
     const original = library.find(item => item.id === id);
@@ -694,12 +739,13 @@ export const cloneItinerary = (id: string, asQuote = false): StoredItineraryData
       id: generateId(),
       tripId: `COPY-${Date.now().toString().slice(-6)}`,
       tripName: `${original.tripName} (Copy)`,
-      isMasterItinerary: asQuote ? false : original.isMasterItinerary, // If asQuote is true, it becomes a regular trip
-      bookingStatus: 'quote', // Always starts as quote
+      isMasterItinerary: asQuote ? false : original.isMasterItinerary, 
+      bookingStatus: 'quote', 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: 'active',
-      selectedCurrency: original.selectedCurrency || 'USD'
+      selectedCurrency: original.selectedCurrency || 'USD',
+      assignedAgentId: agentId // 👈 NEW: Stamp the owner's ID!
     };
     
     library.push(cloned);

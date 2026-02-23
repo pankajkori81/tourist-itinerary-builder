@@ -801,7 +801,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Users, ArrowRight } from "lucide-react"; 
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useItinerary } from "@/app/context/ItineraryContext";
 
 
@@ -828,9 +829,31 @@ const DESTINATION_COUNTRIES: Record<string, string[]> = {
 
 export default function CreateItineraryPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   // const { itineraryData, updateItineraryData } = useItinerary();
   const { itineraryData, updateItineraryData, completeStep } = useItinerary(); // Destructure completeStep
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+
+
+  // 👈 NEW LOGIC: Pre-fill data from CRM Magic Button
+  useEffect(() => {
+     const clientName = searchParams.get('clientName');
+     const pax = searchParams.get('pax');
+     const dest = searchParams.get('dest');
+
+     // Only run if there are params AND we haven't already filled it 
+     // (prevents overwriting if they reload the page)
+     if ((clientName || pax || dest) && !itineraryData.tripName) {
+         updateItineraryData({
+             tripName: clientName ? `${clientName}'s Trip` : '',
+             creatingFor: 'guest',
+             leadGuestName: clientName || '', // Saves to DB for later
+             numberOfTravelers: pax ? parseInt(pax) : 2,
+             selectedCountries: dest ? [dest] : []
+         });
+     }
+  }, [searchParams]);
+
 
   // --- HANDLERS ---
 

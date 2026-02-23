@@ -1876,23 +1876,42 @@ import {
 // --- 1. TYPE DEFINITIONS ---
 
 // Workflow Status
-export type ItineraryStatus = 'draft' | 'pending_costing' | 'approved' | 'active' | 'archived';
+// app/context/ItineraryContext.tsx
 
+export type ItineraryStatus = 'draft' | 'pending_costing' | 'approved' | 'reedit_requested' | 'active' | 'archived';
 // Stepper Locks
 export interface StepperStatus {
   intro: 'completed' | 'incomplete';
   routing: 'locked' | 'unlocked' | 'completed';
   createDay: 'locked' | 'unlocked' | 'completed';
+  review: 'locked' | 'unlocked' | 'completed';
   costing: 'locked' | 'unlocked' | 'completed';
   preview: 'locked' | 'unlocked' | 'completed';
 }
 
+
+// 👇 NEW: Audit Log Interfaces
+export interface AuditLogEntry {
+  version: string;
+  action: 'ADD' | 'EDIT' | 'DELETE' | 'STATUS';
+  module: string;
+  details: string;
+  userRole: string;
+  timestamp: string;
+}
+
 // Main Data Interface
 export interface ItineraryData extends Omit<StoredItineraryData, 'status'> {
+  companyMarkup: number;
   tripCategory: string;
   tripExperience: string;
   stepperStatus: StepperStatus;
   status: ItineraryStatus; // Explicitly enforce our status type
+  // 👇 NEW FIELDS ADDED HERE
+  currentVersion: string; 
+  auditLog: AuditLogEntry[];
+
+  
 }
 
 // Context Interface
@@ -1909,6 +1928,15 @@ interface ItineraryContextType {
   completeStep: (step: keyof StepperStatus) => void; 
   submitForCosting: () => void;
   approveCosting: () => void;
+
+  // 👇 ADD THIS NEW FUNCTION DEFINITION
+  rejectCosting: (reason: string) => void;
+
+  revertToPending: () => void;
+
+
+  requestReEdit: (reason: string) => void; // 👈 NEW (Employee)
+  allowReEdit: () => void;
   
   // Toast Notification
   toastMessage: { message: string, type: 'success' | 'error' } | null;
@@ -1916,6 +1944,10 @@ interface ItineraryContextType {
 
   isSaving: boolean;
   saveSuccess: boolean;
+
+
+  // 👇 NEW METHOD ADDED HERE
+  logAction: (action: 'ADD' | 'EDIT' | 'DELETE' | 'STATUS', module: string, details: string, userRole: string, isMajor?: boolean) => void;
 }
 
 const ItineraryContext = createContext<ItineraryContextType | undefined>(undefined);
@@ -1943,13 +1975,31 @@ const DEFAULT_ITINERARY: ItineraryData = {
   // New fields
   tripCategory: '',
   tripExperience: '',
-  status: 'draft', 
+  status: 'draft',
+
+  // 👇 NEW DEFAULTS ADDED HERE
+  currentVersion: '1.0',
+  auditLog: [{
+     version: '1.0',
+     action: 'STATUS',
+     module: 'System',
+     details: 'Itinerary Created',
+     userRole: 'system',
+     timestamp: new Date().toISOString()
+  }],
+
   stepperStatus: {
     intro: 'incomplete',
     routing: 'locked',
     createDay: 'locked',
+    review: 'locked',
     costing: 'locked',
     preview: 'locked'
+  },
+  companyMarkup: 0,
+ 
+  startDate: function (startDate: any): unknown {
+    throw new Error('Function not implemented.');
   }
 };
 
@@ -1990,6 +2040,34 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+
+  // 👇 NEW: Function to record changes and bump versions
+  const logAction = useCallback((action: 'ADD' | 'EDIT' | 'DELETE' | 'STATUS', module: string, details: string, userRole: string, isMajor = false) => {
+    setItineraryData(prev => {
+      // Calculate new version
+      const [major, minor] = (prev.currentVersion || '1.0').split('.').map(Number);
+      const newVersion = isMajor ? `${major + 1}.0` : `${major}.${(minor || 0) + 1}`;
+
+      const newLog: AuditLogEntry = {
+        version: newVersion,
+        action,
+        module,
+        details,
+        userRole,
+        timestamp: new Date().toISOString()
+      };
+
+      const updated = { 
+          ...prev, 
+          currentVersion: newVersion,
+          auditLog: [newLog, ...(prev.auditLog || [])] // Push to top of list
+      };
+      
+      saveItineraryToStorage(updated);
+      return updated;
+    });
+  }, []);
+
   // --- 5. WORKFLOW ACTIONS ---
 
   const completeStep = useCallback((step: keyof StepperStatus) => {
@@ -2007,12 +2085,126 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // // Employee: Submit for Costing
+  // const submitForCosting = useCallback(() => {
+  //   setItineraryData(prev => {
+  //     const updated = {
+  //       ...prev,
+  //       status: 'pending_costing' as ItineraryStatus,
+  //     };
+      
+  //     saveItineraryToStorage(updated);
+  //     saveToLibrary(updated);
+  //     return updated;
+  //   });
+  //   showToast("Request sent to Admin! Waiting for approval.", "success");
+  // }, [showToast]);
+
+  // // Admin: Approve Costing
+  // const approveCosting = useCallback(() => {
+  //   setItineraryData(prev => {
+  //     const newStepper = { 
+  //       ...prev.stepperStatus, 
+  //       costing: 'completed', 
+  //       preview: 'unlocked' 
+  //     } as StepperStatus;
+
+  //     const updated = {
+  //       ...prev,
+  //       status: 'approved' as ItineraryStatus,
+  //       stepperStatus: newStepper
+  //     };
+
+  //     saveItineraryToStorage(updated);
+  //     saveToLibrary(updated);
+  //     return updated;
+  //   });
+  //   showToast("Costing Approved! Employee can now see Preview.", "success");
+  // }, [showToast]);
+
+
+
+
+
+  // // 👇 ADD THIS NEW FUNCTION (The Logic for Rejection)
+  // const rejectCosting = useCallback((reason: string) => {
+  //   setItineraryData(prev => {
+  //     const updated = {
+  //       ...prev,
+  //       status: 'draft' as ItineraryStatus, // Unlock for employee
+  //       adminComment: reason, // Save the reason
+  //       // Reset stepper if needed, or keep as is
+  //     };
+      
+  //     saveItineraryToStorage(updated);
+  //     saveToLibrary(updated);
+  //     return updated;
+  //   });
+  //   showToast("Returned to Employee for changes.", "error");
+  // }, [showToast]);
+
+
+  // // 👇 ADD THIS NEW FUNCTION
+  // const revertToPending = useCallback(() => {
+  //   setItineraryData(prev => {
+  //     const updated = {
+  //       ...prev,
+  //       status: 'pending_costing' as ItineraryStatus, // Move back to Pending
+  //     };
+  //     saveItineraryToStorage(updated);
+  //     saveToLibrary(updated);
+  //     return updated;
+  //   });
+  //   showToast("Costing Unlocked for corrections.", "success");
+  // }, [showToast]);
+
+
+  // // 👇 1. EMPLOYEE: REQUEST RE-EDIT
+  // const requestReEdit = useCallback((reason: string) => {
+  //   setItineraryData(prev => {
+  //     const updated = {
+  //       ...prev,
+  //       status: 'reedit_requested' as ItineraryStatus,
+  //       reEditReason: reason
+  //     };
+  //     saveItineraryToStorage(updated);
+  //     saveToLibrary(updated);
+  //     return updated;
+  //   });
+  //   showToast("Re-edit request sent to Admin.", "success");
+  // }, [showToast]);
+
+  // // 👇 2. ADMIN: ALLOW RE-EDIT (Reset to Draft)
+  // const allowReEdit = useCallback(() => {
+  //   setItineraryData(prev => {
+  //     const updated = {
+  //       ...prev,
+  //       status: 'draft' as ItineraryStatus, // Back to start
+  //       reEditReason: undefined, // Clear the reason
+  //       adminComment: "Re-edit request granted. Please make your changes."
+  //     };
+  //     saveItineraryToStorage(updated);
+  //     saveToLibrary(updated);
+  //     return updated;
+  //   });
+  //   showToast("Itinerary unlocked for Employee.", "success");
+  // }, [showToast]);
+
+
+
   // Employee: Submit for Costing
   const submitForCosting = useCallback(() => {
     setItineraryData(prev => {
+      // 👇 Calculate Major Version Bump (e.g. 1.2 -> 2.0)
+      const [major] = (prev.currentVersion || '1.0').split('.').map(Number);
+      const newVersion = `${major + 1}.0`;
+      const newLog: AuditLogEntry = { version: newVersion, action: 'STATUS', module: 'System', details: 'Submitted Itinerary for Costing', userRole: 'Agent / Employee', timestamp: new Date().toISOString() };
+
       const updated = {
         ...prev,
         status: 'pending_costing' as ItineraryStatus,
+        currentVersion: newVersion,
+        auditLog: [newLog, ...(prev.auditLog || [])]
       };
       
       saveItineraryToStorage(updated);
@@ -2025,6 +2217,10 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
   // Admin: Approve Costing
   const approveCosting = useCallback(() => {
     setItineraryData(prev => {
+      const [major] = (prev.currentVersion || '1.0').split('.').map(Number);
+      const newVersion = `${major + 1}.0`;
+      const newLog: AuditLogEntry = { version: newVersion, action: 'STATUS', module: 'System', details: 'Costing Approved & Finalized', userRole: 'Admin', timestamp: new Date().toISOString() };
+
       const newStepper = { 
         ...prev.stepperStatus, 
         costing: 'completed', 
@@ -2034,7 +2230,9 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
       const updated = {
         ...prev,
         status: 'approved' as ItineraryStatus,
-        stepperStatus: newStepper
+        stepperStatus: newStepper,
+        currentVersion: newVersion,
+        auditLog: [newLog, ...(prev.auditLog || [])]
       };
 
       saveItineraryToStorage(updated);
@@ -2043,6 +2241,93 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
     });
     showToast("Costing Approved! Employee can now see Preview.", "success");
   }, [showToast]);
+
+  // Admin: Reject Costing
+  const rejectCosting = useCallback((reason: string) => {
+    setItineraryData(prev => {
+      const [major] = (prev.currentVersion || '1.0').split('.').map(Number);
+      const newVersion = `${major + 1}.0`;
+      const newLog: AuditLogEntry = { version: newVersion, action: 'STATUS', module: 'System', details: `Admin requested changes: "${reason}"`, userRole: 'Admin', timestamp: new Date().toISOString() };
+
+      const updated = {
+        ...prev,
+        status: 'draft' as ItineraryStatus, // Unlock for employee
+        adminComment: reason, // Save the reason
+        currentVersion: newVersion,
+        auditLog: [newLog, ...(prev.auditLog || [])]
+      };
+      
+      saveItineraryToStorage(updated);
+      saveToLibrary(updated);
+      return updated;
+    });
+    showToast("Returned to Employee for changes.", "error");
+  }, [showToast]);
+
+  // Admin: Revert to Pending
+  const revertToPending = useCallback(() => {
+    setItineraryData(prev => {
+      const [major] = (prev.currentVersion || '1.0').split('.').map(Number);
+      const newVersion = `${major + 1}.0`;
+      const newLog: AuditLogEntry = { version: newVersion, action: 'STATUS', module: 'System', details: 'Unlocked Costing (Reverted to Pending)', userRole: 'Admin', timestamp: new Date().toISOString() };
+
+      const updated = {
+        ...prev,
+        status: 'pending_costing' as ItineraryStatus, // Move back to Pending
+        currentVersion: newVersion,
+        auditLog: [newLog, ...(prev.auditLog || [])]
+      };
+      saveItineraryToStorage(updated);
+      saveToLibrary(updated);
+      return updated;
+    });
+    showToast("Costing Unlocked for corrections.", "success");
+  }, [showToast]);
+
+  // Employee: Request Re-Edit
+  const requestReEdit = useCallback((reason: string) => {
+    setItineraryData(prev => {
+      const [major] = (prev.currentVersion || '1.0').split('.').map(Number);
+      const newVersion = `${major + 1}.0`;
+      const newLog: AuditLogEntry = { version: newVersion, action: 'STATUS', module: 'System', details: `Requested Re-Edit: "${reason}"`, userRole: 'Agent / Employee', timestamp: new Date().toISOString() };
+
+      const updated = {
+        ...prev,
+        status: 'reedit_requested' as ItineraryStatus,
+        reEditReason: reason,
+        currentVersion: newVersion,
+        auditLog: [newLog, ...(prev.auditLog || [])]
+      };
+      saveItineraryToStorage(updated);
+      saveToLibrary(updated);
+      return updated;
+    });
+    showToast("Re-edit request sent to Admin.", "success");
+  }, [showToast]);
+
+  // Admin: Allow Re-Edit (Reset to Draft)
+  const allowReEdit = useCallback(() => {
+    setItineraryData(prev => {
+      const [major] = (prev.currentVersion || '1.0').split('.').map(Number);
+      const newVersion = `${major + 1}.0`;
+      const newLog: AuditLogEntry = { version: newVersion, action: 'STATUS', module: 'System', details: 'Granted Re-Edit Request (Unlocked)', userRole: 'Admin', timestamp: new Date().toISOString() };
+
+      const updated = {
+        ...prev,
+        status: 'draft' as ItineraryStatus, // Back to start
+        reEditReason: undefined, // Clear the reason
+        adminComment: "Re-edit request granted. Please make your changes.",
+        currentVersion: newVersion,
+        auditLog: [newLog, ...(prev.auditLog || [])]
+      };
+      saveItineraryToStorage(updated);
+      saveToLibrary(updated);
+      return updated;
+    });
+    showToast("Itinerary unlocked for Employee.", "success");
+  }, [showToast]);
+
+
 
   // --- 6. STORAGE HANDLERS ---
 
@@ -2137,7 +2422,12 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
       completeStep,
       submitForCosting,
       approveCosting,
-
+      rejectCosting,
+      revertToPending,
+      requestReEdit,
+      allowReEdit,
+      logAction,
+      
       // Toast Values (Now properly defined)
       toastMessage,
       showToast,

@@ -1596,7 +1596,7 @@ export default function RoutingPage() {
                 </div>
              ) : (
                  <div className="px-4 py-1.5 bg-blue-900/50 border border-blue-500/30 rounded-lg text-blue-200 text-xs font-bold flex items-center gap-2">
-                    <Calendar size={14} /> Master Itinerary Mode (Generic Dates)
+                    {/* <Calendar size={14} /> Master Itinerary Mode (Generic Dates) */}
                  </div>
              )}
           </div>

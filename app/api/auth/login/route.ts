@@ -35,10 +35,28 @@ export const POST = async (req: NextRequest) => {
 
     // 3. Security Check: Is account active?
     // This prevents suspended employees from logging in
+    // if (user.status !== 'active') {
+    //   return NextResponse.json(
+    //     { success: false, message: "Account is suspended or inactive. Contact Admin." },
+    //     { status: 403 } // 403 Forbidden
+    //   );
+    // }
+
+    // 3. Security Check: Is account active?
     if (user.status !== 'active') {
+      
+      // Specific message for pending agents
+      if (user.status === 'pending') {
+        return NextResponse.json(
+          { success: false, message: "Your account is under review. Please wait for Admin approval." },
+          { status: 403 }
+        );
+      }
+
+      // Message for suspended/inactive employees
       return NextResponse.json(
         { success: false, message: "Account is suspended or inactive. Contact Admin." },
-        { status: 403 } // 403 Forbidden
+        { status: 403 }
       );
     }
 

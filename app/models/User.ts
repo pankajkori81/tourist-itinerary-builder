@@ -78,6 +78,80 @@
 
 
 
+// import mongoose from "mongoose";
+
+// const UserSchema = new mongoose.Schema({
+//   name: { 
+//     type: String, 
+//     required: [true, "Name is required"],
+//     trim: true, 
+//     minlength: [2, "Name must be at least 2 characters"]
+//   },
+//   email: { 
+//     type: String, 
+//     required: [true, "Email is required"], 
+//     unique: true,
+//     trim: true,
+//     lowercase: true, 
+//     match: [
+//       /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 
+//       "Please enter a valid email address"
+//     ]
+//   },
+//   password: { 
+//     type: String, 
+//     required: [true, "Password is required"],
+//   },
+//   role: { 
+//     type: String, 
+//     enum: ["admin", "employee"], 
+//     default: "employee" 
+//   },
+//   status: { 
+//     type: String, 
+//     enum: ["active", "inactive", "suspended"], 
+//     default: "active" 
+//   },
+  
+//   // =========================================================
+//   // 👇 UPDATED SECTION: Dynamic Profile Fields
+//   // =========================================================
+  
+//   // 1. Personal Information
+//   profilePicture: { type: String, default: "" }, 
+//   phone: { type: String, default: "" }, 
+//   address: { type: String, default: "" }, // <--- ADDED
+
+//   // 2. Professional Information
+//   department: { type: String, default: "" }, // <--- ADDED
+//   position: { type: String, default: "" },   // <--- ADDED
+//   dateOfJoining: { type: Date, default: Date.now }, // <--- ADDED
+
+//   // =========================================================
+
+//   // Security Fields
+//   isVerified: { type: Boolean, default: false }, 
+//   verificationToken: String,
+//   verificationTokenExpiry: Date,
+  
+//   forgotPasswordToken: String,
+//   forgotPasswordTokenExpiry: Date,
+  
+//   lastLogin: { type: Date, default: null }, // Updated to default null
+// }, 
+// { 
+//   timestamps: true 
+// });
+
+// // Prevent model overwrite in Next.js development mode
+// const User = mongoose.models.User || mongoose.model("User", UserSchema);
+// export default User; 
+
+
+
+
+
+
 import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema({
@@ -102,14 +176,16 @@ const UserSchema = new mongoose.Schema({
     type: String, 
     required: [true, "Password is required"],
   },
+  // 👇 UPDATE: Added 'agent' to enum
   role: { 
     type: String, 
-    enum: ["admin", "employee"], 
+    enum: ["admin", "employee", "agent"], 
     default: "employee" 
   },
+  // 👇 UPDATE: Added 'pending' to enum for the approval flow
   status: { 
     type: String, 
-    enum: ["active", "inactive", "suspended"], 
+    enum: ["active", "inactive", "suspended", "pending"], 
     default: "active" 
   },
   
@@ -120,12 +196,15 @@ const UserSchema = new mongoose.Schema({
   // 1. Personal Information
   profilePicture: { type: String, default: "" }, 
   phone: { type: String, default: "" }, 
-  address: { type: String, default: "" }, // <--- ADDED
+  address: { type: String, default: "" }, 
 
   // 2. Professional Information
-  department: { type: String, default: "" }, // <--- ADDED
-  position: { type: String, default: "" },   // <--- ADDED
-  dateOfJoining: { type: Date, default: Date.now }, // <--- ADDED
+  department: { type: String, default: "" }, 
+  position: { type: String, default: "" },   
+  dateOfJoining: { type: Date, default: Date.now },
+
+  // 👇 NEW FIELD: Specific for Travel Agents
+  agencyName: { type: String, default: "" },
 
   // =========================================================
 
@@ -137,7 +216,7 @@ const UserSchema = new mongoose.Schema({
   forgotPasswordToken: String,
   forgotPasswordTokenExpiry: Date,
   
-  lastLogin: { type: Date, default: null }, // Updated to default null
+  lastLogin: { type: Date, default: null }, 
 }, 
 { 
   timestamps: true 

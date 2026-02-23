@@ -1042,80 +1042,109 @@ export default function PreviewPage() {
   const markupPercent = itineraryData.markupPercentage !== undefined ? itineraryData.markupPercentage : 20; 
   const roundingMode = itineraryData.roundingMode || 'none';
 
-  // --- EXACT CALCULATION ENGINE (Copied from CostingPage) ---
+
+// --- 1. DETERMINE ACTIVE MONTH ---
+  // We need to know which month's pricing to use (e.g., 'JAN').
+  // We derive this from the Season Start Date.
+  const pricingMonth = useMemo(() => {
+      if (itineraryData.seasonStartDate) {
+          const d = new Date(itineraryData.seasonStartDate);
+          return d.toLocaleString('en-US', { month: 'short' }).toUpperCase(); // Returns "JAN", "FEB", etc.
+      }
+      return 'JAN'; // Fallback
+  }, [itineraryData.seasonStartDate]);
+
+  // --- 2. EXACT CALCULATION ENGINE (FIXED: Uses Pricing Matrix) ---
   const calculatedNetTotal = useMemo(() => {
     let total = 0;
+    
+    // Get the matrix for the active month (e.g., pricingMatrix['JAN'])
+    const matrix = itineraryData.pricingMatrix?.[pricingMonth] || {};
+
+    // Helper: Try to get cost from Matrix, otherwise use Raw Cost
+    const getLineCost = (id: string | number, rawCost: number) => {
+        const matrixVal = matrix[id.toString()];
+        // If matrixVal exists (even if 0), use it. Otherwise use rawCost.
+        return matrixVal !== undefined ? matrixVal : rawCost;
+    };
+
     rawDayPlans.forEach(day => {
-        if(day.stays) {
-            day.stays.forEach(s => {
-                if (isItemIncluded(s.inclusionType)) {
-                    total += safeNum(s.costPerNight) * safeNum(s.numRooms) * safeNum(s.nights);
-                }
-            });
-        }
-        if(day.transports) {
-            day.transports.forEach(t => {
-                if (isItemIncluded(t.inclusionType)) {
-                    total += safeNum(t.price) * safeNum(t.vehicleCount);
-                }
-            });
-        }
-        if(day.activities) {
-            day.activities.forEach(a => {
-                if (isItemIncluded(a.inclusionType)) {
-                    const guideCost = a.guideType === 'guided' ? safeNum(a.guideFee) : 0;
-                    const itemCost = (safeNum(a.entranceFeePP) + safeNum(a.activityFeePP)) * travelerCount;
-                    total += itemCost + guideCost;
-                }
-            });
-        }
-        if(day.meals) {
-            day.meals.forEach(m => {
-                if (isItemIncluded(m.inclusionType)) {
-                    total += safeNum(m.adultCost) * travelerCount;
-                }
-            });
-        }
+        // Stays
+        day.stays?.forEach(s => {
+            if (isItemIncluded(s.inclusionType)) {
+                const rawCost = safeNum(s.costPerNight) * safeNum(s.numRooms) * safeNum(s.nights);
+                total += getLineCost(s.id, rawCost);
+            }
+        });
+
+        // Transports
+        day.transports?.forEach(t => {
+            if (isItemIncluded(t.inclusionType)) {
+                const rawCost = safeNum(t.price) * safeNum(t.vehicleCount);
+                total += getLineCost(t.id, rawCost);
+            }
+        });
+
+        // Activities
+        day.activities?.forEach(a => {
+            if (isItemIncluded(a.inclusionType)) {
+                const guideCost = a.guideType === 'guided' ? safeNum(a.guideFee) : 0;
+                const rawCost = (safeNum(a.entranceFeePP) + safeNum(a.activityFeePP)) * travelerCount;
+                // Note: Matrix usually stores the SUM of Activity + Guide
+                total += getLineCost(a.id, rawCost + guideCost);
+            }
+        });
+
+        // Meals
+        day.meals?.forEach(m => {
+            if (isItemIncluded(m.inclusionType)) {
+                const rawCost = safeNum(m.adultCost) * travelerCount;
+                total += getLineCost(m.id, rawCost);
+            }
+        });
     });
     return total;
-  }, [rawDayPlans, travelerCount]);
+  }, [rawDayPlans, travelerCount, itineraryData.pricingMatrix, pricingMonth]);
 
-  // --- 2. DETERMINE FINAL PRICE ---
+
+
+
+
+  // --- 3. DETERMINE FINAL PRICE ---
   const netInSelected = convert(calculatedNetTotal, currency);
   
-  // NEW: CHECK FOR FIXED PRICE OVERRIDE
   let finalPerPerson = 0;
+  let finalGrandTotal = 0;
 
-  // Check if fixed pricing is enabled and a row is selected
-  const activeFixedDeparture = itineraryData.fixedDepartures?.find(d => d.isSelected);
+  // PRIORITY FIX: If Costing Page saved a Final Price, USE IT directly.
+  // This ensures Preview matches Costing 100% of the time.
+  if (itineraryData.finalSellPrice && itineraryData.finalSellPrice > 0) {
+      finalGrandTotal = convert(itineraryData.finalSellPrice, currency);
+      finalPerPerson = finalGrandTotal / travelerCount;
+  } 
+  // FALLBACK: Calculate it manually (if no saved price found)
+  else {
+      const activeFixedDeparture = itineraryData.fixedDepartures?.find(d => d.isSelected);
 
-  if (itineraryData.useFixedPrice && activeFixedDeparture) {
-      // OVERRIDE: Use the manual price
-      finalPerPerson = activeFixedDeparture.price;
-  } else {
-      // STANDARD: Use calculated price
-      const markupAmount = netInSelected * (markupPercent / 100);
-      const exactGrandTotal = netInSelected + markupAmount;
-      const exactPerPerson = travelerCount > 0 ? exactGrandTotal / travelerCount : 0;
-      
-      finalPerPerson = exactPerPerson;
-      if (roundingMode === '5') finalPerPerson = Math.ceil(exactPerPerson / 5) * 5;
-      else if (roundingMode === '10') finalPerPerson = Math.ceil(exactPerPerson / 10) * 10;
-      else if (roundingMode === '100') finalPerPerson = Math.ceil(exactPerPerson / 100) * 100;
+      if (itineraryData.useFixedPrice && activeFixedDeparture) {
+          finalPerPerson = activeFixedDeparture.price;
+          finalGrandTotal = finalPerPerson * travelerCount;
+      } else {
+          const markupAmount = netInSelected * (markupPercent / 100);
+          const exactGrandTotal = netInSelected + markupAmount;
+          const exactPerPerson = travelerCount > 0 ? exactGrandTotal / travelerCount : 0;
+          
+          finalPerPerson = exactPerPerson;
+          // Apply rounding logic
+          if (roundingMode === '5') finalPerPerson = Math.ceil(exactPerPerson / 5) * 5;
+          else if (roundingMode === '10') finalPerPerson = Math.ceil(exactPerPerson / 10) * 10;
+          else if (roundingMode === '100') finalPerPerson = Math.ceil(exactPerPerson / 100) * 100;
+          
+          finalGrandTotal = finalPerPerson * travelerCount;
+      }
   }
 
-//   // --- FINAL TOTALS CALCULATION (Exact Match) ---
-//   const netInSelected = convert(calculatedNetTotal, currency);
-//   const markupAmount = netInSelected * (markupPercent / 100);
-//   const exactGrandTotal = netInSelected + markupAmount;
-//   const exactPerPerson = travelerCount > 0 ? exactGrandTotal / travelerCount : 0;
 
-//   // --- ROUNDING LOGIC (The Missing Piece) ---
-//   let finalPerPerson = exactPerPerson;
-//   if (roundingMode === '5') finalPerPerson = Math.ceil(exactPerPerson / 5) * 5;
-//   else if (roundingMode === '10') finalPerPerson = Math.ceil(exactPerPerson / 10) * 10;
-//   else if (roundingMode === '100') finalPerPerson = Math.ceil(exactPerPerson / 100) * 100;
-  
   // Logic for display label
   const hasFlights = rawDayPlans.some(day => 
     day.transports?.some(t => t.mode === 'flight' && isItemIncluded(t.inclusionType))
@@ -1284,7 +1313,9 @@ return (
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Release Date:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{formatDate(new Date().toISOString())}</div>
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Trip Validity:</div>
-                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>{formatDate(itineraryData.routingData?.startDate)} to {formatDate(itineraryData.routingData?.endDate)}</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>{itineraryData.seasonStartDate ? formatDate(itineraryData.seasonStartDate) : formatDate(itineraryData.routingData?.startDate)} 
+                        {' to '} 
+                        {itineraryData.seasonEndDate ? formatDate(itineraryData.seasonEndDate) : formatDate(itineraryData.routingData?.endDate)}</div>
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Country:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff', textTransform: 'uppercase', gridColumn: 'span 3' }}>{itineraryData.selectedCountries?.join(', ') || "India"}</div>
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Cities:</div>

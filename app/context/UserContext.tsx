@@ -158,7 +158,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'employee' | 'agent';
   status: 'active' | 'inactive' | 'suspended';
   profilePicture?: string;
   
