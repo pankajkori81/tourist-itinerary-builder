@@ -990,7 +990,8 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { Download} from "lucide-react";
+import { Download , Share2, X, Loader2, Mail} from "lucide-react";
+// import toast, { Toaster } from 'react-hot-toast';
 import { useItinerary } from '@/app/context/ItineraryContext';
 import { DayPlan } from '../create-day/constants/daywiseConstants';
 import { useCurrency } from '@/hooks/useCurrency'; 
@@ -1015,6 +1016,13 @@ export default function PreviewPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
+// 👇 UPDATED: Share Modal States (Added Phone & Checkboxes)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareForm, setShareForm] = useState({ 
+      clientName: '', clientEmail: '', clientPhone: '', 
+      sendEmail: true, sendWhatsapp: false 
+  });
   // --- 1. DATA PREPARATION ---
   const routes = itineraryData.routingData?.routes || [];
   const startCity = routes.length > 0 ? routes[0].cities[0]?.name : 'TBA';
@@ -1055,17 +1063,34 @@ export default function PreviewPage() {
   }, [itineraryData.seasonStartDate]);
 
   // --- 2. EXACT CALCULATION ENGINE (FIXED: Uses Pricing Matrix) ---
+//   const calculatedNetTotal = useMemo(() => {
+//     let total = 0;
+    
+//     // Get the matrix for the active month (e.g., pricingMatrix['JAN'])
+//     const matrix = itineraryData.pricingMatrix?.[pricingMonth] || {};
+
+//     // Helper: Try to get cost from Matrix, otherwise use Raw Cost
+//     const getLineCost = (id: string | number, rawCost: number) => {
+//         const matrixVal = matrix[id.toString()];
+//         // If matrixVal exists (even if 0), use it. Otherwise use rawCost.
+//         return matrixVal !== undefined ? matrixVal : rawCost;
+//     };
+
+
+
+// --- 2. EXACT CALCULATION ENGINE (FIXED: Uses Pricing Matrix) ---
   const calculatedNetTotal = useMemo(() => {
     let total = 0;
     
     // Get the matrix for the active month (e.g., pricingMatrix['JAN'])
     const matrix = itineraryData.pricingMatrix?.[pricingMonth] || {};
 
-    // Helper: Try to get cost from Matrix, otherwise use Raw Cost
+    // Helper: Try to get cost from Matrix, otherwise use 0
     const getLineCost = (id: string | number, rawCost: number) => {
         const matrixVal = matrix[id.toString()];
-        // If matrixVal exists (even if 0), use it. Otherwise use rawCost.
-        return matrixVal !== undefined ? matrixVal : rawCost;
+        // 👇 CRITICAL FIX: The Costing Page falls back to 0 if a box is empty. 
+        // We MUST return 0 here instead of 'rawCost' so the Preview math matches Costing math 100%.
+        return matrixVal !== undefined ? matrixVal : 0; 
     };
 
     rawDayPlans.forEach(day => {
@@ -1110,39 +1135,65 @@ export default function PreviewPage() {
 
 
 
-  // --- 3. DETERMINE FINAL PRICE ---
+// --- 3. DETERMINE FINAL PRICE ---
   const netInSelected = convert(calculatedNetTotal, currency);
   
-  let finalPerPerson = 0;
-  let finalGrandTotal = 0;
+  // 👇 FIX: Synchronized with the CostingPage's 3-Tier Architecture
+  let activeFixedDeparture: any = null;
+  let activePriceDBL = 0;
 
-  // PRIORITY FIX: If Costing Page saved a Final Price, USE IT directly.
-  // This ensures Preview matches Costing 100% of the time.
-  if (itineraryData.finalSellPrice && itineraryData.finalSellPrice > 0) {
-      finalGrandTotal = convert(itineraryData.finalSellPrice, currency);
-      finalPerPerson = finalGrandTotal / travelerCount;
-  } 
-  // FALLBACK: Calculate it manually (if no saved price found)
-  else {
-      const activeFixedDeparture = itineraryData.fixedDepartures?.find(d => d.isSelected);
+  const fixedDepartures = itineraryData.fixedDepartures || [];
+  const selectedDepartureId = itineraryData.selectedDepartureId;
 
-      if (itineraryData.useFixedPrice && activeFixedDeparture) {
-          finalPerPerson = activeFixedDeparture.price;
-          finalGrandTotal = finalPerPerson * travelerCount;
-      } else {
-          const markupAmount = netInSelected * (markupPercent / 100);
-          const exactGrandTotal = netInSelected + markupAmount;
-          const exactPerPerson = travelerCount > 0 ? exactGrandTotal / travelerCount : 0;
-          
-          finalPerPerson = exactPerPerson;
-          // Apply rounding logic
-          if (roundingMode === '5') finalPerPerson = Math.ceil(exactPerPerson / 5) * 5;
-          else if (roundingMode === '10') finalPerPerson = Math.ceil(exactPerPerson / 10) * 10;
-          else if (roundingMode === '100') finalPerPerson = Math.ceil(exactPerPerson / 100) * 100;
-          
-          finalGrandTotal = finalPerPerson * travelerCount;
+  if (selectedDepartureId) {
+      for (const month of fixedDepartures) {
+          // Check if a Master Month is selected
+          if (month.id === selectedDepartureId) {
+              activeFixedDeparture = month;
+              activePriceDBL = month.priceDBL || 0; 
+              break;
+          }
+          // Check if a Specific Date is selected
+          const specificDate = month.departures?.find((d: any) => d.id === selectedDepartureId);
+          if (specificDate) {
+              activeFixedDeparture = specificDate;
+              // Use override if exists, otherwise fallback to Master Month price
+              activePriceDBL = specificDate.overridePriceDBL ? Number(specificDate.overridePriceDBL) : (month.priceDBL || 0);
+              break;
+          }
       }
   }
+
+  // --- WHOLESALE CALCULATION (Admin Base) ---
+  let wholesalePerPerson = 0;
+  let wholesaleGrandTotal = 0;
+
+  if (activeFixedDeparture) {
+      wholesalePerPerson = activePriceDBL; 
+      wholesaleGrandTotal = wholesalePerPerson * travelerCount;
+  } else {
+      // Fallback to Template Markup if no series is selected
+      const adminMarkupAmount = netInSelected * (markupPercent / 100);
+      wholesaleGrandTotal = netInSelected + adminMarkupAmount;
+      wholesalePerPerson = travelerCount > 0 ? wholesaleGrandTotal / travelerCount : 0;
+  }
+
+  // --- RETAIL CALCULATION (Agent Final Price) ---
+  let finalPerPerson = 0;
+  let finalGrandTotal = 0;
+  const agentMargin = (itineraryData as any).agentMargin || 0;
+  
+  const agencyMarkupAmount = wholesaleGrandTotal * (agentMargin / 100);
+  const exactPerPerson = travelerCount > 0 ? (wholesaleGrandTotal + agencyMarkupAmount) / travelerCount : 0;
+  
+  finalPerPerson = exactPerPerson;
+  
+  // Apply Rounding Strategy
+  if (roundingMode === '5') finalPerPerson = Math.ceil(exactPerPerson / 5) * 5;
+  else if (roundingMode === '10') finalPerPerson = Math.ceil(exactPerPerson / 10) * 10;
+  else if (roundingMode === '100') finalPerPerson = Math.ceil(exactPerPerson / 100) * 100;
+  
+  finalGrandTotal = finalPerPerson * travelerCount;
 
 
   // Logic for display label
@@ -1183,79 +1234,359 @@ export default function PreviewPage() {
   };
 
 
-// --- PDF GENERATION: VISUAL CAPTURE (Preserves HTML Design) ---
-  const handleDownloadPdf = async () => {
-    if (!printRef.current) return;
-    setIsDownloading(true);
+// // --- PDF GENERATION: VISUAL CAPTURE (Preserves HTML Design) ---
+//   const handleDownloadPdf = async () => {
+//     if (!printRef.current) return;
+//     setIsDownloading(true);
 
+//     const element = printRef.current;
+    
+//     // A4 Dimensions in MM
+//     const PDF_WIDTH = 210;
+//     const PDF_HEIGHT = 297;
+//     const TOP_MARGIN = 0; // Adjust if you want white space at the top of PDF
+//     const PAGE_HEIGHT_PX_ESTIMATE = (PDF_HEIGHT * 3.78); // Approx conversion mm to px (96 DPI)
+
+//     // 1. PREPARE DOM FOR SNAPSHOT
+//     // (Optional: Hide scrollbars or temporary styles here if needed)
+    
+//     try {
+//         // 2. CAPTURE THE ELEMENT
+//         // Scale 2 ensures high quality (Retina-like) for the PDF
+//         const canvas = await html2canvas(element, {
+//             scale: 2,
+//             useCORS: true, 
+//             logging: false,
+//             backgroundColor: '#ffffff',
+//             // Ensure we capture the full scroll height
+//             height: element.scrollHeight, 
+//             windowHeight: element.scrollHeight,
+//             onclone: (clonedDoc) => {
+//                 // Fix for missing images or distinct styles during capture can go here
+//                 const clonedElement = clonedDoc.getElementById('itinerary-preview-container');
+//                 if(clonedElement) {
+//                     clonedElement.style.height = 'auto'; 
+//                     clonedElement.style.overflow = 'visible';
+//                 }
+//             }
+//         });
+
+//         // 3. CALCULATE DIMENSIONS
+//         const imgData = canvas.toDataURL('image/jpeg', 0.95); // JPEG is faster/smaller than PNG
+//         const pdf = new jsPDF('p', 'mm', 'a4');
+        
+//         const imgWidth = canvas.width;
+//         const imgHeight = canvas.height;
+
+//         // Calculate the height of the image on the PDF based on A4 Width
+//         // formula: (original height * pdf width) / original width
+//         const imgHeightInPdf = (imgHeight * PDF_WIDTH) / imgWidth; 
+        
+//         let heightLeft = imgHeightInPdf;
+//         let position = 0; // Starts at top of page
+
+//         // 4. ADD FIRST PAGE
+//         pdf.addImage(imgData, 'JPEG', 0, position + TOP_MARGIN, PDF_WIDTH, imgHeightInPdf);
+//         heightLeft -= PDF_HEIGHT;
+
+//         // 5. LOOP FOR ADDITIONAL PAGES
+//         while (heightLeft > 0) {
+//             position = heightLeft - imgHeightInPdf; // Shift position up for next page
+//             pdf.addPage();
+//             pdf.addImage(imgData, 'JPEG', 0, position + TOP_MARGIN, PDF_WIDTH, imgHeightInPdf);
+//             heightLeft -= PDF_HEIGHT;
+//         }
+
+//         pdf.save(`${itineraryData.tripName || 'Itinerary'}.pdf`);
+
+//     } catch (error) {
+//         console.error("PDF Gen Error:", error);
+//         alert("Failed to generate PDF. Please check console.");
+//     } finally {
+//         setIsDownloading(false);
+//     }
+//   };
+
+
+// 👇 1. The Core PDF Engine (Extracted so both buttons can use it)
+  const createPdfObject = async () => {
+    if (!printRef.current) throw new Error("No print ref");
     const element = printRef.current;
     
-    // A4 Dimensions in MM
     const PDF_WIDTH = 210;
     const PDF_HEIGHT = 297;
-    const TOP_MARGIN = 0; // Adjust if you want white space at the top of PDF
-    const PAGE_HEIGHT_PX_ESTIMATE = (PDF_HEIGHT * 3.78); // Approx conversion mm to px (96 DPI)
-
-    // 1. PREPARE DOM FOR SNAPSHOT
-    // (Optional: Hide scrollbars or temporary styles here if needed)
+    const TOP_MARGIN = 0; 
     
-    try {
-        // 2. CAPTURE THE ELEMENT
-        // Scale 2 ensures high quality (Retina-like) for the PDF
-        const canvas = await html2canvas(element, {
-            scale: 2,
-            useCORS: true, 
-            logging: false,
-            backgroundColor: '#ffffff',
-            // Ensure we capture the full scroll height
-            height: element.scrollHeight, 
-            windowHeight: element.scrollHeight,
-            onclone: (clonedDoc) => {
-                // Fix for missing images or distinct styles during capture can go here
-                const clonedElement = clonedDoc.getElementById('itinerary-preview-container');
-                if(clonedElement) {
-                    clonedElement.style.height = 'auto'; 
-                    clonedElement.style.overflow = 'visible';
-                }
+    const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true, 
+        logging: false,
+        backgroundColor: '#ffffff',
+        height: element.scrollHeight, 
+        windowHeight: element.scrollHeight,
+        onclone: (clonedDoc) => {
+            const clonedElement = clonedDoc.getElementById('itinerary-preview-container');
+            if(clonedElement) {
+                clonedElement.style.height = 'auto'; 
+                clonedElement.style.overflow = 'visible';
             }
-        });
+        }
+    });
 
-        // 3. CALCULATE DIMENSIONS
-        const imgData = canvas.toDataURL('image/jpeg', 0.95); // JPEG is faster/smaller than PNG
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const imgHeightInPdf = (imgHeight * PDF_WIDTH) / imgWidth; 
+    let heightLeft = imgHeightInPdf;
+    let position = 0; 
 
-        // Calculate the height of the image on the PDF based on A4 Width
-        // formula: (original height * pdf width) / original width
-        const imgHeightInPdf = (imgHeight * PDF_WIDTH) / imgWidth; 
-        
-        let heightLeft = imgHeightInPdf;
-        let position = 0; // Starts at top of page
+    pdf.addImage(imgData, 'JPEG', 0, position + TOP_MARGIN, PDF_WIDTH, imgHeightInPdf);
+    heightLeft -= PDF_HEIGHT;
 
-        // 4. ADD FIRST PAGE
+    while (heightLeft > 0) {
+        position = heightLeft - imgHeightInPdf;
+        pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position + TOP_MARGIN, PDF_WIDTH, imgHeightInPdf);
         heightLeft -= PDF_HEIGHT;
+    }
+    return pdf;
+  };
 
-        // 5. LOOP FOR ADDITIONAL PAGES
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeightInPdf; // Shift position up for next page
-            pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', 0, position + TOP_MARGIN, PDF_WIDTH, imgHeightInPdf);
-            heightLeft -= PDF_HEIGHT;
-        }
-
+  // 👇 2. Download Button Logic
+  const handleDownloadPdf = async () => {
+    try {
+        setIsDownloading(true);
+        const pdf = await createPdfObject();
         pdf.save(`${itineraryData.tripName || 'Itinerary'}.pdf`);
-
     } catch (error) {
         console.error("PDF Gen Error:", error);
-        alert("Failed to generate PDF. Please check console.");
+        alert("Failed to generate PDF.");
     } finally {
         setIsDownloading(false);
     }
   };
 
+//   // 👇 3. Share Button Logic (Calls your new Backend API)
+//   const handleShareEmail = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!shareForm.clientEmail) return alert("Client Email is required.");
+    
+//     setIsSharing(true);
+//     try {
+//         const pdf = await createPdfObject();
+//         const pdfBase64 = pdf.output('datauristring'); // Converts PDF to text
+
+//         const res = await fetch('/api/share/email', {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({
+//                 toEmail: shareForm.clientEmail,
+//                 clientName: shareForm.clientName,
+//                 pdfBase64: pdfBase64,
+//                 tripName: itineraryData.tripName || "Custom Itinerary"
+//             })
+//         });
+
+//         const data = await res.json();
+//         if (data.success) {
+//             alert("Itinerary sent to client successfully!");
+//             setIsShareModalOpen(false);
+//             setShareForm({ clientName: '', clientEmail: '' });
+//         } else {
+//             alert("Failed to send: " + data.message);
+//         }
+//     } catch (error) {
+//         console.error("Share Error:", error);
+//         alert("An error occurred while sending the email.");
+//     } finally {
+//         setIsSharing(false);
+//     }
+//   };
+
+
+
+
+// 👇 3. Master Share Button Logic (Using standard alerts)
+  const handleShareEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    if (shareForm.sendEmail && !shareForm.clientEmail) {
+        alert("Client Email is required.");
+        return;
+    }
+    if (shareForm.sendWhatsapp && !shareForm.clientPhone) {
+        alert("Client Phone is required.");
+        return;
+    }
+    if (!shareForm.sendEmail && !shareForm.sendWhatsapp) {
+        alert("Please select a sending method.");
+        return;
+    }
+    
+    setIsSharing(true);
+
+    try {
+        const pdf = await createPdfObject();
+        const pdfBase64 = pdf.output('datauristring'); 
+
+        // Call the new MASTER route
+        const res = await fetch('/api/share', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                clientName: shareForm.clientName,
+                clientEmail: shareForm.clientEmail,
+                clientPhone: shareForm.clientPhone,
+                pdfBase64: pdfBase64,
+                tripName: itineraryData.tripName || "Custom Itinerary",
+                sendEmail: shareForm.sendEmail,
+                sendWhatsapp: shareForm.sendWhatsapp
+            })
+        });
+
+        const data = await res.json();
+        
+        if (data.success) {
+            alert("Successfully shared with client!"); 
+            setIsShareModalOpen(false);
+            setShareForm({ clientName: '', clientEmail: '', clientPhone: '', sendEmail: true, sendWhatsapp: false });
+        } else {
+            alert("Failed to process: " + data.message);
+        }
+    } catch (error) {
+        console.error("Share Error:", error);
+        alert("An error occurred while sharing.");
+    } finally {
+        setIsSharing(false);
+    }
+  };
+
+
+// // 👇 2. Download Button Logic
+//   const handleDownloadPdf = async () => {
+//     try {
+//         setIsDownloading(true);
+//         const pdf = await createPdfObject();
+//         pdf.save(`${itineraryData.tripName || 'Itinerary'}.pdf`);
+//         toast.success("PDF Downloaded successfully!"); // 🌟 Changed to Toast
+//     } catch (error) {
+//         console.error("PDF Gen Error:", error);
+//         toast.error("Failed to generate PDF."); // 🌟 Changed to Toast
+//     } finally {
+//         setIsDownloading(false);
+//     }
+//   };
+
+//   // 👇 3. Share Button Logic (Calls your new Backend API)
+//   const handleShareEmail = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!shareForm.clientEmail) {
+//         toast.error("Client Email is required."); // 🌟 Changed to Toast
+//         return;
+//     }
+    
+//     setIsSharing(true);
+//     // Optional: Show a loading toast that we can dismiss later
+//     const loadingToast = toast.loading("Generating PDF and sending email..."); 
+
+//     try {
+//         const pdf = await createPdfObject();
+//         const pdfBase64 = pdf.output('datauristring'); // Converts PDF to text
+
+//         const res = await fetch('/api/share/email', {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({
+//                 toEmail: shareForm.clientEmail,
+//                 clientName: shareForm.clientName,
+//                 pdfBase64: pdfBase64,
+//                 tripName: itineraryData.tripName || "Custom Itinerary"
+//             })
+//         });
+
+//         const data = await res.json();
+        
+//         toast.dismiss(loadingToast); // Clear the loading toast
+
+//         if (data.success) {
+//             toast.success("Itinerary sent to client successfully!"); // 🌟 Changed to Toast
+//             setIsShareModalOpen(false);
+//             setShareForm({ clientName: '', clientEmail: '' });
+//         } else {
+//             toast.error("Failed to send: " + data.message); // 🌟 Changed to Toast
+//         }
+//     } catch (error) {
+//         console.error("Share Error:", error);
+//         toast.dismiss(loadingToast); // Clear the loading toast
+//         toast.error("An error occurred while sending the email."); // 🌟 Changed to Toast
+//     } finally {
+//         setIsSharing(false);
+//     }
+//   };
+
+
+// // 👇 2. Download Button Logic
+//   const handleDownloadPdf = async () => {
+//     const loadingToast = toast.loading("Generating PDF...");
+//     try {
+//         setIsDownloading(true);
+//         const pdf = await createPdfObject();
+//         pdf.save(`${itineraryData.tripName || 'Itinerary'}.pdf`);
+//         toast.success("PDF Downloaded successfully!", { id: loadingToast }); // 🌟 Replaces loader with success
+//     } catch (error) {
+//         console.error("PDF Gen Error:", error);
+//         toast.error("Failed to generate PDF.", { id: loadingToast }); 
+//     } finally {
+//         setIsDownloading(false);
+//     }
+//   };
+
+//   // 👇 3. Share Button Logic
+//   const handleShareEmail = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!shareForm.clientEmail) {
+//         toast.error("Client Email is required.");
+//         return;
+//     }
+    
+//     setIsSharing(true);
+//     // 🌟 Capture the toast ID so we can morph it later instead of dismissing it
+//     const loadingToast = toast.loading("Generating PDF and sending email..."); 
+
+//     try {
+//         const pdf = await createPdfObject();
+//         const pdfBase64 = pdf.output('datauristring');
+
+//         const res = await fetch('/api/share/email', {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({
+//                 toEmail: shareForm.clientEmail,
+//                 clientName: shareForm.clientName,
+//                 pdfBase64: pdfBase64,
+//                 tripName: itineraryData.tripName || "Custom Itinerary"
+//             })
+//         });
+
+//         const data = await res.json();
+        
+//         if (data.success) {
+//             // 🌟 Pass the ID here. It instantly changes the loading spinner to a success checkmark!
+//             toast.success("Itinerary sent to client successfully!", { id: loadingToast }); 
+//             setIsShareModalOpen(false);
+//             setShareForm({ clientName: '', clientEmail: '' });
+//         } else {
+//             toast.error("Failed to send: " + data.message, { id: loadingToast });
+//         }
+//     } catch (error) {
+//         console.error("Share Error:", error);
+//         toast.error("An error occurred while sending the email.", { id: loadingToast });
+//     } finally {
+//         setIsSharing(false);
+//     }
+//   };
 
 
   if (loading) return <div>Loading Preview...</div>;
@@ -1263,17 +1594,29 @@ export default function PreviewPage() {
 
 return (
     <div className="min-h-screen bg-gray-100 p-8 flex flex-col items-center gap-6">
+
+
       
       {/* TOOLBAR */}
       <div className="w-full max-w-[370mm] flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200">
          <h2 className="font-bold text-gray-700">Print Preview</h2>
-         <button 
-            onClick={handleDownloadPdf}
-            disabled={isDownloading}
-            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded shadow hover:bg-blue-700 transition-colors disabled:opacity-50"
-         >
-            {isDownloading ? 'Generating...' : <><Download size={18} /> Download PDF</>}
-         </button>
+      
+      {/* 👇 ADDED SHARE BUTTON HERE */}
+         <div className="flex gap-3">
+            <button 
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex items-center gap-2 bg-green-600 text-white px-5 py-2 rounded shadow hover:bg-green-700 transition-colors"
+            >
+                <Share2 size={18} /> Share with Client
+            </button>
+            <button 
+                onClick={handleDownloadPdf}
+                disabled={isDownloading}
+                className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded shadow hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+                {isDownloading ? 'Generating...' : <><Download size={18} /> Download PDF</>}
+            </button>
+         </div>
       </div>
 
       {/* --- PRINTABLE AREA --- */}
@@ -1550,10 +1893,129 @@ return (
         </div>
 
         {/* Footer */}
+      {/* Footer */}
         <div style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', marginTop: '32px', padding: '24px', textAlign: 'center', fontSize: '12px', color: '#505050ff' }}>
             <p>Generated by Travdek. Prices and availability are subject to change.</p>
         </div>
       </div>
+
+      {/* 👇 NEW SHARE MODAL UI PAasted HERE */}
+      {isShareModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                      <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                          <Share2 className="text-green-600" size={20} /> Share Itinerary
+                      </h2>
+                      <button onClick={() => setIsShareModalOpen(false)} disabled={isSharing} className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                          <X size={20} />
+                      </button>
+                  </div>
+                  
+                  {/* <form onSubmit={handleShareEmail} className="p-6 space-y-5">
+                      <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg text-sm text-blue-800 mb-4">
+                          This will generate a clean PDF presentation of the itinerary and email it directly to your client.
+                      </div>
+                      
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">Client Name</label>
+                          <input 
+                              type="text" 
+                              required
+                              value={shareForm.clientName}
+                              onChange={(e) => setShareForm({...shareForm, clientName: e.target.value})}
+                              placeholder="e.g. John Doe" 
+                              className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                      </div>
+                      
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">Client Email <span className="text-red-500">*</span></label>
+                          <div className="relative">
+                              <Mail size={16} className="absolute left-3 top-3 text-gray-400" />
+                              <input 
+                                  type="email" 
+                                  required
+                                  value={shareForm.clientEmail}
+                                  onChange={(e) => setShareForm({...shareForm, clientEmail: e.target.value})}
+                                  placeholder="john@example.com" 
+                                  className="w-full pl-9 p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                              />
+                          </div>
+                      </div>
+
+                      <button 
+                          type="submit" 
+                          disabled={isSharing}
+                          className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-70 mt-2"
+                      >
+                          {isSharing ? <><Loader2 size={18} className="animate-spin" /> Sending to Client...</> : 'Send Email Now'}
+                      </button>
+                  </form> */}
+
+
+                  <form onSubmit={handleShareEmail} className="p-6 space-y-5">
+                      <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg text-sm text-blue-800 mb-2">
+                          Generate a clean PDF presentation and send it directly to your client.
+                      </div>
+
+                      {/* Delivery Methods Checkboxes */}
+                      <div className="flex gap-4 mb-4">
+                          <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                              <input type="checkbox" checked={shareForm.sendEmail} onChange={(e) => setShareForm({...shareForm, sendEmail: e.target.checked})} className="w-4 h-4 text-green-600 rounded" />
+                              Send via Email
+                          </label>
+                          <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                              <input type="checkbox" checked={shareForm.sendWhatsapp} onChange={(e) => setShareForm({...shareForm, sendWhatsapp: e.target.checked})} className="w-4 h-4 text-green-600 rounded" />
+                              Send WhatsApp Alert
+                          </label>
+                      </div>
+                      
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">Client Name</label>
+                          <input 
+                              type="text" required value={shareForm.clientName} onChange={(e) => setShareForm({...shareForm, clientName: e.target.value})}
+                              placeholder="e.g. John Doe" 
+                              className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                      </div>
+                      
+                      {shareForm.sendEmail && (
+                          <div className="animate-in fade-in slide-in-from-top-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">Client Email <span className="text-red-500">*</span></label>
+                              <div className="relative">
+                                  <Mail size={16} className="absolute left-3 top-3 text-gray-400" />
+                                  <input 
+                                      type="email" required={shareForm.sendEmail} value={shareForm.clientEmail} onChange={(e) => setShareForm({...shareForm, clientEmail: e.target.value})}
+                                      placeholder="john@example.com" 
+                                      className="w-full pl-9 p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                  />
+                              </div>
+                          </div>
+                      )}
+
+                      {shareForm.sendWhatsapp && (
+                          <div className="animate-in fade-in slide-in-from-top-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">Client Phone <span className="text-red-500">*</span></label>
+                              <input 
+                                  type="tel" required={shareForm.sendWhatsapp} value={shareForm.clientPhone} onChange={(e) => setShareForm({...shareForm, clientPhone: e.target.value})}
+                                  placeholder="+919876543210 (Include country code)" 
+                                  className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                              />
+                          </div>
+                      )}
+
+                      <button 
+                          type="submit" disabled={isSharing || (!shareForm.sendEmail && !shareForm.sendWhatsapp)}
+                          className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-70 mt-2"
+                      >
+                          {isSharing ? <><Loader2 size={18} className="animate-spin" /> Processing...</> : 'Send to Client'}
+                      </button>
+                  </form>
+              </div>
+          </div>
+      )}
+
     </div>
   );
 }

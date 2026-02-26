@@ -3266,14 +3266,16 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { saveItineraryToStorage } from '@/utils/itineraryStorage';
+import { saveItineraryToStorage, SpecificDeparture } from '@/utils/itineraryStorage';
 import { useRouter } from 'next/navigation';
 import { 
-  Calculator, Download, FileText, 
+  ArrowRight ,Calculator, Download, FileText, 
   ArrowLeft, Calendar, Sparkles, User, Printer, Save, 
   Plus, Trash2, Check, Briefcase,
   CheckCircle2, XCircle, Unlock, ThumbsDown, AlertOctagon, ThumbsUp,
-  Clock // Icons
+  Clock, // Icons
+  Info,
+  AlertTriangle
 } from 'lucide-react';
 import { useUser } from '@/app/context/UserContext';
 import jsPDF from 'jspdf';
@@ -3429,6 +3431,9 @@ export default function CostingPage() {
   const [roundingMode, setRoundingMode] = useState<string>('none'); 
   const [fixedDepartures, setFixedDepartures] = useState<FixedDeparture[]>([]);
   const [selectedDepartureId, setSelectedDepartureId] = useState<string | null>(null);
+
+  // 👇 NEW: Tracks which month is currently opened in Table 3
+  const [activeMonthId, setActiveMonthId] = useState<string | null>(null);
 
   // MONTHLY MATRIX
   const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -3606,18 +3611,38 @@ export default function CostingPage() {
 
 
 
-const netInSelected = totals.totalNet;
+  
+  const netInSelected = totals.totalNet;
   const isAgent = user?.role === 'agent';
-  const activeFixedDeparture = fixedDepartures.find(d => d.id === selectedDepartureId);
+  
+  // 👇 NEW LOGIC: Find if selected radio is a Month OR a Specific Date
+  let activeFixedDeparture: any = null;
+  let activePriceDBL = 0;
+
+  for (const month of fixedDepartures) {
+      if (month.id === selectedDepartureId) {
+          activeFixedDeparture = month;
+          activePriceDBL = month.priceDBL || 0; // It's a Month
+          break;
+      }
+      const specificDate = month.departures?.find((d: any) => d.id === selectedDepartureId);
+      if (specificDate) {
+          activeFixedDeparture = specificDate;
+          // If specific date has an override, use it. Otherwise, fallback to Month price!
+          activePriceDBL = specificDate.overridePriceDBL ? Number(specificDate.overridePriceDBL) : (month.priceDBL || 0);
+          break;
+      }
+  }
   
   // --- 1. B2B WHOLESALE CALCULATION (Admin's Price to Agent) ---
   let wholesalePerPerson = 0;
   let wholesaleGrandTotal = 0;
 
   if (activeFixedDeparture) {
-      wholesalePerPerson = activeFixedDeparture.price; 
+      wholesalePerPerson = activePriceDBL; // Uses the DBL price for the calculator
       wholesaleGrandTotal = wholesalePerPerson * travelerCount;
   } else {
+      // 👇 This is the math that was missing/commented out in your broken code!
       const adminMarkupAmount = netInSelected * (markupPercent / 100);
       wholesaleGrandTotal = netInSelected + adminMarkupAmount;
       wholesalePerPerson = travelerCount > 0 ? wholesaleGrandTotal / travelerCount : 0;
@@ -3651,35 +3676,91 @@ const netInSelected = totals.totalNet;
 
 
 
-// --- FIXED DEPARTURES (INVENTORY MATRIX) ---
-  const addDepartureRow = () => { 
-      // 👇 Default values updated to Month, Occupancy, and Available
-      const newRow = { id: Date.now().toString(), month: '', occupancy: 'Double / Twin Sharing', price: 0, status: 'Available', isSelected: false }; 
-      const updated = [...fixedDepartures, newRow as any]; 
-      setFixedDepartures(updated); 
-      updateItineraryData({ fixedDepartures: updated }); 
-  };
-  
-  const updateDepartureRow = (id: string, field: string, value: any) => { 
-      const updated = fixedDepartures.map((d: any) => { 
-          if (d.id === id) { return { ...d, [field]: value }; } 
-          return d; 
-      }); 
-      setFixedDepartures(updated); 
-      updateItineraryData({ fixedDepartures: updated }); 
-  };
-  
-  const removeDepartureRow = (id: string) => { 
-      const updated = fixedDepartures.filter(d => d.id !== id); 
-      setFixedDepartures(updated); 
-      updateItineraryData({ fixedDepartures: updated }); 
-  };
+// ========================================================
+  // --- TIER 2 & 3: MASTER-CHILD INVENTORY LOGIC ---
+  // ========================================================
 
+
+  // 👇 ADD THIS MISSING FUNCTION HERE
+//   const toggleDepartureSelection = (id: string) => {
+//       const isSelecting = selectedDepartureId !== id;
+//       const newId = isSelecting ? id : null;
+//       setSelectedDepartureId(newId);
+//       updateItineraryData({ selectedDepartureId: newId || undefined });
+//   };
+
+
+// 👇 CRITICAL FIX: Save the selection to storage so Preview Page knows what changed
   const toggleDepartureSelection = (id: string) => {
       const isSelecting = selectedDepartureId !== id;
       const newId = isSelecting ? id : null;
       setSelectedDepartureId(newId);
-      updateItineraryData({ selectedDepartureId: newId || undefined });
+      
+      const updatedData = { ...itineraryData, selectedDepartureId: newId || undefined };
+      updateItineraryData(updatedData);
+      
+      // This line is the magic fix! It tells the Preview page that you unselected the package.
+      saveItineraryToStorage(updatedData as any); 
+  };
+
+
+
+  // --- 1. Month Actions (Parent / Master) ---
+  const addMonthRow = () => { 
+      const newRow: FixedDeparture = {
+          id: Date.now().toString(), month: '', priceDBL: 0, priceSGL: 0, priceTPL: 0, priceQUAD: 0, departures: [],
+          date: undefined,
+          price: 0
+      }; 
+      const updated = [...fixedDepartures, newRow]; 
+      setFixedDepartures(updated); 
+      updateItineraryData({ fixedDepartures: updated }); 
+      setActiveMonthId(newRow.id); // Auto-open Table 3 for the new month
+  };
+
+  const updateMonthRow = (id: string, field: string, value: any) => { 
+      const updated = fixedDepartures.map(d => d.id === id ? { ...d, [field]: value } : d); 
+      setFixedDepartures(updated); updateItineraryData({ fixedDepartures: updated }); 
+  };
+
+  const removeMonthRow = (id: string) => { 
+      if(!confirm("Delete this month and all its specific dates?")) return;
+      const updated = fixedDepartures.filter(d => d.id !== id); 
+      setFixedDepartures(updated); updateItineraryData({ fixedDepartures: updated }); 
+      if (activeMonthId === id) setActiveMonthId(null);
+  };
+
+  // --- 2. Specific Date Actions (Child) ---
+  const addSpecificDate = (monthId: string) => {
+      const updated = fixedDepartures.map(month => {
+          if (month.id === monthId) {
+              const newDate: SpecificDeparture = { id: Date.now().toString(), date: '', status: 'Available', overridePriceDBL: '', overridePriceSGL: '', overridePriceTPL: '', overridePriceQUAD: '', isSelected: false };
+              return { ...month, departures: [...(month.departures || []), newDate] };
+          }
+          return month;
+      });
+      setFixedDepartures(updated); updateItineraryData({ fixedDepartures: updated });
+  };
+
+  const updateSpecificDate = (monthId: string, dateId: string, field: string, value: any) => {
+      const updated = fixedDepartures.map(month => {
+          if (month.id === monthId) {
+              const updatedDepartures = month.departures.map(d => d.id === dateId ? { ...d, [field]: value } : d);
+              return { ...month, departures: updatedDepartures };
+          }
+          return month;
+      });
+      setFixedDepartures(updated); updateItineraryData({ fixedDepartures: updated });
+  };
+
+  const removeSpecificDate = (monthId: string, dateId: string) => {
+      const updated = fixedDepartures.map(month => {
+          if (month.id === monthId) {
+              return { ...month, departures: month.departures.filter(d => d.id !== dateId) };
+          }
+          return month;
+      });
+      setFixedDepartures(updated); updateItineraryData({ fixedDepartures: updated });
   };
 
 
@@ -4135,13 +4216,51 @@ const netInSelected = totals.totalNet;
                     </div>
                 </div>
             </div>
-       
 
+       </main>
 
-          </main>
+      {/* 👇 NEW: VALIDITY FOOTER & NEXT BUTTON (AGENT/EMPLOYEE VIEW) */}
+          <div className="max-w-[1600px] mx-auto px-6 pb-12 pt-4 flex flex-col gap-6">
+             
+             {/* Top: Validity Footer */}
+             <div className="flex items-start md:items-center gap-3 bg-blue-50/50 border border-blue-100 rounded-xl p-4 shadow-sm w-fit">
+                <Info className="text-blue-500 mt-0.5 md:mt-0 shrink-0" size={18} />
+                <p className="text-slate-600 text-sm font-medium tracking-wide">
+                   <span className="font-bold text-blue-900 mr-1">Please Note:</span>
+                   {(() => {
+                       let validDate = "TBA";
+                       if (seasonEnd) {
+                           const d = new Date(seasonEnd);
+                           if (!isNaN(d.getTime())) {
+                               const m = d.toLocaleDateString('en-US', { month: 'short' });
+                               const dy = d.toLocaleDateString('en-US', { day: 'numeric' });
+                               const yr = d.toLocaleDateString('en-US', { year: '2-digit' });
+                               validDate = `${m} ${dy} '${yr}`;
+                           }
+                       }
+                       return `Prices are per person, are valid through ${validDate} and may change without notice.`;
+                   })()}
+                </p>
+             </div>
+
+             {/* Bottom: Proceed Button (Aligned Right) */}
+             <div className="flex justify-end">
+                 <button 
+                     onClick={() => router.push('/dashboard/itinerary/preview')}
+                     className="flex items-center gap-2 bg-green-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-green-200 hover:bg-green-700 transition-all hover:scale-105"
+                 >
+                     Proceed to Preview <ArrowRight size={18}/>
+                 </button>
+             </div>
+          </div>
+
         </div>
       );
   }
+
+
+  
+
   // =====================================================================
   // 👆 END EMPLOYEE & AGENT VIEW 👆
   // =====================================================================
@@ -4300,76 +4419,161 @@ const netInSelected = totals.totalNet;
             {/* FIXED DEPARTURES TABLE */}
       
       {/* FIXED DEPARTURES TABLE (SERIES INVENTORY MATRIX) */}
-            <div className="bg-white border border-gray-400 rounded-xl shadow-md overflow-hidden p-6">
+
+
+      {/* ========================================================= */}
+            {/* TABLE 2: MONTH SERIES (PARENT)                            */}
+            {/* ========================================================= */}
+            <div className="bg-white border border-gray-300 rounded-xl shadow-md overflow-hidden p-6">
                  <div className="flex justify-between items-center mb-4">
-                     <h3 className="font-bold text-gray-800 flex items-center gap-2"><Calendar size={18} className="text-blue-600" />Series Inventory & Pricing</h3>
-                     <button onClick={addDepartureRow} className="text-sm flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-md font-bold hover:bg-blue-700 transition"><Plus size={15} /> Add Package</button>
+                     <h3 className="font-bold text-gray-800 flex items-center gap-2 text-lg">
+                        <Calendar size={20} className="text-blue-600" /> Dates & Pricing
+                     </h3>
+                     <button onClick={addMonthRow} className="text-sm flex items-center gap-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm">
+                        <Plus size={16} /> Add Month
+                     </button>
                  </div>
+                 
                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm border border-gray-400">
-                        <thead className="bg-gray-200 text-gray-600 uppercase text-[10px] tracking-wider border-b border-gray-400">
+                    <table className="w-full text-left text-sm border-collapse">
+                        <thead className="bg-slate-100 text-slate-600 uppercase text-[10px] tracking-wider border-b border-t border-slate-200">
                             <tr>
                                 <th className="py-3 px-4 w-[60px] text-center">Select</th>
-                                <th className="py-3 px-4 w-[180px]">Month</th>
-                                <th className="py-3 px-4">Occupancy Type</th>
-                                <th className="py-3 px-4 w-[150px]">Net Price (B2B)</th>
-                                <th className="py-3 px-4 w-[140px]">Status</th>
-                                <th className="py-3 px-4 w-[50px] text-center">Del</th>
+                                <th className="py-3 px-4 w-[200px]">Base Month</th>
+                                <th className="py-3 px-4 w-[120px] text-center border-l border-slate-200">DBL / TWIN</th>
+                                <th className="py-3 px-4 w-[120px] text-center border-l border-slate-200">SINGLE</th>
+                                <th className="py-3 px-4 w-[120px] text-center border-l border-slate-200">TRIPLE</th>
+                                <th className="py-3 px-4 w-[120px] text-center border-l border-slate-200">QUAD</th>
+                                <th className="py-3 px-4 w-[120px] text-center border-l border-slate-200">Dates</th>
+                                <th className="py-3 px-4 w-[60px] text-center">Del</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-300 border border-gray-400">
-                            {fixedDepartures.map((row: any) => (
-                                <tr key={row.id} className={selectedDepartureId === row.id ? 'bg-blue-50/60' : 'hover:bg-gray-50'}>
+                        <tbody className="divide-y divide-slate-200">
+                            {fixedDepartures.map((monthData: any) => (
+                                <tr key={monthData.id} className={`hover:bg-slate-50 transition-colors ${activeMonthId === monthData.id ? 'bg-blue-50/40' : ''}`}>
+                                    {/* 1. RADIO BUTTON FOR CALCULATOR */}
                                     <td className="py-3 px-4 text-center">
-                                        <button onClick={() => toggleDepartureSelection(row.id)} className="group focus:outline-none">
-                                            <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all duration-200 ${selectedDepartureId === row.id ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300 group-hover:border-gray-400'}`}>
-                                                {selectedDepartureId === row.id && <div className="w-2 h-2 bg-white rounded-full" />}
+                                        <button onClick={() => toggleDepartureSelection(monthData.id)} className="group focus:outline-none">
+                                            <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all duration-200 ${selectedDepartureId === monthData.id ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300 group-hover:border-gray-400'}`}>
+                                                {selectedDepartureId === monthData.id && <div className="w-2 h-2 bg-white rounded-full" />}
                                             </div>
                                         </button>
                                     </td>
-                                    {/* 1. MONTH PICKER */}
+                                    
+                                    {/* 2. MONTH INPUT */}
                                     <td className="py-3 px-4">
-                                        <input type="month" value={row.month || ''} onChange={(e) => updateDepartureRow(row.id, 'month', e.target.value)} className="w-full border border-gray-300 rounded px-2 py-1.5 text-gray-700 outline-none font-bold text-xs uppercase"/>
+                                        <input type="month" value={monthData.month || ''} onChange={(e) => updateMonthRow(monthData.id, 'month', e.target.value)} className="border border-slate-300 rounded px-2 py-1.5 text-slate-700 font-bold text-sm uppercase bg-white w-full outline-none focus:border-blue-500"/>
                                     </td>
-                                    {/* 2. OCCUPANCY DROPDOWN */}
-                                    <td className="py-3 px-4">
-                                        <select value={row.occupancy || 'Double / Twin Sharing'} onChange={(e) => updateDepartureRow(row.id, 'occupancy', e.target.value)} className="w-full border border-gray-300 rounded px-2 py-1.5 text-gray-700 bg-white outline-none text-xs font-bold">
-                                            <option value="Single Sharing">Single Sharing</option>
-                                            <option value="Double / Twin Sharing">Double / Twin Sharing</option>
-                                            <option value="Triple Sharing">Triple Sharing</option>
-                                            <option value="Quad Sharing">Quad Sharing</option>
-                                           
-                                        </select>
+                                    
+                                    {/* 3. PRICES */}
+                                    <td className="py-3 px-2 border-l border-slate-100"><div className="flex items-center gap-1 bg-white border border-slate-300 focus-within:border-blue-500 rounded px-2 py-1.5"><span className="text-[10px] font-bold text-slate-400">{currency}</span><input type="number" min="0" value={monthData.priceDBL || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceDBL', parseFloat(e.target.value) || 0)} className="w-full font-mono font-bold text-slate-900 outline-none text-right" placeholder="0"/></div></td>
+                                    <td className="py-3 px-2 border-l border-slate-100"><div className="flex items-center gap-1 bg-white border border-slate-300 focus-within:border-blue-500 rounded px-2 py-1.5"><span className="text-[10px] font-bold text-slate-400">{currency}</span><input type="number" min="0" value={monthData.priceSGL || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceSGL', parseFloat(e.target.value) || 0)} className="w-full font-mono font-bold text-slate-900 outline-none text-right" placeholder="0"/></div></td>
+                                    <td className="py-3 px-2 border-l border-slate-100"><div className="flex items-center gap-1 bg-white border border-slate-300 focus-within:border-blue-500 rounded px-2 py-1.5"><span className="text-[10px] font-bold text-slate-400">{currency}</span><input type="number" min="0" value={monthData.priceTPL || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceTPL', parseFloat(e.target.value) || 0)} className="w-full font-mono font-bold text-slate-900 outline-none text-right" placeholder="0"/></div></td>
+                                    <td className="py-3 px-2 border-l border-slate-100"><div className="flex items-center gap-1 bg-white border border-slate-300 focus-within:border-blue-500 rounded px-2 py-1.5"><span className="text-[10px] font-bold text-slate-400">{currency}</span><input type="number" min="0" value={monthData.priceQUAD || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceQUAD', parseFloat(e.target.value) || 0)} className="w-full font-mono font-bold text-slate-900 outline-none text-right" placeholder="0"/></div></td>
+                                    
+                                    {/* 4. OPEN TABLE 3 BUTTON */}
+                                    <td className="py-3 px-4 text-center border-l border-slate-100">
+                                        <button onClick={() => setActiveMonthId(activeMonthId === monthData.id ? null : monthData.id)} className={`text-xs font-bold px-3 py-1.5 rounded-md border ${activeMonthId === monthData.id ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'}`}>
+                                            {activeMonthId === monthData.id ? 'Close' : 'Manage'}
+                                        </button>
                                     </td>
-                                    {/* 3. PRICE */}
-                                    <td className="py-3 px-4">
-                                        <div className="flex items-center gap-2 bg-white border border-gray-300 rounded px-2 py-1.5 focus-within:border-blue-500">
-                                            <span className="text-xs font-bold text-gray-400">{currency}</span>
-                                            <input type="number" min="0" value={row.price} onChange={(e) => updateDepartureRow(row.id, 'price', parseFloat(e.target.value) || 0)} className="w-full font-mono font-bold text-gray-900 outline-none bg-transparent"/>
-                                        </div>
-                                    </td>
-                                    {/* 4. NEW STATUS DROPDOWN */}
-                                    <td className="py-3 px-4">
-                                        <select value={row.status || 'Available'} onChange={(e) => updateDepartureRow(row.id, 'status', e.target.value)} className={`w-full border rounded px-2 py-1.5 text-xs font-bold outline-none ${row.status === 'Sold' ? 'bg-red-50 text-red-700 border-red-200' : row.status === 'Limited Seat' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                                            <option value="Available">Available</option>
-                                            <option value="Limited Seat">Limited Seat</option>
-                                            <option value="Sold">Sold</option>
-                                        </select>
-                                    </td>
+                                    
                                     <td className="py-3 px-4 text-center">
-                                        <button onClick={() => removeDepartureRow(row.id)} className="text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                                        <button onClick={() => removeMonthRow(monthData.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1"><Trash2 size={16} /></button>
                                     </td>
                                 </tr>
                             ))}
                             {fixedDepartures.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} className="py-8 text-center text-gray-400 text-sm italic">No packages added. Click "Add Package" to build inventory.</td>
-                                </tr>
+                                <tr><td colSpan={8} className="py-12 text-center text-slate-400 text-sm italic">No inventory created. Click "Add Month" to start.</td></tr>
                             )}
                         </tbody>
                     </table>
                  </div>
             </div>
+
+            {/* ========================================================= */}
+            {/* TABLE 3: SPECIFIC DATES (CHILD) - Renders BELOW Table 2   */}
+            {/* ========================================================= */}
+            {activeMonthId && (
+                <div className="bg-white border-2 border-blue-200 rounded-xl shadow-lg overflow-hidden p-6 mt-6 relative animate-in fade-in slide-in-from-top-4">
+                    {/* Visual Connector to Table 2 */}
+                    <div className="absolute -top-6 left-1/2 w-0.5 h-6 bg-blue-200"></div>
+
+                    {(() => {
+                        const activeMonthData = fixedDepartures.find(m => m.id === activeMonthId);
+                        if (!activeMonthData) return null;
+
+                        return (
+                            <>
+                                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                    <h4 className="font-bold text-blue-900 flex items-center gap-2">
+                                       <Calendar size={20} className="text-blue-600" />Specific Departures Dates for: <span className="uppercase bg-blue-100 px-2 py-0.5 rounded text-blue-700">{activeMonthData.month || 'Selected Month'}</span>
+                                    </h4>
+                                    <button onClick={() => addSpecificDate(activeMonthData.id)} className="text-xs flex items-center gap-1 bg-white border border-blue-300 text-blue-700 px-4 py-2 rounded-md font-bold hover:bg-blue-50 transition shadow-sm">
+                                        <Plus size={14} /> Add Date
+                                    </button>
+                                </div>
+                                
+                                {activeMonthData.departures && activeMonthData.departures.length > 0 ? (
+                                    <table className="w-full text-left text-xs bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                                        <thead className="bg-slate-50 text-slate-500 uppercase text-[9px] border-b border-slate-200">
+                                            <tr>
+                                                <th className="py-2 px-3 w-[60px] text-center">Select</th>
+                                                <th className="py-2 px-3 w-[150px]">Exact Date</th>
+                                                <th className="py-2 px-3 w-[130px]">Status</th>
+                                                <th className="py-2 px-3 text-center border-l border-slate-200">DBL Override</th>
+                                                <th className="py-2 px-3 text-center border-l border-slate-200">SGL Override</th>
+                                                <th className="py-2 px-3 text-center border-l border-slate-200">TPL Override</th>
+                                                <th className="py-2 px-3 text-center border-l border-slate-200">QUAD Override</th>
+                                                <th className="py-2 px-3 w-[50px] text-center border-l border-slate-200">Del</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {activeMonthData.departures.map((dateRow: any) => (
+                                                <tr key={dateRow.id} className={`hover:bg-blue-50/30 transition-colors ${selectedDepartureId === dateRow.id ? 'bg-blue-50/60' : ''}`}>
+                                                    
+                                                    {/* 1. RADIO BUTTON FOR SPECIFIC DATE */}
+                                                    <td className="py-2 px-3 text-center">
+                                                        <button onClick={() => toggleDepartureSelection(dateRow.id)} className="group focus:outline-none">
+                                                            <div className={`flex items-center justify-center w-4 h-4 rounded-full border-2 transition-all duration-200 ${selectedDepartureId === dateRow.id ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300 group-hover:border-gray-400'}`}>
+                                                                {selectedDepartureId === dateRow.id && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                                                            </div>
+                                                        </button>
+                                                    </td>
+
+                                                    <td className="py-2 px-3"><input type="date" value={dateRow.date || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'date', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1 text-slate-700 font-bold bg-white outline-none focus:border-blue-500"/></td>
+                                                    <td className="py-2 px-3">
+                                                        <select value={dateRow.status || 'Available'} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'status', e.target.value)} className={`w-full border rounded px-2 py-1 font-bold outline-none ${dateRow.status === 'Sold Out' ? 'bg-red-50 text-red-700 border-red-200' : dateRow.status === 'Limited Seat' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                                                            <option value="Available">Available</option>
+                                                            <option value="Limited Seat">Limited Seat</option>
+                                                            <option value="Sold Out">Sold Out</option>
+                                                        </select>
+                                                    </td>
+                                                    
+                                                    {/* OVERRIDES: Shows the master price lightly if blank */}
+                                                    <td className="py-2 px-2 border-l border-slate-100"><input type="number" min="0" placeholder={activeMonthData.priceDBL ? `${currency} ${activeMonthData.priceDBL}` : 'Auto'} value={dateRow.overridePriceDBL || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceDBL', e.target.value)} className="w-full border border-dashed border-slate-300 rounded px-1.5 py-1 font-mono text-slate-800 text-right outline-none focus:border-blue-500 focus:bg-white transition-colors"/></td>
+                                                    <td className="py-2 px-2 border-l border-slate-100"><input type="number" min="0" placeholder={activeMonthData.priceSGL ? `${currency} ${activeMonthData.priceSGL}` : 'Auto'} value={dateRow.overridePriceSGL || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceSGL', e.target.value)} className="w-full border border-dashed border-slate-300 rounded px-1.5 py-1 font-mono text-slate-800 text-right outline-none focus:border-blue-500 focus:bg-white transition-colors"/></td>
+                                                    <td className="py-2 px-2 border-l border-slate-100"><input type="number" min="0" placeholder={activeMonthData.priceTPL ? `${currency} ${activeMonthData.priceTPL}` : 'Auto'} value={dateRow.overridePriceTPL || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceTPL', e.target.value)} className="w-full border border-dashed border-slate-300 rounded px-1.5 py-1 font-mono text-slate-800 text-right outline-none focus:border-blue-500 focus:bg-white transition-colors"/></td>
+                                                    <td className="py-2 px-2 border-l border-slate-100"><input type="number" min="0" placeholder={activeMonthData.priceQUAD ? `${currency} ${activeMonthData.priceQUAD}` : 'Auto'} value={dateRow.overridePriceQUAD || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceQUAD', e.target.value)} className="w-full border border-dashed border-slate-300 rounded px-1.5 py-1 font-mono text-slate-800 text-right outline-none focus:border-blue-500 focus:bg-white transition-colors"/></td>
+                                                    
+                                                    <td className="py-2 px-3 text-center border-l border-slate-100"><button onClick={() => removeSpecificDate(activeMonthData.id, dateRow.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1"><XCircle size={14} /></button></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div className="text-center text-slate-500 text-sm italic py-8 border border-dashed border-slate-300 rounded-lg bg-slate-50">
+                                        No specific dates scheduled. Click "Add Date" to create a departure.
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+                </div>
+            )}
+
+    
+        
         </div>
 
         {/* RIGHT: CALCULATOR */}
@@ -4390,7 +4594,7 @@ const netInSelected = totals.totalNet;
             <div className={`bg-white rounded-xl shadow-lg border ${activeFixedDeparture ? 'border-blue-400 ring-1 ring-blue-400' : 'border-gray-300'} overflow-hidden transition-all duration-300`}>
                 <div className={`bg-gray-900 text-white px-5 py-4 flex items-center justify-between`}>
                     <div className="flex items-center gap-2"><Calculator size={18} className="text-green-400"/><span className="font-bold tracking-wide text-sm">{activeFixedDeparture ? 'Fixed Package Price' : `Quote Calculator (${selectedMonth})`}</span></div>
-                    {activeFixedDeparture && <span className="text-[10px] bg-blue-700 px-2 py-0.5 rounded text-white font-medium">LOCKED</span>}
+              
                 </div>
 
                 <div className="p-5 space-y-5">
@@ -4471,6 +4675,54 @@ const netInSelected = totals.totalNet;
             </div> 
         </div> 
       </main>
-    </div>
-  );
-}
+
+
+
+      
+
+          {/* 👇 NEW: VALIDITY FOOTER & ROLE-BASED NEXT BUTTON (ADMIN VIEW) */}
+         {/* 👇 NEW: VALIDITY FOOTER & ROLE-BASED NEXT BUTTON (ADMIN VIEW) */}
+          <div className="max-w-[1600px] mx-auto px-6 pb-12 pt-4 flex flex-col gap-6">
+             
+             {/* Top: Validity Footer */}
+             <div className="flex items-start md:items-center gap-3 bg-blue-50/50 border border-blue-100 rounded-xl p-4 shadow-sm w-fit">
+                <Info className="text-blue-500 mt-0.5 md:mt-0 shrink-0" size={18} />
+                <p className="text-slate-600 text-sm font-medium tracking-wide">
+                   <span className="font-bold text-blue-900 mr-1">Please Note:</span>
+                   {(() => {
+                       let validDate = "TBA";
+                       if (seasonEnd) {
+                           const d = new Date(seasonEnd);
+                           if (!isNaN(d.getTime())) {
+                               const m = d.toLocaleDateString('en-US', { month: 'short' });
+                               const dy = d.toLocaleDateString('en-US', { day: 'numeric' });
+                               const yr = d.toLocaleDateString('en-US', { year: '2-digit' });
+                               validDate = `${m} ${dy} '${yr}`;
+                           }
+                       }
+                       return `Prices are per person, are valid through ${validDate} and may change without notice.`;
+                   })()}
+                </p>
+             </div>
+
+             {/* Bottom: Admin Action Logic (Aligned Right) */}
+             <div className="flex items-center justify-end gap-4">
+                 {/* Warning if the admin tries to go to preview without approving the agent's request first */}
+                 {itineraryData.status === 'pending_costing' && (
+                     <div className="flex items-center text-orange-600 font-bold text-sm bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 shadow-sm">
+                         <AlertTriangle size={16} className="mr-2"/> Approve Costing to unlock for Employees/Agents
+                     </div>
+                 )}
+                 
+                 <button 
+                     onClick={() => router.push('/dashboard/itinerary/preview')}
+                     className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-105"
+                 >
+                     Go to Preview <ArrowRight size={18}/>
+                 </button>
+             </div>
+          </div>
+
+        </div>
+      );
+    }

@@ -399,15 +399,53 @@ export interface RoutingData {
   routes: RouteDay[];
 }
 
-export interface FixedDeparture {
+// export interface FixedDeparture {
+//   date: any;
+//   id: string;
+//   month: string;       // 👈 REPLACED date with month
+//   occupancy: string;   // 👈 REPLACED label with occupancy
+//   price: number;      
+//   status: 'Available' | 'Limited Seat' | 'Sold';
+//   isSelected: boolean; 
+// }
+
+
+
+// ========================================================
+// TABLE 3: SPECIFIC DATES (Child Table)
+// ========================================================
+export interface SpecificDeparture {
   id: string;
-  month: string;       // 👈 REPLACED date with month
-  occupancy: string;   // 👈 REPLACED label with occupancy
-  price: number;      
-  status: 'Available' | 'Limited Seat' | 'Sold';
-  isSelected: boolean; 
+  date: string; // The exact date (e.g., "2026-01-14")
+  status: 'Available' | 'Limited Seat' | 'Sold Out';
+  
+  // Overrides (If admin leaves these empty, it fetches from Table 2 automatically)
+  overridePriceDBL?: number | string; 
+  overridePriceSGL?: number | string;
+  overridePriceTPL?: number | string;
+  overridePriceQUAD?: number | string;
+  
+  isSelected: boolean;
 }
 
+// ========================================================
+// TABLE 2: MONTH SERIES (Parent Table)
+// ========================================================
+export interface FixedDeparture {
+  date: any;
+  price: number;
+  id: string;
+  month: string; // The Month string (e.g., "2026-01")
+  
+  // Base Prices for the whole month (Admin sets these once)
+  priceDBL: number;
+  priceSGL: number;
+  priceTPL: number;
+  priceQUAD: number;
+  
+  // This links Table 3 inside Table 2!
+  departures: SpecificDeparture[]; 
+}
 
 
 
