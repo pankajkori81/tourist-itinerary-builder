@@ -1954,13 +1954,19 @@ export default function TripDetailsPage() {
   const [isDownloading, setIsDownloading] = useState(false);
 
   // --- 1. DATA FETCHING ---
+// --- 1. DATA FETCHING (Corrected for MongoDB Async) ---
   useEffect(() => {
-    const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
-    if (id) {
-      const data = getItineraryById(id as string);
-      if (data) setItinerary(data);
-    }
-    setLoading(false);
+    const loadData = async () => {
+      const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
+      if (id) {
+        // We MUST 'await' because the data is now coming from the cloud
+        const data = await getItineraryById(id as string);
+        if (data) setItinerary(data);
+      }
+      setLoading(false);
+    };
+
+    loadData();
   }, [params]);
 
   // --- 2. CURRENCY ---

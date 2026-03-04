@@ -1025,8 +1025,8 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
     itineraryData, 
     saveItinerary, 
     isSaving, 
-    saveError ,
-    toastMessage,
+    toastMessage
+   
   } = useItinerary();
 
   const [activeTab, setActiveTab] = useState('INTRO');
@@ -1054,13 +1054,14 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
     else setActiveTab('INTRO');
   }, [pathname, isPreviewDetailsPage]);
 
-  // Error handling
-  useEffect(() => {
-    if (saveError) {
-      setErrorMessage(saveError);
-      setShowErrorPopup(true);
-    }
-  }, [saveError]);
+// 2. Replace your Error Handling useEffect with this:
+useEffect(() => {
+  // Check if there is a toast message and if it is an 'error' type
+  if (toastMessage && toastMessage.type === 'error') {
+    setErrorMessage(toastMessage.message);
+    setShowErrorPopup(true);
+  }
+}, [toastMessage]);
 
   // 👇 HIGHLIGHT: Updated Locking Logic (Review-First Flow)
   const getTabState = (tabId: string) => {
@@ -1068,8 +1069,8 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
       
       // 1. Determine Completion of previous steps
       const introDone = !!itineraryData.tripName;
-      const routingDone = introDone && (itineraryData.routingData?.routes?.length > 0);
-      
+   // 👇 FIXED: Added safe navigation ?. to prevent "Cannot read property routes of undefined"
+      const routingDone = !!(introDone && itineraryData.routingData?.routes && itineraryData.routingData.routes.length > 0);
       // Create Day is "done" if we have at least one activity/hotel, or if we moved past it
       const hasDayItems = (itineraryData.dayWiseActivities?.length || 0) > 0;
       const createDayDone = routingDone && hasDayItems;

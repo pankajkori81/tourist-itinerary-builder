@@ -21,14 +21,20 @@ export default function FixedDepartureModal({ isOpen, onClose, onSave, initialDa
     }
   }, [isOpen, initialData]);
 
-  const addRow = () => {
+const addRow = () => {
     const newRow: FixedDeparture = {
         id: Date.now().toString(),
         date: '',
-        label: '',
+        label: '', // Ensure this is an empty string, not null
         price: 0,
-        status: 'Open',
-        isSelected: false
+        status: 'Open' as 'Open' | 'Filling Fast' | 'Sold Out', // Explicitly cast the status
+        isSelected: false,
+        month: '',
+        priceDBL: 0,
+        priceSGL: 0,
+        priceTPL: 0,
+        priceQUAD: 0,
+        departures: []
     };
     setDepartures([...departures, newRow]);
   };
@@ -98,15 +104,16 @@ export default function FixedDepartureModal({ isOpen, onClose, onSave, initialDa
                                     className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                                 />
                             </td>
-                            <td className="py-3 pr-4">
-                                <input 
-                                    type="text" 
-                                    placeholder="e.g. Valentine's Batch"
-                                    value={row.label} 
-                                    onChange={(e) => updateRow(row.id, 'label', e.target.value)}
-                                    className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none"
-                                />
-                            </td>
+                         <td className="py-3 pr-4">
+    <input 
+        type="text" 
+        placeholder="e.g. Valentine's Batch"
+        // 👇 The "|| ''" fixes the "undefined is not assignable to string" error
+        value={String(row.label || '')} 
+        onChange={(e) => updateRow(row.id, 'label', e.target.value)}
+        className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none"
+    />
+</td>
                             <td className="py-3 pr-4">
                                 <div className="relative">
                                     <span className="absolute left-3 top-2 text-gray-400 text-xs font-bold">$</span>

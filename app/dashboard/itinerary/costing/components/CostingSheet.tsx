@@ -101,7 +101,8 @@ export default function CostingSheet({ dayPlans, initialTravelers }: CostingShee
       // C. TRANSPORT
       if (day.transports) {
           day.transports.forEach(trans => {
-       if ((trans as any).serviceType === 'Planned') {
+     // To this (Adding a safety check for 'included'):
+if ((trans as any).serviceType === 'Planned' && trans.inclusionType === 'included') {
               const rowTotal = trans.price * trans.vehicleCount;
               totalTransportCost += rowTotal;
       

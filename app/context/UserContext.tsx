@@ -174,7 +174,6 @@ interface User {
 // --- UPDATE ENDS HERE ---
 
 interface UserContextType {
-
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;

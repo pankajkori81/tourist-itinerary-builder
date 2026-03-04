@@ -51,7 +51,7 @@ export default function DashboardPage() {
       {/* 1. Welcome Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">
-          Welcome back, {userData?.name || 'Admin'}!
+         Welcome back, {userData?.user?.name || 'Admin'}!
         </h1>
         <p className="text-gray-600 mt-2">
           Here is what's happening with your travel agency today.
