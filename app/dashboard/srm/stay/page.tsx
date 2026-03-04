@@ -749,7 +749,6 @@
 //   const addRoomCategory = () => {
 //     const currentYear = new Date().getFullYear();
 //     const newRoom: RoomCategory = {
-//       id: Date.now().toString(),
 //       name: 'Standard Room',
 //       maxOccupancy: 2,
 //       bedType: 'Double',
@@ -766,17 +765,17 @@
 //     const newCategories = [...formData.roomCategories];
 //     const room = newCategories[roomIndex];
 //     const maxYear = room.rateCards.length > 0 
-//         ? Math.max(...room.rateCards.map(c => c.year)) 
+//         ? Math.max(...room.rateCards.map((c: { year: any; }) => c.year)) 
 //         : new Date().getFullYear() - 1;
 
 //     room.rateCards.push({ year: maxYear + 1, rates: { ...DEFAULT_RATES } });
-//     room.rateCards.sort((a, b) => a.year - b.year);
+//     room.rateCards.sort((a: { year: number; }, b: { year: number; }) => a.year - b.year);
 //     setFormData({ ...formData, roomCategories: newCategories });
 //   };
 
 //   const removeYearFromRoom = (roomIndex: number, yearToDelete: number) => {
 //     const newCategories = [...formData.roomCategories];
-//     newCategories[roomIndex].rateCards = newCategories[roomIndex].rateCards.filter(rc => rc.year !== yearToDelete);
+//     newCategories[roomIndex].rateCards = newCategories[roomIndex].rateCards.filter((rc: { year: number; }) => rc.year !== yearToDelete);
 //     setFormData({ ...formData, roomCategories: newCategories });
 //   };
 
@@ -1067,8 +1066,8 @@
 //                                               </div>
 //                                           </div>
 //                                           <div className="p-4 overflow-x-auto">
-//                                               {room.rateCards.map((card, yIndex) => (
-//                                                   <div key={card.year} className="mb-6 last:mb-0 relative group">
+//                                               {room.rateCards.map((card: { year: boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | React.Key | null | undefined; rates: { [x: string]: string | number | readonly string[] | undefined; }; }, yIndex: number) => (
+//                                                   <div key={String(card.year)} className="mb-6 last:mb-0 relative group">
 //                                                       <div className="flex items-center justify-between mb-2">
 //                                                           <div className="flex items-center gap-2"><span className="bg-gray-800 text-white px-3 py-1 rounded text-xs font-bold shadow-sm">{card.year} Rate Card</span><span className="text-[10px] text-gray-600 uppercase tracking-wide">USD per Night</span></div>
 //                                                           <button onClick={() => removeYearFromRoom(rIndex, card.year)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600 p-1" title="Remove Year"><Trash2 size={14}/></button>
@@ -1347,10 +1346,11 @@ export default function StaySRMPage() {
 
   const addRoomCategory = () => {
     const newRoom: RoomCategory = {
-      name: 'Standard Room',
-      maxOccupancy: 2,
-      bedType: 'Double',
-      inclusions: ['Breakfast']
+        name: 'Standard Room',
+        maxOccupancy: 2,
+        bedType: 'Double',
+        inclusions: ['Breakfast'],
+        rateCards: undefined
     };
     setFormData(prev => ({ ...prev, roomCategories: [...prev.roomCategories, newRoom] }));
   };

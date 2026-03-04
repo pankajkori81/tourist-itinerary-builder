@@ -652,6 +652,7 @@ export interface SupplierData {
 }
 
 export interface RoomCategory {
+  rateCards: any;
   name: string;
   maxOccupancy: number;
   bedType: string;

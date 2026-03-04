@@ -85,6 +85,7 @@ export interface Activity {
 
 // --- UPDATED STAY INTERFACE ---
 export interface Stay {
+  roomName: string;
   id: number;
   type: 'stay';
   

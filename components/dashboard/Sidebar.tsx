@@ -345,7 +345,8 @@ import { usePathname } from 'next/navigation';
 import { 
   Home, Map, Users, Settings, ChevronLeft, Menu, 
   RouteIcon, BarChart3, Plane, CreditCard, User, 
-  Settings2, HelpCircle, Calendar, Briefcase 
+  Settings2, HelpCircle, Calendar, Briefcase, 
+  Landmark
 } from 'lucide-react';
 import { useDashboardUI } from '@/app/context/DashboardUIContext';
 import { useUser } from '@/app/context/UserContext'; // <--- Import User Context
@@ -405,6 +406,14 @@ export function Sidebar() {
       path: "/dashboard/travel-operations", 
       icon: RouteIcon,
       roles: ['admin', 'employee', 'agent']
+    },
+
+
+      { 
+      label: "Rate Manager", 
+      path: "/dashboard/rate-manager", 
+      icon: Landmark,
+      roles: ['admin']
     },
 
     // 6. Reports (Admin Only)
