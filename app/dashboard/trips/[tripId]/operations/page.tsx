@@ -4503,22 +4503,31 @@ export default function TripOperationsPage() {
       setSelectedIds(new Set()); 
   };
 
-  // --- 1. LOAD DATA ---
+// --- 1. LOAD DATA (Corrected for MongoDB Async) ---
   useEffect(() => {
-    if (tripId) {
-      const rawData = getItineraryById(tripId);
-      if (rawData) {
-          const initializedData = initializeOperations(rawData);
-          setTrip(initializedData);
-          setOpsData(initializedData.operations || null);
-          if(!rawData.operations) {
-             saveOperationsData(tripId, initializedData.operations);
-          }
+    const loadData = async () => {
+      if (tripId) {
+        // 👈 CRITICAL: We MUST add 'await' because this returns a Promise now
+        const rawData = await getItineraryById(tripId);
+        
+        if (rawData) {
+            const initializedData = initializeOperations(rawData);
+            setTrip(initializedData);
+            setOpsData(initializedData.operations || null);
+
+            // 👈 ALSO ADD 'await' HERE to ensure data is saved before moving on
+            if(!rawData.operations) {
+               await saveOperationsData(tripId, initializedData.operations);
+            }
+        }
+        
+        const allSuppliers = getSuppliers();
+        setSuppliers(await allSuppliers);
+        setLoading(false);
       }
-      const allSuppliers = getSuppliers();
-      setSuppliers(allSuppliers);
-      setLoading(false);
-    }
+    };
+
+    loadData();
   }, [tripId]);
 
 

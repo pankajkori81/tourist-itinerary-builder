@@ -1288,16 +1288,24 @@ export default function TripsPage() {
   const [filter, setFilter] = useState<'upcoming' | 'ongoing' | 'completed' | 'cancelled'>('upcoming'); 
   const [search, setSearch] = useState('');
   
-  // --- LOAD DATA ---
-  const loadTrips = () => {
-    const allItineraries = getLibrary();
+// --- LOAD DATA (Corrected for MongoDB Async) ---
+  const loadTrips = async () => {
+    // 1. We MUST 'await' because getLibrary is now an async DB call
+    const allItineraries = await getLibrary();
+    
+    // Safety check: if for some reason data is null
+    if (!allItineraries) {
+      setTrips([]);
+      return;
+    }
     
     let confirmedTrips = allItineraries.filter(item => 
         (item.bookingStatus === 'confirmed' || item.bookingStatus === 'cancelled') && 
         item.isMasterItinerary === false
     );
 
-    // 👈 AGENT FILTER LOGIC
+    // 2. AGENT FILTER LOGIC
+    // Note: Ensure user?._id exists in your User interface
     if (user?.role === 'agent') {
         confirmedTrips = confirmedTrips.filter(trip => trip.assignedAgentId === user._id);
     }
@@ -1309,24 +1317,47 @@ export default function TripsPage() {
     loadTrips();
   }, [user]); 
 
-  // --- ACTIONS HANDLER ---
-  const handleCardAction = (action: string, id: string) => {
+//   // --- ACTIONS HANDLER ---
+//   const handleCardAction = (action: string, id: string) => {
+//     if (action === 'edit') {
+//         sessionStorage.setItem('editing_itinerary_id', id);
+//         router.push('/dashboard/itinerary/create');
+//     }
+    
+//     if (action === 'cancel') {
+//         if (confirm("Are you sure you want to cancel this trip? This will move it to the 'Cancelled' tab.")) {
+//             updateItineraryStatus(id, 'cancelled');
+//             loadTrips(); 
+//         }
+//     }
+    
+//     if (action === 'delete') {
+//         if (confirm("⚠️ WARNING: This will permanently delete this trip and all its data. This cannot be undone.\n\nAre you sure?")) {
+//             deleteItinerary(id);
+//             loadTrips(); 
+//         }
+//     }
+//   };
+
+
+// --- ACTIONS HANDLER (Made Async) ---
+  const handleCardAction = async (action: string, id: string) => {
     if (action === 'edit') {
         sessionStorage.setItem('editing_itinerary_id', id);
         router.push('/dashboard/itinerary/create');
     }
     
     if (action === 'cancel') {
-        if (confirm("Are you sure you want to cancel this trip? This will move it to the 'Cancelled' tab.")) {
-            updateItineraryStatus(id, 'cancelled');
-            loadTrips(); 
+        if (confirm("Are you sure you want to cancel this trip?")) {
+            await updateItineraryStatus(id, 'cancelled'); // Added await
+            await loadTrips(); // Refresh list after DB update
         }
     }
     
     if (action === 'delete') {
-        if (confirm("⚠️ WARNING: This will permanently delete this trip and all its data. This cannot be undone.\n\nAre you sure?")) {
-            deleteItinerary(id);
-            loadTrips(); 
+        if (confirm("⚠️ WARNING: This will permanently delete this trip...")) {
+            await deleteItinerary(id); // Added await
+            await loadTrips(); // Refresh list after DB delete
         }
     }
   };
