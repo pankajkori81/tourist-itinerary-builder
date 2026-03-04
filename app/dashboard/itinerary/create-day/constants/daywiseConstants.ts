@@ -128,8 +128,10 @@ export interface Stay {
 
 // --- UPDATED TRANSPORT INTERFACE ---
 export interface Transport {
+
   id: number;
   type: 'transport';
+  serviceType?: string;
   
   // 1. Service Config
   mode: 'vehicle' | 'flight' | 'rail' | 'ferry';
