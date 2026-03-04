@@ -572,7 +572,7 @@ export default function RoutingPage() {
   const removeCitySlot = (routeId: number, cityIdx: number) => {
     setRoutes(prev => prev.map(r => {
       if (r.id === routeId && r.cities.length > 1) {
-        return { ...r, cities: r.cities.filter((_, i) => i !== cityIdx) };
+        return { ...r, cities: r.cities.filter((_: any, i: number) => i !== cityIdx) };
       }
       return r;
     }));
