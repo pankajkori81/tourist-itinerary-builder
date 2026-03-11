@@ -44,11 +44,18 @@ import mongoose from "mongoose";
 
 // 🌟 UPGRADED: Sub-schema for Per-Night Occupancy Pricing
 const RateItemSchema = new mongoose.Schema({
-  name: { type: String, required: true }, // e.g., "Standard Room"
-  singleRate: { type: Number, required: true, default: 0 }, // 1 Pax
-  doubleRate: { type: Number, required: true, default: 0 }, // 2 Pax (Twin/Double)
-  tripleRate: { type: Number, required: true, default: 0 }, // 3 Pax
-  quadRate: { type: Number, required: true, default: 0 },   // 4 Pax
+  name: { type: String,default: "" }, // e.g., "Standard Room"
+  singleRate: { type: Number,  default: 0 }, // 1 Pax
+  doubleRate: { type: Number,  default: 0 }, // 2 Pax (Twin/Double)
+  tripleRate: { type: Number,  default: 0 }, // 3 Pax
+  quadRate: { type: Number,    default: 0 },   // 4 Pax
+
+
+
+  // 2. 👇 ADDED THIS FOR TRANSPORT 👇
+  vehicleType: { type: String , default: ""}, 
+  transferRate: { type: Number, default: 0 }, 
+  disposalRate: { type: Number, default: 0 }
 });
 
 // Sub-schema for the Date Ranges

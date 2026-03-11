@@ -948,19 +948,144 @@ export default function CostingPage() {
           });
 
           // 4. 🚗 AUTO-FILL TRANSPORTS (Cost x Vehicles)
+        //   day.transports?.forEach(t => {
+        //       if (!isItemIncluded(t.inclusionType)) return;
+        //       const bestSeason = getBestSeason(t.linkedSupplierId, t.vehicleType);
+        //       if (bestSeason && bestSeason.rates && bestSeason.rates.length > 0) {
+        //           // For non-stays, assume the 'singleRate' column is the flat price
+        //           const baseRate = bestSeason.rates[0].singleRate || 0;
+        //           if (baseRate > 0) {
+        //               const vehicleCount = Number(t.vehicleCount) || 1;
+        //               updatedMatrix[selectedMonth][t.id.toString()] = baseRate * vehicleCount;
+        //               ratesFound++;
+        //           }
+        //       }
+        //   });
+
+
+        // 4. 🚗 AUTO-FILL TRANSPORTS (Updated for Transfer vs Disposal)
+
+        // 4. 🚗 AUTO-FILL TRANSPORTS (Reflecting Correct Transfer/Disposal Rates)
+
+
+        // 4. 🚗 AUTO-FILL TRANSPORTS (Fully Fixed for Transfer & Disposal)
           day.transports?.forEach(t => {
               if (!isItemIncluded(t.inclusionType)) return;
-              const bestSeason = getBestSeason(t.linkedSupplierId, t.vehicleType);
+
+              // 1. Look for the EXACT contract name we saved in the DB (e.g., "Rome Transport Fleet")
+              const expectedServiceName = day.city ? `${day.city} Transport Fleet` : undefined;
+              const bestSeason = getBestSeason(t.linkedSupplierId, expectedServiceName);
+
               if (bestSeason && bestSeason.rates && bestSeason.rates.length > 0) {
-                  // For non-stays, assume the 'singleRate' column is the flat price
-                  const baseRate = bestSeason.rates[0].singleRate || 0;
-                  if (baseRate > 0) {
+                  
+                  // 2. Find the exact vehicle type (e.g., "Sedan Car")
+                  const matchedRateRow = bestSeason.rates.find((r: any) => 
+                      r.vehicleType === t.vehicleType
+                  ) || bestSeason.rates[0];
+
+                  // 3. Check if the Itinerary was set to Disposal or Transfer
+                  const isDisposal = t.subType === 'disposal';
+
+                  // 4. Pull the correct price from the correct column
+                  const ratePerVehicle = isDisposal 
+                      ? (matchedRateRow.disposalRate || 0) 
+                      : (matchedRateRow.transferRate || 0);
+
+                  if (ratePerVehicle > 0) {
                       const vehicleCount = Number(t.vehicleCount) || 1;
-                      updatedMatrix[selectedMonth][t.id.toString()] = baseRate * vehicleCount;
+                      updatedMatrix[selectedMonth][t.id.toString()] = ratePerVehicle * vehicleCount;
                       ratesFound++;
                   }
               }
           });
+
+
+        // // 4. 🚗 AUTO-FILL TRANSPORTS
+        //   day.transports?.forEach(t => {
+        //       if (!isItemIncluded(t.inclusionType)) return;
+
+        //       // 🛠️ FIX 1: Search for the City's Transport Fleet, NOT the vehicle name
+        //       const expectedServiceName = day.city ? `${day.city} - Transportation Services` : undefined;
+        //       const bestSeason = getBestSeason(t.linkedSupplierId, expectedServiceName);
+
+        //       if (bestSeason && bestSeason.rates && bestSeason.rates.length > 0) {
+        //           // Find the exact vehicle type row in the tariff (e.g., 'Sedan Car')
+        //           const matchedRateRow = bestSeason.rates.find((r: any) => 
+        //               r.vehicleType === t.vehicleType
+        //           ) || bestSeason.rates[0];
+
+        //           // 🛠️ FIX 2: Use `t.subType` because that is what TransportForm saves it as
+        //           const isDisposal = t.subType === 'disposal';
+
+        //           // Pull the correct price based on the selection
+        //           const ratePerVehicle = isDisposal 
+        //               ? (matchedRateRow.disposalRate || 0) 
+        //               : (matchedRateRow.transferRate || 0);
+
+        //           if (ratePerVehicle > 0) {
+        //               const vehicleCount = Number(t.vehicleCount) || 1;
+        //               updatedMatrix[selectedMonth][t.id.toString()] = ratePerVehicle * vehicleCount;
+        //               ratesFound++;
+        //           }
+        //       }
+        //   });
+
+
+
+
+        //   day.transports?.forEach(t => {
+        //       if (!isItemIncluded(t.inclusionType)) return;
+
+        //       // Use the tariff matched by either supplier ID or vehicle type
+        //       const bestSeason = getBestSeason(t.linkedSupplierId, t.vehicleType);
+
+        //       if (bestSeason && bestSeason.rates && bestSeason.rates.length > 0) {
+        //           // Find the exact vehicle type row in the tariff (e.g., 'Sedan Car')
+        //           const matchedRateRow = bestSeason.rates.find((r: any) => 
+        //               r.vehicleType === t.vehicleType
+        //           ) || bestSeason.rates[0];
+
+        //           // determine which column to pull from based on the itinerary's serviceType
+        //           // Logic: If the itinerary says 'Disposal' or 'Full Day', pull disposalRate
+        //           const isDisposal = t.serviceType?.toLowerCase().includes('disposal') || 
+        //                              t.serviceType?.toLowerCase().includes('full day');
+
+        //           const ratePerVehicle = isDisposal 
+        //               ? (matchedRateRow.disposalRate || 0) 
+        //               : (matchedRateRow.transferRate || 0);
+
+        //           if (ratePerVehicle > 0) {
+        //               const vehicleCount = Number(t.vehicleCount) || 1;
+        //               updatedMatrix[selectedMonth][t.id.toString()] = ratePerVehicle * vehicleCount;
+        //               ratesFound++;
+        //           }
+        //       }
+        //   });
+        //   day.transports?.forEach(t => {
+        //       if (!isItemIncluded(t.inclusionType)) return;
+              
+        //       // Find the tariff for this transport city/fleet
+        //       const bestSeason = getBestSeason(t.linkedSupplierId, t.vehicleType);
+              
+        //       if (bestSeason && bestSeason.rates && bestSeason.rates.length > 0) {
+        //           // Find the specific vehicle type in the tariff (e.g., 'Sedan Car')
+        //           const matchedVehicle = bestSeason.rates.find((r: any) => 
+        //               r.vehicleType === t.vehicleType
+        //           ) || bestSeason.rates[0];
+
+        //           // Determine which price to use based on the Itinerary Service Type
+        //           // Logic: If serviceType is 'Disposal', use disposalRate. Otherwise, use transferRate.
+        //           const unitPrice = (t.serviceType === 'Disposal' || t.serviceType === 'Full Day') 
+        //               ? (matchedVehicle.disposalRate || 0) 
+        //               : (matchedVehicle.transferRate || 0);
+
+        //           if (unitPrice > 0) {
+        //               const vehicleCount = Number(t.vehicleCount) || 1;
+        //               updatedMatrix[selectedMonth][t.id.toString()] = unitPrice * vehicleCount;
+        //               ratesFound++;
+        //           }
+        //       }
+        //   });
 
           // 5. 🎟️ AUTO-FILL ACTIVITIES (Cost x Pax)
           day.activities?.forEach(a => {

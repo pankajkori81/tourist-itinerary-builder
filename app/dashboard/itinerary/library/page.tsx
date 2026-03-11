@@ -1096,40 +1096,84 @@ const handleUseTemplate = async (item: StoredItineraryData) => {
 
 
 
+// const handleConfirmDateSelection = async (exactDate: string, specificDepartureId: string) => {
+//      if (!selectedTemplate) return;
+     
+//      // 👇 Await clone
+//      const cloned = await cloneItinerary(selectedTemplate.id!, true, user?._id); 
+     
+//      if (cloned) {
+//          const startDateObj = new Date(exactDate); 
+//          const toDateStr = (date: Date) => date.toISOString().split('T')[0];
+//          let currentDayDate = new Date(startDateObj);
+         
+//          const updatedRoutes = (cloned.routingData?.routes || []).map(route => {
+//              const rowDate = toDateStr(currentDayDate);
+//              const nights = parseInt(String(route.nights) || '0');
+//              currentDayDate.setDate(currentDayDate.getDate() + nights);
+//              return { ...route, date: rowDate };
+//          });
+//          const finalEndDate = toDateStr(currentDayDate);
+
+//          cloned.routingData = { startDate: exactDate, endDate: finalEndDate, routes: updatedRoutes };
+//          cloned.useFixedPrice = true; 
+//          cloned.selectedDepartureId = specificDepartureId; 
+
+//          // 👇 Save to DB instead of localStorage
+//          await saveToLibrary(cloned);
+
+//          setIsDateSelectorOpen(false); 
+//          setSelectedTemplate(null); 
+//          setActiveTab('quotes'); 
+//          await loadLibraries(); 
+//      }
+//   };
+
+
+
 const handleConfirmDateSelection = async (exactDate: string, specificDepartureId: string) => {
      if (!selectedTemplate) return;
      
-     // 👇 Await clone
-     const cloned = await cloneItinerary(selectedTemplate.id!, true, user?._id); 
-     
-     if (cloned) {
-         const startDateObj = new Date(exactDate); 
-         const toDateStr = (date: Date) => date.toISOString().split('T')[0];
-         let currentDayDate = new Date(startDateObj);
+     try {
+         // 1. Await the clone from the fixed backend
+         const cloned = await cloneItinerary(selectedTemplate.id!, true, user?._id); 
          
-         const updatedRoutes = (cloned.routingData?.routes || []).map(route => {
-             const rowDate = toDateStr(currentDayDate);
-             const nights = parseInt(String(route.nights) || '0');
-             currentDayDate.setDate(currentDayDate.getDate() + nights);
-             return { ...route, date: rowDate };
-         });
-         const finalEndDate = toDateStr(currentDayDate);
+         if (cloned) {
+             const startDateObj = new Date(exactDate); 
+             const toDateStr = (date: Date) => date.toISOString().split('T')[0];
+             let currentDayDate = new Date(startDateObj);
+             
+             const updatedRoutes = (cloned.routingData?.routes || []).map(route => {
+                 const rowDate = toDateStr(currentDayDate);
+                 const nights = parseInt(String(route.nights) || '0');
+                 currentDayDate.setDate(currentDayDate.getDate() + nights);
+                 return { ...route, date: rowDate };
+             });
+             const finalEndDate = toDateStr(currentDayDate);
 
-         cloned.routingData = { startDate: exactDate, endDate: finalEndDate, routes: updatedRoutes };
-         cloned.useFixedPrice = true; 
-         cloned.selectedDepartureId = specificDepartureId; 
+             cloned.routingData = { startDate: exactDate, endDate: finalEndDate, routes: updatedRoutes };
+             cloned.useFixedPrice = true; 
+             cloned.selectedDepartureId = specificDepartureId; 
 
-         // 👇 Save to DB instead of localStorage
-         await saveToLibrary(cloned);
+             // 2. Save the updated dates to DB
+             await saveToLibrary(cloned);
 
-         setIsDateSelectorOpen(false); 
-         setSelectedTemplate(null); 
-         setActiveTab('quotes'); 
-         await loadLibraries(); 
+             // 3. SUCCESS! Close modal and switch tabs safely
+             setIsDateSelectorOpen(false); 
+             setSelectedTemplate(null); 
+             setActiveTab('quotes'); 
+             await loadLibraries(); 
+         } else {
+             // 👇 If the DB crashes again, it will tell you instead of freezing silently!
+             alert("Failed to copy the template. Check terminal for errors.");
+         }
+     } catch (error) {
+         console.error("Error confirming date:", error);
+         alert("An unexpected error occurred.");
      }
   };
 
-
+  
 
 //   const handleConfirmTrip = (guestName: string, calculatedPrice: number, pax: number) => {
 //       if (!confirmModal.itinerary?.id) return;

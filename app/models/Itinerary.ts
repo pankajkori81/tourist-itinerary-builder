@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 const ItinerarySchema = new mongoose.Schema({
   // 1. Identifiers & Meta
   tripId: { type: String, required: true, unique: true },
+  // 🌟 CRITICAL FIX: We MUST include this so Mongoose doesn't strip it out 
+  itineraryCode: { type: String },
   tripName: { type: String, default: '' },
   numberOfTravelers: { type: Number, default: 2 },
   isMasterItinerary: { type: Boolean, default: false },

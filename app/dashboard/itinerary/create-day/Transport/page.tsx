@@ -1391,7 +1391,7 @@ export default function TransportForm({
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
         
         {/* 1. SERVICE CONFIGURATION */}
-        <section>
+        {/* <section>
             <div className="flex gap-6 border-b border-gray-100 pb-4 mb-4">
                 <label className="flex items-center gap-3 cursor-pointer group">
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.subType === 'transfer' ? 'border-green-600' : 'border-gray-300'}`}>
@@ -1404,7 +1404,37 @@ export default function TransportForm({
                     </div>
                 </label>
             </div>
-        </section>
+        </section> */}
+
+
+        {/* 1. SERVICE CONFIGURATION (Transfer vs Disposal) */}
+<section>
+    <div className="flex gap-6 border-b border-gray-100 pb-4 mb-4">
+        {/* Transfer Option */}
+        <label className="flex items-center gap-3 cursor-pointer group">
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.subType === 'transfer' ? 'border-green-600' : 'border-gray-300'}`}>
+                {formData.subType === 'transfer' && <div className="w-2.5 h-2.5 rounded-full bg-green-600" />}
+            </div>
+            <input type="radio" className="hidden" checked={formData.subType === 'transfer'} onChange={() => updateField('subType', 'transfer')} />
+            <div>
+                <div className="text-sm font-bold text-gray-800">Transfer (Point-to-Point)</div>
+                <div className="text-[10px] text-gray-400">A to B drop (e.g. Airport to Hotel)</div>
+            </div>
+        </label>
+
+        {/* Disposal Option (NEW) */}
+        <label className="flex items-center gap-3 cursor-pointer group">
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.subType === 'disposal' ? 'border-green-600' : 'border-gray-300'}`}>
+                {formData.subType === 'disposal' && <div className="w-2.5 h-2.5 rounded-full bg-green-600" />}
+            </div>
+            <input type="radio" className="hidden" checked={formData.subType === 'disposal'} onChange={() => updateField('subType', 'disposal')} />
+            <div>
+                <div className="text-sm font-bold text-gray-800">Disposal (Full Day)</div>
+                <div className="text-[10px] text-gray-400">Vehicle stays with client (e.g. 8 Hrs / 80 Km)</div>
+            </div>
+        </label>
+    </div>
+</section>
 
         {/* 2. VEHICLE SELECTION */}
         <section className="grid grid-cols-12 gap-6">
@@ -1714,20 +1744,38 @@ export default function TransportForm({
                             </div>
                         </>
                     ) : (
-                        <>
-                            <label className="text-xs font-bold text-gray-600 uppercase">Duration</label>
-                            <div className="relative">
-                                <input 
-                                    type="text" 
-                                    value={formData.duration || ''} 
-                                    onChange={e => updateField('duration', e.target.value)}
-                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:border-green-500 outline-none" 
-                                    placeholder="e.g. 8 Hours / 80 Km"
-                                />
-                                <Clock className="absolute right-3 top-3 text-gray-400" size={16} />
-                            </div>
-                            <p className="text-[10px] text-gray-400 mt-1">Vehicle remains with you for this duration.</p>
-                        </>
+                        // <>
+                        //     <label className="text-xs font-bold text-gray-600 uppercase">Duration</label>
+                        //     <div className="relative">
+                        //         <input 
+                        //             type="text" 
+                        //             value={formData.duration || ''} 
+                        //             onChange={e => updateField('duration', e.target.value)}
+                        //             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:border-green-500 outline-none" 
+                        //             placeholder="e.g. 8 Hours / 80 Km"
+                        //         />
+                        //         <Clock className="absolute right-3 top-3 text-gray-400" size={16} />
+                        //     </div>
+                        //     <p className="text-[10px] text-gray-400 mt-1">Vehicle remains with you for this duration.</p>
+                        // </>
+
+
+                        <div className="space-y-3">
+        <label className="text-xs font-bold text-gray-600 uppercase">Service Duration</label>
+        <div className="relative">
+            <input 
+                type="text" 
+                value={formData.duration || ''} 
+                onChange={e => updateField('duration', e.target.value)}
+                className="w-full px-3 py-2.5 border border-green-300 bg-green-50/30 rounded-lg text-sm font-bold focus:border-green-500 outline-none" 
+                placeholder="e.g. 8 Hours / 80 Km"
+            />
+            <Clock className="absolute right-3 top-3 text-green-600" size={16} />
+        </div>
+        <p className="text-[10px] text-gray-400 mt-1 font-medium">
+            
+        </p>
+    </div>
                     ) }
                 </div>
             </div>

@@ -812,7 +812,7 @@ import { useItinerary } from "@/app/context/ItineraryContext";
 const TRIP_CATEGORIES = ["Classic", "Premium", "Deluxe", "Luxury"];
 
 // Updated: Trip Styles
-const TRIP_STYLES = ["Join-in", "Small Group", "Large Group", "Tailor Made"];
+const TRIP_STYLES = ["Join-in / Shared", "Small Group", "Large Group", "Tailor Made"];
 
 // New: Trip Experiences
 const TRIP_EXPERIENCES = [
