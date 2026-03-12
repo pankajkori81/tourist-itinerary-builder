@@ -1442,43 +1442,6 @@ export default function TransportForm({
                 {/* Inputs Column */}
                 <div className="col-span-7 space-y-4">
                     
-                     {/* Supplier Section */}
-                    <div className="bg-green-50/50 p-4 rounded-xl border border-green-100 flex gap-4 items-start">
-                        <div className="flex-1">
-                            <label className="block text-xs font-bold text-green-900 mb-2 flex items-center gap-1">
-                                <Briefcase size={14} /> Fulfillment Partner (Transport)
-                            </label>
-                            <select 
-                                className="w-full p-2.5 border border-green-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-500 outline-none"
-                                value={formData.linkedSupplierId || ""}
-                                onChange={(e) => updateField('linkedSupplierId', e.target.value)}
-                            >
-                                <option value="">-- Direct / Unknown --</option>
-                                {availableSuppliers.map(s => (
-                                    <option key={s.id} value={s.id}>
-                                        {s.name} ({s.city}) {s.isPreferred ? '★ Preferred' : ''}
-                                    </option>
-                                ))}
-                            </select>
-                            {availableSuppliers.length === 0 && (
-                                <p className="text-[10px] text-gray-400 mt-1">No 'Transport' suppliers found for {city}.</p>
-                            )}
-                        </div>
-                        
-                        {/* Intelligence Box */}
-                        {selectedSupplier && (
-                            <div className="flex-1 bg-white p-3 rounded-lg border border-green-100 shadow-sm text-xs">
-                                <div className="font-bold text-gray-800 mb-2 flex justify-between items-center border-b border-gray-100 pb-1">
-                                    <span>{selectedSupplier.contactPerson}</span>
-                                    <span className="text-green-600 bg-green-50 px-1.5 rounded">{selectedSupplier.paymentTerms}</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-gray-600">
-                                    <div className="flex items-center gap-1"><Phone size={10}/> {selectedSupplier.phone}</div>
-                                    <div className="col-span-2 flex items-center gap-1 truncate"><Mail size={10}/> {selectedSupplier.email}</div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
 
                     {/* Vehicle Type Selection */}
                     <div>

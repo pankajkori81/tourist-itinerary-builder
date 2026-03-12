@@ -660,46 +660,7 @@ export default function MealForm({ initialData, city, dayDate, onSave, onCancel 
           {/* Section A: Restaurant Info */}
           <section className="space-y-4">
              
-             {/* SUPPLIER SECTION */}
-             <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 flex gap-4 items-start mb-2">
-                <div className="flex-1">
-                    <label className="block text-xs font-bold text-orange-900 mb-2 flex items-center gap-1">
-                        <Briefcase size={14} /> Fulfillment Partner (Meal)
-                    </label>
-                    <select 
-                        className="w-full p-2.5 border border-orange-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-orange-500 outline-none"
-                        // @ts-ignore
-                        value={formData.linkedSupplierId || ""}
-                        // @ts-ignore
-                        onChange={(e) => handleChange('linkedSupplierId', e.target.value)}
-                    >
-                        <option value="">-- Direct / Unknown --</option>
-                        {availableSuppliers.map(s => (
-                            <option key={s.id} value={s.id}>
-                                {s.name} ({s.city}) {s.isPreferred ? '★ Preferred' : ''}
-                            </option>
-                        ))}
-                    </select>
-                    {availableSuppliers.length === 0 && (
-                        <p className="text-[10px] text-gray-400 mt-1">No 'Meal' suppliers found for {city}.</p>
-                    )}
-                </div>
-                
-                {/* Intelligence Box */}
-                {selectedSupplier && (
-                    <div className="flex-1 bg-white p-3 rounded-lg border border-orange-100 shadow-sm text-xs">
-                        <div className="font-bold text-gray-800 mb-2 flex justify-between items-center border-b border-gray-100 pb-1">
-                            <span>{selectedSupplier.contactPerson}</span>
-                            <span className="text-orange-600 bg-orange-50 px-1.5 rounded">{selectedSupplier.paymentTerms}</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-gray-600">
-                            <div className="flex items-center gap-1"><Phone size={10}/> {selectedSupplier.phone}</div>
-                            <div className="flex items-center gap-1"><DollarSign size={10}/> {selectedSupplier.currency || 'USD'}</div>
-                            <div className="col-span-2 flex items-center gap-1 truncate" title={selectedSupplier.email}><Mail size={10}/> {selectedSupplier.email}</div>
-                        </div>
-                    </div>
-                )}
-             </div>
+          
 
              <div className="flex gap-2">
                 <div className="flex-1">

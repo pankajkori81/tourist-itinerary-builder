@@ -493,48 +493,12 @@ export default function ActivityForm({
 
             <div className="space-y-4">
                 
-                {/* SUPPLIER SECTION */}
-                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-4 flex gap-4 items-start">
-                    <div className="flex-1">
-                        <label className="block text-xs font-bold text-blue-900 mb-2 flex items-center gap-1">
-                            <Briefcase size={14} /> Fulfillment Partner (DMC)
-                        </label>
-                        <select 
-                            className="w-full p-2.5 border border-blue-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={formData.linkedSupplierId || ""}
-                            onChange={(e) => handleChange('linkedSupplierId', e.target.value)}
-                        >
-                            <option value="">-- Direct / Unknown --</option>
-                            {availableSuppliers.map(s => (
-                                <option key={s.id} value={s.id}>
-                                    {s.name} ({s.city}) {s.isPreferred ? '★ Preferred' : ''}
-                                </option>
-                            ))}
-                        </select>
-                        {availableSuppliers.length === 0 && (
-                             <p className="text-[10px] text-gray-400 mt-1">No suppliers found for {city}.</p>
-                        )}
-                    </div>
-                    
-                    {/* Intelligence Box */}
-                    {selectedSupplier && (
-                        <div className="flex-1 bg-white p-3 rounded-lg border border-blue-100 shadow-sm text-xs">
-                            <div className="font-bold text-gray-800 mb-1 flex justify-between">
-                                <span>{selectedSupplier.contactPerson}</span>
-                                <span className="text-blue-600 bg-blue-50 px-1.5 rounded">{selectedSupplier.paymentTerms}</span>
-                            </div>
-                            <div className="text-gray-500 space-y-1">
-                                <div className="flex items-center gap-1"><Phone size={10}/> {selectedSupplier.phone}</div>
-                                <div className="truncate"><Mail size={10} className="inline mr-1"/>{selectedSupplier.email}</div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+             
 
                 <div className="flex gap-2">
                     <div className="flex-1">
                     <label className="block text-xs font-semibold text-gray-500 mb-1">Activity Name *</label>
-                    <input type="text" value={formData.heading} onChange={(e) => handleChange('heading', e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g. Guided Visit to Taj Mahal" />
+                    <input type="text" value={formData.heading} onChange={(e) => handleChange('heading', e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Enter activity or tour name..." />
                     </div>
                     <button onClick={() => setShowSidebar(!showSidebar)} className="mt-6 px-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors" title="View SRM Inventory"><PlusCircle size={20} /></button>
                 </div>
