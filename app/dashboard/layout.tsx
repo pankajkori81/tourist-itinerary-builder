@@ -207,6 +207,7 @@ import { DashboardUIProvider, useDashboardUI } from '@/app/context/DashboardUICo
 import { useUser } from '@/app/context/UserContext'; // <--- Using Real Auth
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { Topbar } from '@/components/dashboard/Topbar';
+import LoadingScreen from '@/components/dashboard/LoadingScreen';
 
 // Guard Component
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -221,11 +222,16 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [user, loading, router]);
 
   // Show a loading screen while checking session
-  if (loading) return (
-    <div className="h-screen w-full bg-[#0f172a] flex items-center justify-center text-white">
-      Loading...
-    </div>
-  );
+  // if (loading) return (
+  //   <div className="h-screen w-full bg-[#0f172a] flex items-center justify-center text-white">
+  //     Loading...
+  //   </div>
+  // );
+  
+
+  // Show a loading screen while checking session
+  if (loading) return <LoadingScreen />;
+
   
   // If no user (and redirecting), don't render dashboard content
   if (!user) return null;

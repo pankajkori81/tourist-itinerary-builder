@@ -402,7 +402,9 @@ import { useRouter } from 'next/navigation';
 import { useItinerary } from '@/app/context/ItineraryContext';
 import { CITIES_BY_COUNTRY, TRANSPORT_MODES } from './constants'; 
 
-// ... CitySelect Component (Unchanged) ...
+
+
+// ... CitySelect Component (UPDATED FOR SMOOTH SEARCH) ...
 const CitySelect = ({ value, options, onChange }: { value: string, options: {name: string, type: 'city'|'airport'}[], onChange: (n:string, t:any) => void }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -419,7 +421,7 @@ const CitySelect = ({ value, options, onChange }: { value: string, options: {nam
   const filteredOptions = options.filter(opt => opt.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="relative w-full" ref={wrapperRef}>
+    <div className={`relative w-full ${isOpen ? 'z-50' : 'z-auto'}`} ref={wrapperRef}>
       <div 
         onClick={() => setIsOpen(!isOpen)} 
         className={`w-full px-4 py-3 border bg-white rounded-md text-sm flex items-center justify-between cursor-pointer transition-all ${isOpen ? 'border-blue-500 ring-1' : 'border-gray-200 hover:border-blue-400'}`}
@@ -427,22 +429,41 @@ const CitySelect = ({ value, options, onChange }: { value: string, options: {nam
         <span className={value ? "text-gray-900 font-medium" : "text-gray-400"}>{value || "Select City/Airport"}</span>
         <span className="text-gray-400 text-xs">▼</span>
       </div>
+      
       {isOpen && (
-        <div className="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden left-0 max-h-[250px] overflow-y-auto">
-          <div className="p-3 bg-gray-50 sticky top-0 border-b">
-            <input type="text" placeholder="Search..." className="w-full px-3 py-2 text-sm border rounded-lg" value={search} onChange={(e) => setSearch(e.target.value)} autoFocus />
+        <div className="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden left-0">
+          
+          {/* STATIC SEARCH BAR (Stops Event Bubbling) */}
+          <div className="p-3 bg-gray-50 border-b shrink-0" onClick={(e) => e.stopPropagation()}>
+            <input 
+              type="text" 
+              placeholder="Search..." 
+              className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              autoFocus 
+            />
           </div>
-          {filteredOptions.map((opt, idx) => (
-             <div key={idx} onClick={() => { onChange(opt.name, opt.type); setIsOpen(false); setSearch(''); }} className="flex gap-3 px-3 py-2.5 text-sm hover:bg-blue-50 cursor-pointer">
-               {opt.type === 'city' ? <Building2 size={16} className="text-gray-400"/> : <Plane size={16} className="text-blue-500"/>}
-               <span>{opt.name}</span>
-             </div>
-          ))}
+          
+          {/* SCROLLABLE LIST ZONE */}
+          <div className="max-h-[200px] overflow-y-auto">
+            {filteredOptions.map((opt, idx) => (
+               <div key={idx} onClick={() => { onChange(opt.name, opt.type); setIsOpen(false); setSearch(''); }} className="flex gap-3 px-3 py-2.5 text-sm hover:bg-blue-50 cursor-pointer">
+                 {opt.type === 'city' ? <Building2 size={16} className="text-gray-400"/> : <Plane size={16} className="text-blue-500"/>}
+                 <span>{opt.name}</span>
+               </div>
+            ))}
+            {filteredOptions.length === 0 && (
+               <div className="px-3 py-4 text-center text-sm text-gray-400 italic">No cities found.</div>
+            )}
+          </div>
+
         </div>
       )}
     </div>
   );
 };
+
 
 export default function RoutingPage() {
   const router = useRouter();
@@ -646,7 +667,9 @@ export default function RoutingPage() {
             </h3>
          </div>
 
-         <div className="overflow-x-auto overflow-y-visible">
+         {/* <div className="overflow-x-auto overflow-y-visible"> */}
+          {/* ADDED pb-48: This gives the dropdowns physical room to open without getting cut off by the scroll boundary */}
+         <div className="overflow-x-auto pb-48">
             <table className="w-full min-w-[900px] table-auto">
               <thead className="bg-white border-b border-gray-200">
                 <tr>
@@ -694,7 +717,7 @@ export default function RoutingPage() {
                     <td className="px-6 py-6 align-top">
                         <div className="space-y-3">
                              {route.cities.map((city: any, cityIndex: number) => (
-                              <div key={cityIndex} className="flex items-center gap-2 relative z-10">
+                             <div key={cityIndex} className="flex items-center gap-2">
                                 <CitySelect value={city.name} options={availableOptions} onChange={(name, type) => updateCity(route.id, cityIndex, 'name', name)} />
                                 {route.cities.length > 1 && (
                                     <button onClick={() => removeCitySlot(route.id, cityIndex)} className="text-gray-300 hover:text-red-500 "><X size={16}/></button>
