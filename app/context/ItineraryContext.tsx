@@ -656,6 +656,8 @@ interface ItineraryContextType {
   isSaving: boolean;
   saveSuccess: boolean;
   logAction: (action: 'ADD' | 'EDIT' | 'DELETE' | 'STATUS', module: string, details: string, userRole: string, isMajor?: boolean) => void;
+
+  reorderDays: (startIndex: number, endIndex: number) => void;
 }
 
 const ItineraryContext = createContext<ItineraryContextType | undefined>(undefined);
@@ -725,6 +727,97 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
         return updatedData;
     });
   }, []);
+
+
+  // 🌟 NEW: GLOBAL DRAG AND DROP REORDER LOGIC 🌟
+  // const reorderDays = useCallback((startIndex: number, endIndex: number) => {
+  //   setItineraryData(prev => {
+  //     if (!prev.dayWiseActivities || prev.dayWiseActivities.length === 0) return prev;
+      
+  //     // 1. Copy the array
+  //     const newDays = Array.from(prev.dayWiseActivities);
+      
+  //     // 2. Remove the dragged day from its old position and insert it at the new position
+  //     const [movedDay] = newDays.splice(startIndex, 1);
+  //     newDays.splice(endIndex, 0, movedDay);
+
+  //     // 3. Automatically rewrite the dayNumber so they stay sequential (Day 1, Day 2, etc.)
+  //     const updatedDays = newDays.map((day, index) => ({
+  //       ...day,
+  //       dayNumber: index + 1
+  //     }));
+
+  //     const updatedItinerary = { ...prev, dayWiseActivities: updatedDays };
+  //     saveItineraryToStorage(updatedItinerary);
+  //     return updatedItinerary;
+  //   });
+  // }, []);
+
+
+
+
+
+  // 🌟 NEW: GLOBAL DRAG AND DROP REORDER LOGIC (SYNCED WITH ROUTING) 🌟
+  const reorderDays = useCallback((startIndex: number, endIndex: number) => {
+    setItineraryData(prev => {
+      if (!prev.dayWiseActivities || prev.dayWiseActivities.length === 0) return prev;
+      
+      // 1. Reorder the days array
+      const newDays = Array.from(prev.dayWiseActivities);
+      const [movedDay] = newDays.splice(startIndex, 1);
+      newDays.splice(endIndex, 0, movedDay);
+
+      // 2. Re-index Day Numbers and Dates chronologically
+      let runningDate = prev.routingData?.startDate ? new Date(prev.routingData.startDate) : new Date();
+
+      const updatedDays = newDays.map((plan, index) => {
+        const dateString = (prev.routingData?.startDate && !prev.isMasterItinerary)
+            ? runningDate.toISOString().split('T')[0] : '';
+        
+        if (prev.routingData?.startDate && !prev.isMasterItinerary) {
+            runningDate.setDate(runningDate.getDate() + 1);
+        }
+        return { ...plan, dayNumber: index + 1, date: dateString };
+      });
+
+      // 3. ✨ REBUILD ROUTING DATA ✨ (This prevents the disconnect in Routing/Create Day pages!)
+      const newRoutes: any[] = [];
+      if (updatedDays.length > 1) {
+          let currentCity = updatedDays[0].city;
+          let currentNights = 0;
+
+          // Loop through to group cities back into nights (e.g., Rome x2)
+          for (let i = 0; i < updatedDays.length - 1; i++) {
+              const plan = updatedDays[i];
+              if (plan.city === currentCity) {
+                  currentNights++;
+              } else {
+                  newRoutes.push({ id: Date.now() + i, cities: [{ name: currentCity, type: 'city' }], nights: currentNights, transportMode: 'vehicle' });
+                  currentCity = plan.city;
+                  currentNights = 1;
+              }
+          }
+          if (currentNights > 0) {
+             newRoutes.push({ id: Date.now() + 1000, cities: [{ name: currentCity, type: 'city' }], nights: currentNights, transportMode: 'vehicle' });
+          }
+      }
+
+      // 4. Save BOTH the new days AND the new routing to the global database
+      const updatedItinerary = { 
+          ...prev, 
+          dayWiseActivities: updatedDays,
+          routingData: {
+              ...(prev.routingData || {}),
+              routes: newRoutes.length > 0 ? newRoutes : (prev.routingData?.routes || [])
+          } as any
+      };
+      
+      saveItineraryToStorage(updatedItinerary);
+      return updatedItinerary;
+    });
+  }, []);
+
+
 
   // 🌟 DB-AWARE WORKFLOW ACTIONS 🌟
   const submitForCosting = useCallback(async () => {
@@ -877,7 +970,7 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
     <ItineraryContext.Provider value={{
       itineraryData, updateItineraryData, updateRoutingData, saveItinerary, loadSavedItinerary, loadItineraryForEdit, clearSavedItinerary,
       completeStep, submitForCosting, approveCosting, rejectCosting, revertToPending, requestReEdit, allowReEdit, logAction,
-      toastMessage, showToast, isSaving, saveSuccess
+      toastMessage, showToast, isSaving, saveSuccess , reorderDays
     }}>
       {children}
     </ItineraryContext.Provider>

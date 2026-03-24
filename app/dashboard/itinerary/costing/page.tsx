@@ -642,8 +642,11 @@ import {
   Clock, // Icons
   Info,
   AlertTriangle,
-  Loader2
+  Loader2 , GripVertical
 } from 'lucide-react';
+
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+
 import { useUser } from '@/app/context/UserContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
@@ -788,9 +791,29 @@ export default function CostingPage() {
     approveCosting, rejectCosting, revertToPending, allowReEdit 
   } = useItinerary();
   const { suppliers } = useSRM();
+
+  // Grab the global function
+  const { reorderDays } = useItinerary();
+
+  // Handle what happens when the user drops the item
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return; // Dropped outside the list
+    if (result.source.index === result.destination.index) return; // Dropped in the same spot
+    
+    // Call the global context to update the whole app!
+    reorderDays(result.source.index, result.destination.index);
+  };
   
   const rawDayPlans = (itineraryData?.dayWiseActivities || []) as DayPlan[];
   const travelerCount = safeNum(itineraryData?.numberOfTravelers) || 1;
+
+
+  // 🌟 NEW: OCCUPANCY LOCKDOWN LOGIC 🌟
+  const isSglEnabled = true; // Single is ALWAYS enabled (for solo rooms)
+  const isDblEnabled = travelerCount >= 2;
+  const isTplEnabled = travelerCount >= 3;
+  const isQuadEnabled = travelerCount >= 4;
+  
   const { currency, setCurrency, convert, formatPrice, loading, rates } = useCurrency('USD');
 
   // --- STATE ---
@@ -1000,92 +1023,7 @@ export default function CostingPage() {
           });
 
 
-        // // 4. 🚗 AUTO-FILL TRANSPORTS
-        //   day.transports?.forEach(t => {
-        //       if (!isItemIncluded(t.inclusionType)) return;
 
-        //       // 🛠️ FIX 1: Search for the City's Transport Fleet, NOT the vehicle name
-        //       const expectedServiceName = day.city ? `${day.city} - Transportation Services` : undefined;
-        //       const bestSeason = getBestSeason(t.linkedSupplierId, expectedServiceName);
-
-        //       if (bestSeason && bestSeason.rates && bestSeason.rates.length > 0) {
-        //           // Find the exact vehicle type row in the tariff (e.g., 'Sedan Car')
-        //           const matchedRateRow = bestSeason.rates.find((r: any) => 
-        //               r.vehicleType === t.vehicleType
-        //           ) || bestSeason.rates[0];
-
-        //           // 🛠️ FIX 2: Use `t.subType` because that is what TransportForm saves it as
-        //           const isDisposal = t.subType === 'disposal';
-
-        //           // Pull the correct price based on the selection
-        //           const ratePerVehicle = isDisposal 
-        //               ? (matchedRateRow.disposalRate || 0) 
-        //               : (matchedRateRow.transferRate || 0);
-
-        //           if (ratePerVehicle > 0) {
-        //               const vehicleCount = Number(t.vehicleCount) || 1;
-        //               updatedMatrix[selectedMonth][t.id.toString()] = ratePerVehicle * vehicleCount;
-        //               ratesFound++;
-        //           }
-        //       }
-        //   });
-
-
-
-
-        //   day.transports?.forEach(t => {
-        //       if (!isItemIncluded(t.inclusionType)) return;
-
-        //       // Use the tariff matched by either supplier ID or vehicle type
-        //       const bestSeason = getBestSeason(t.linkedSupplierId, t.vehicleType);
-
-        //       if (bestSeason && bestSeason.rates && bestSeason.rates.length > 0) {
-        //           // Find the exact vehicle type row in the tariff (e.g., 'Sedan Car')
-        //           const matchedRateRow = bestSeason.rates.find((r: any) => 
-        //               r.vehicleType === t.vehicleType
-        //           ) || bestSeason.rates[0];
-
-        //           // determine which column to pull from based on the itinerary's serviceType
-        //           // Logic: If the itinerary says 'Disposal' or 'Full Day', pull disposalRate
-        //           const isDisposal = t.serviceType?.toLowerCase().includes('disposal') || 
-        //                              t.serviceType?.toLowerCase().includes('full day');
-
-        //           const ratePerVehicle = isDisposal 
-        //               ? (matchedRateRow.disposalRate || 0) 
-        //               : (matchedRateRow.transferRate || 0);
-
-        //           if (ratePerVehicle > 0) {
-        //               const vehicleCount = Number(t.vehicleCount) || 1;
-        //               updatedMatrix[selectedMonth][t.id.toString()] = ratePerVehicle * vehicleCount;
-        //               ratesFound++;
-        //           }
-        //       }
-        //   });
-        //   day.transports?.forEach(t => {
-        //       if (!isItemIncluded(t.inclusionType)) return;
-              
-        //       // Find the tariff for this transport city/fleet
-        //       const bestSeason = getBestSeason(t.linkedSupplierId, t.vehicleType);
-              
-        //       if (bestSeason && bestSeason.rates && bestSeason.rates.length > 0) {
-        //           // Find the specific vehicle type in the tariff (e.g., 'Sedan Car')
-        //           const matchedVehicle = bestSeason.rates.find((r: any) => 
-        //               r.vehicleType === t.vehicleType
-        //           ) || bestSeason.rates[0];
-
-        //           // Determine which price to use based on the Itinerary Service Type
-        //           // Logic: If serviceType is 'Disposal', use disposalRate. Otherwise, use transferRate.
-        //           const unitPrice = (t.serviceType === 'Disposal' || t.serviceType === 'Full Day') 
-        //               ? (matchedVehicle.disposalRate || 0) 
-        //               : (matchedVehicle.transferRate || 0);
-
-        //           if (unitPrice > 0) {
-        //               const vehicleCount = Number(t.vehicleCount) || 1;
-        //               updatedMatrix[selectedMonth][t.id.toString()] = unitPrice * vehicleCount;
-        //               ratesFound++;
-        //           }
-        //       }
-        //   });
 
           // 5. 🎟️ AUTO-FILL ACTIVITIES (Cost x Pax)
           day.activities?.forEach(a => {
@@ -1141,23 +1079,7 @@ export default function CostingPage() {
     if ((itineraryData as any).simulationDate) setSimulationDate((itineraryData as any).simulationDate);
   }, [itineraryData]);
 
-//   // Auto-Update Simulation Date (ONLY if missing or month changes)
-//   useEffect(() => {
-//       const year = new Date().getFullYear() + 1; 
-//       const monthIndex = MONTHS.indexOf(selectedMonth);
-//       if (monthIndex >= 0) {
-//           const currentSim = new Date(simulationDate);
-//           // 👇 FIX: Only auto-generate if no date exists OR the user switched to a completely different month tab
-//           if (!simulationDate || currentSim.getMonth() !== monthIndex) {
-//              // Create date at local noon to avoid UTC midnight shifting to previous day (31st Dec)
-//              const d = new Date(year, monthIndex, 1, 12, 0, 0); 
-//              const newDate = d.toISOString().split('T')[0];
-             
-//              setSimulationDate(newDate);
-//              updateItineraryData({ simulationDate: newDate } as any);
-//           }
-//       }
-//   }, [selectedMonth]); // Only triggers when the Month Tab is clicked
+
 
 
 
@@ -2043,46 +1965,88 @@ export default function CostingPage() {
                 </div>
             </div>
 
+
             <div className="bg-white border border-gray-400 rounded-xl shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="bg-gray-50 text-gray-500 border-b border-gray-400">
-                            <tr>
-                                <th className="py-3 px-4 text-xs font-bold uppercase w-[80px]">Type</th>
-                                <th className="py-3 px-4 text-xs font-bold uppercase">Item Details</th>
-                                <th className="py-3 px-4 text-xs font-bold uppercase w-[120px] text-blue-600">Supplier</th> 
-                                <th className="py-3 px-4 text-xs font-bold uppercase w-[150px]">Config</th>
-                                <th className="py-3 px-4 text-xs font-bold uppercase text-right w-[140px]">Net Total</th>
-                                <th className="py-3 px-4 text-xs font-bold uppercase text-right w-[100px]">PP Cost</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-sm">
-                            {processedDayPlans.map((day) => (
-                                <React.Fragment key={day.dayNumber}>
-                                    <tr className="bg-gray-100 border-b border-gray-400">
-                                        <td colSpan={6} className="py-2 px-4"><div className="flex items-center gap-2 text-gray-700 font-bold"><Calendar size={14} className="text-blue-500"/><span>DAY {day.dayNumber} - {day.city}</span><span className="text-gray-400 font-medium text-xs ml-2">{getCalculatedDate(simulationDate, day.dayNumber - 1)}</span></div></td>
-                                    </tr>
-                                    {(day.stays || []).map((s: any, i: number) => { 
-                                        const rows = getStayRows(s);
-                                        return rows.map((row, idx) => (<LedgerRow key={`s-${i}-${idx}`} itemId={s.id} typeLabel="Stay" typeColor={s.isGhost ? "text-gray-400" : "text-gray-900"} details={row.details} inclusionType={s.inclusionType} config={s.isGhost ? "Continuing" : row.config} manualNetTotal={getCost(s.id)} onCostChange={handleManualCostChange} divisor={row.ppDivisor} currency={currency} formatPrice={formatPrice} isGhost={s.isGhost} vendorName={getVendorName(s.linkedSupplierId)} rowSpan={idx === 0 ? rows.length : 1} isSubRow={idx > 0} />)); 
-                                    })}
-                                    {(day.transports || []).map((t: any, i: number) => { 
-                                        const divisor = t.paxCount || travelerCount; 
-                                        return (<LedgerRow key={`t-${i}`} itemId={t.id} typeLabel="Transport" typeColor="text-gray-900" details={t.vehicleType} inclusionType={t.inclusionType} config={`${t.vehicleCount} Veh / ${divisor} Pax`} manualNetTotal={getCost(t.id)} onCostChange={handleManualCostChange} divisor={divisor} currency={currency} formatPrice={formatPrice} vendorName={getVendorName(t.linkedSupplierId)} />); 
-                                    })}
-                                    {(day.activities || []).map((a: any, i: number) => { 
-                                        const pax = a.paxCount || travelerCount;
-                                        return (<LedgerRow key={`a-${i}`} itemId={a.id} typeLabel="Activity" typeColor="text-gray-900" details={a.heading} inclusionType={a.inclusionType} config={`${pax} Pax`} manualNetTotal={getCost(a.id)} onCostChange={handleManualCostChange} divisor={pax} currency={currency} formatPrice={formatPrice} vendorName={getVendorName(a.linkedSupplierId)} />); 
-                                    })}
-                                    {(day.meals || []).map((m: any, i: number) => {
-                                        return (<LedgerRow key={`m-${i}`} itemId={m.id} typeLabel="Meal" typeColor="text-gray-900" details={m.restaurantName} inclusionType={m.inclusionType} config={m.mealType} manualNetTotal={getCost(m.id)} onCostChange={handleManualCostChange} divisor={travelerCount} currency={currency} formatPrice={formatPrice} vendorName={getVendorName(m.linkedSupplierId)} />);
-                                    })}
-                                </React.Fragment>
-                            ))}
-                        </tbody>
-                    </table>
+                    
+                    <DragDropContext onDragEnd={onDragEnd}>
+                        <Droppable droppableId="costing-days" type="day">
+                            {(provided) => (
+                                <table 
+                                    className="w-full text-left border-collapse"
+                                    ref={provided.innerRef} 
+                                    {...provided.droppableProps}
+                                >
+                                    <thead className="bg-gray-50 text-gray-500 border-b border-gray-400">
+                                        <tr>
+                                            <th className="py-3 px-4 text-xs font-bold uppercase w-[80px]">Type</th>
+                                            <th className="py-3 px-4 text-xs font-bold uppercase">Item Details</th>
+                                            <th className="py-3 px-4 text-xs font-bold uppercase w-[120px] text-blue-600">Supplier</th> 
+                                            <th className="py-3 px-4 text-xs font-bold uppercase w-[150px]">Config</th>
+                                            <th className="py-3 px-4 text-xs font-bold uppercase text-right w-[140px]">Net Total</th>
+                                            <th className="py-3 px-4 text-xs font-bold uppercase text-right w-[100px]">PP Cost</th>
+                                        </tr>
+                                    </thead>
+                                    
+                                    {processedDayPlans.map((day, index) => (
+                                        <Draggable key={`day-${day.dayNumber}`} draggableId={`day-${day.dayNumber}`} index={index}>
+                                            {(provided, snapshot) => (
+                                                <tbody 
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    className={`text-sm transition-all duration-200 ${snapshot.isDragging ? 'bg-blue-50 shadow-2xl relative z-50 ring-2 ring-blue-500' : 'bg-white'}`}
+                                                >
+                                                    <tr className="bg-gray-100 border-b border-gray-400">
+                                                        <td colSpan={6} className="py-2 px-4">
+                                                            <div className="flex items-center gap-2 text-gray-700 font-bold">
+                                                                
+                                                                {/* 🌟 THE DRAG HANDLE 🌟 */}
+                                                                <div 
+                                                                    {...provided.dragHandleProps} 
+                                                                    className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-blue-600 mr-1 p-1 hover:bg-blue-100 rounded transition-colors"
+                                                                    title="Drag to reorder day"
+                                                                >
+                                                                    <GripVertical size={16} />
+                                                                </div>
+
+                                                                <Calendar size={14} className="text-blue-500"/>
+                                                                <span>DAY {day.dayNumber} - {day.city}</span>
+                                                                <span className="text-gray-400 font-medium text-xs ml-2">
+                                                                    {getCalculatedDate(simulationDate, day.dayNumber - 1)}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    
+                                                    {/* The Rows Inside the Day */}
+                                                    {(day.stays || []).map((s: any, i: number) => { 
+                                                        const rows = getStayRows(s);
+                                                        return rows.map((row: any, idx: number) => (<LedgerRow key={`s-${i}-${idx}`} itemId={s.id} typeLabel="Stay" typeColor={s.isGhost ? "text-gray-400" : "text-gray-900"} details={row.details} inclusionType={s.inclusionType} config={s.isGhost ? "Continuing" : row.config} manualNetTotal={getCost(s.id)} onCostChange={handleManualCostChange} divisor={row.ppDivisor} currency={currency} formatPrice={formatPrice} isGhost={s.isGhost} vendorName={getVendorName(s.linkedSupplierId)} rowSpan={idx === 0 ? rows.length : 1} isSubRow={idx > 0} />)); 
+                                                    })}
+                                                    {(day.transports || []).map((t: any, i: number) => { 
+                                                        const divisor = t.paxCount || travelerCount; 
+                                                        return (<LedgerRow key={`t-${i}`} itemId={t.id} typeLabel="Transport" typeColor="text-gray-900" details={t.vehicleType} inclusionType={t.inclusionType} config={`${t.vehicleCount} Veh / ${divisor} Pax`} manualNetTotal={getCost(t.id)} onCostChange={handleManualCostChange} divisor={divisor} currency={currency} formatPrice={formatPrice} vendorName={getVendorName(t.linkedSupplierId)} />); 
+                                                    })}
+                                                    {(day.activities || []).map((a: any, i: number) => { 
+                                                        const pax = a.paxCount || travelerCount;
+                                                        return (<LedgerRow key={`a-${i}`} itemId={a.id} typeLabel="Activity" typeColor="text-gray-900" details={a.heading} inclusionType={a.inclusionType} config={`${pax} Pax`} manualNetTotal={getCost(a.id)} onCostChange={handleManualCostChange} divisor={pax} currency={currency} formatPrice={formatPrice} vendorName={getVendorName(a.linkedSupplierId)} />); 
+                                                    })}
+                                                    {(day.meals || []).map((m: any, i: number) => {
+                                                        return (<LedgerRow key={`m-${i}`} itemId={m.id} typeLabel="Meal" typeColor="text-gray-900" details={m.restaurantName} inclusionType={m.inclusionType} config={m.mealType} manualNetTotal={getCost(m.id)} onCostChange={handleManualCostChange} divisor={travelerCount} currency={currency} formatPrice={formatPrice} vendorName={getVendorName(m.linkedSupplierId)} />);
+                                                    })}
+                                                </tbody>
+                                            )}
+                                        </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                </table>
+                            )}
+                        </Droppable>
+                    </DragDropContext>
+
                 </div>
             </div>
+
 
             {/* FIXED DEPARTURES TABLE */}
       
@@ -2133,12 +2097,33 @@ export default function CostingPage() {
                                         <input type="month" value={monthData.month || ''} onChange={(e) => updateMonthRow(monthData.id, 'month', e.target.value)} className="border border-slate-300 rounded px-2 py-1.5 text-slate-700 font-bold text-sm uppercase bg-white w-full outline-none focus:border-blue-500"/>
                                     </td>
                                     
-                                    {/* 3. PRICES */}
-                                    <td className="py-3 px-2 border-l border-slate-100"><div className="flex items-center gap-1 bg-white border border-slate-300 focus-within:border-blue-500 rounded px-2 py-1.5"><span className="text-[10px] font-bold text-slate-400">{currency}</span><input type="number" min="0" value={monthData.priceDBL || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceDBL', parseFloat(e.target.value) || 0)} className="w-full font-mono font-bold text-slate-900 outline-none text-right" placeholder="0"/></div></td>
-                                    <td className="py-3 px-2 border-l border-slate-100"><div className="flex items-center gap-1 bg-white border border-slate-300 focus-within:border-blue-500 rounded px-2 py-1.5"><span className="text-[10px] font-bold text-slate-400">{currency}</span><input type="number" min="0" value={monthData.priceSGL || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceSGL', parseFloat(e.target.value) || 0)} className="w-full font-mono font-bold text-slate-900 outline-none text-right" placeholder="0"/></div></td>
-                                    <td className="py-3 px-2 border-l border-slate-100"><div className="flex items-center gap-1 bg-white border border-slate-300 focus-within:border-blue-500 rounded px-2 py-1.5"><span className="text-[10px] font-bold text-slate-400">{currency}</span><input type="number" min="0" value={monthData.priceTPL || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceTPL', parseFloat(e.target.value) || 0)} className="w-full font-mono font-bold text-slate-900 outline-none text-right" placeholder="0"/></div></td>
-                                    <td className="py-3 px-2 border-l border-slate-100"><div className="flex items-center gap-1 bg-white border border-slate-300 focus-within:border-blue-500 rounded px-2 py-1.5"><span className="text-[10px] font-bold text-slate-400">{currency}</span><input type="number" min="0" value={monthData.priceQUAD || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceQUAD', parseFloat(e.target.value) || 0)} className="w-full font-mono font-bold text-slate-900 outline-none text-right" placeholder="0"/></div></td>
-                                    
+                    
+                                     {/* 3. PRICES (WITH SMART DISABLE LOGIC) */}
+                                    <td className="py-3 px-2 border-l border-slate-100">
+                                        <div className={`flex items-center gap-1 border rounded px-2 py-1.5 transition-colors ${!isDblEnabled ? 'bg-gray-100 border-gray-200' : 'bg-white border-slate-300 focus-within:border-blue-500'}`}>
+                                            <span className={`text-[10px] font-bold ${!isDblEnabled ? 'text-gray-300' : 'text-slate-400'}`}>{currency}</span>
+                                            <input type="number" min="0" value={monthData.priceDBL || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceDBL', parseFloat(e.target.value) || 0)} disabled={!isDblEnabled} className={`w-full font-mono font-bold outline-none text-right ${!isDblEnabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-slate-900 bg-white'}`} placeholder={!isDblEnabled ? "-" : "0"}/>
+                                        </div>
+                                    </td>
+                                    <td className="py-3 px-2 border-l border-slate-100">
+                                        <div className={`flex items-center gap-1 border rounded px-2 py-1.5 transition-colors ${!isSglEnabled ? 'bg-gray-100 border-gray-200' : 'bg-white border-slate-300 focus-within:border-blue-500'}`}>
+                                            <span className={`text-[10px] font-bold ${!isSglEnabled ? 'text-gray-300' : 'text-slate-400'}`}>{currency}</span>
+                                            <input type="number" min="0" value={monthData.priceSGL || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceSGL', parseFloat(e.target.value) || 0)} disabled={!isSglEnabled} className={`w-full font-mono font-bold outline-none text-right ${!isSglEnabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-slate-900 bg-white'}`} placeholder={!isSglEnabled ? "-" : "0"}/>
+                                        </div>
+                                    </td>
+                                    <td className="py-3 px-2 border-l border-slate-100">
+                                        <div className={`flex items-center gap-1 border rounded px-2 py-1.5 transition-colors ${!isTplEnabled ? 'bg-gray-100 border-gray-200' : 'bg-white border-slate-300 focus-within:border-blue-500'}`}>
+                                            <span className={`text-[10px] font-bold ${!isTplEnabled ? 'text-gray-300' : 'text-slate-400'}`}>{currency}</span>
+                                            <input type="number" min="0" value={monthData.priceTPL || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceTPL', parseFloat(e.target.value) || 0)} disabled={!isTplEnabled} className={`w-full font-mono font-bold outline-none text-right ${!isTplEnabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-slate-900 bg-white'}`} placeholder={!isTplEnabled ? "-" : "0"}/>
+                                        </div>
+                                    </td>
+                                    <td className="py-3 px-2 border-l border-slate-100">
+                                        <div className={`flex items-center gap-1 border rounded px-2 py-1.5 transition-colors ${!isQuadEnabled ? 'bg-gray-100 border-gray-200' : 'bg-white border-slate-300 focus-within:border-blue-500'}`}>
+                                            <span className={`text-[10px] font-bold ${!isQuadEnabled ? 'text-gray-300' : 'text-slate-400'}`}>{currency}</span>
+                                            <input type="number" min="0" value={monthData.priceQUAD || ''} onChange={(e) => updateMonthRow(monthData.id, 'priceQUAD', parseFloat(e.target.value) || 0)} disabled={!isQuadEnabled} className={`w-full font-mono font-bold outline-none text-right ${!isQuadEnabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-slate-900 bg-white'}`} placeholder={!isQuadEnabled ? "-" : "0"}/>
+                                        </div>
+                                    </td>
+
                                     {/* 4. OPEN TABLE 3 BUTTON */}
                                     <td className="py-3 px-4 text-center border-l border-slate-100">
                                         <button onClick={() => setActiveMonthId(activeMonthId === monthData.id ? null : monthData.id)} className={`text-xs font-bold px-3 py-1.5 rounded-md border ${activeMonthId === monthData.id ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'}`}>
@@ -2218,12 +2203,21 @@ export default function CostingPage() {
                                                         </select>
                                                     </td>
                                                     
-                                                    {/* OVERRIDES: Shows the master price lightly if blank */}
-                                                    <td className="py-2 px-2 border-l border-slate-100"><input type="number" min="0" placeholder={activeMonthData.priceDBL ? `${currency} ${activeMonthData.priceDBL}` : 'Auto'} value={dateRow.overridePriceDBL || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceDBL', e.target.value)} className="w-full border border-dashed border-slate-300 rounded px-1.5 py-1 font-mono text-slate-800 text-right outline-none focus:border-blue-500 focus:bg-white transition-colors"/></td>
-                                                    <td className="py-2 px-2 border-l border-slate-100"><input type="number" min="0" placeholder={activeMonthData.priceSGL ? `${currency} ${activeMonthData.priceSGL}` : 'Auto'} value={dateRow.overridePriceSGL || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceSGL', e.target.value)} className="w-full border border-dashed border-slate-300 rounded px-1.5 py-1 font-mono text-slate-800 text-right outline-none focus:border-blue-500 focus:bg-white transition-colors"/></td>
-                                                    <td className="py-2 px-2 border-l border-slate-100"><input type="number" min="0" placeholder={activeMonthData.priceTPL ? `${currency} ${activeMonthData.priceTPL}` : 'Auto'} value={dateRow.overridePriceTPL || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceTPL', e.target.value)} className="w-full border border-dashed border-slate-300 rounded px-1.5 py-1 font-mono text-slate-800 text-right outline-none focus:border-blue-500 focus:bg-white transition-colors"/></td>
-                                                    <td className="py-2 px-2 border-l border-slate-100"><input type="number" min="0" placeholder={activeMonthData.priceQUAD ? `${currency} ${activeMonthData.priceQUAD}` : 'Auto'} value={dateRow.overridePriceQUAD || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceQUAD', e.target.value)} className="w-full border border-dashed border-slate-300 rounded px-1.5 py-1 font-mono text-slate-800 text-right outline-none focus:border-blue-500 focus:bg-white transition-colors"/></td>
-                                                    
+                                        
+
+                                                     {/* OVERRIDES (WITH SMART DISABLE LOGIC) */}
+                                                    <td className="py-2 px-2 border-l border-slate-100">
+                                                        <input type="number" min="0" placeholder={!isDblEnabled ? '-' : (activeMonthData.priceDBL ? `${currency} ${activeMonthData.priceDBL}` : 'Auto')} value={dateRow.overridePriceDBL || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceDBL', e.target.value)} disabled={!isDblEnabled} className={`w-full border rounded px-1.5 py-1 font-mono text-right outline-none transition-colors ${!isDblEnabled ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' : 'border-dashed border-slate-300 text-slate-800 focus:border-blue-500 focus:bg-white'}`}/>
+                                                    </td>
+                                                    <td className="py-2 px-2 border-l border-slate-100">
+                                                        <input type="number" min="0" placeholder={!isSglEnabled ? '-' : (activeMonthData.priceSGL ? `${currency} ${activeMonthData.priceSGL}` : 'Auto')} value={dateRow.overridePriceSGL || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceSGL', e.target.value)} disabled={!isSglEnabled} className={`w-full border rounded px-1.5 py-1 font-mono text-right outline-none transition-colors ${!isSglEnabled ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' : 'border-dashed border-slate-300 text-slate-800 focus:border-blue-500 focus:bg-white'}`}/>
+                                                    </td>
+                                                    <td className="py-2 px-2 border-l border-slate-100">
+                                                        <input type="number" min="0" placeholder={!isTplEnabled ? '-' : (activeMonthData.priceTPL ? `${currency} ${activeMonthData.priceTPL}` : 'Auto')} value={dateRow.overridePriceTPL || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceTPL', e.target.value)} disabled={!isTplEnabled} className={`w-full border rounded px-1.5 py-1 font-mono text-right outline-none transition-colors ${!isTplEnabled ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' : 'border-dashed border-slate-300 text-slate-800 focus:border-blue-500 focus:bg-white'}`}/>
+                                                    </td>
+                                                    <td className="py-2 px-2 border-l border-slate-100">
+                                                        <input type="number" min="0" placeholder={!isQuadEnabled ? '-' : (activeMonthData.priceQUAD ? `${currency} ${activeMonthData.priceQUAD}` : 'Auto')} value={dateRow.overridePriceQUAD || ''} onChange={(e) => updateSpecificDate(activeMonthData.id, dateRow.id, 'overridePriceQUAD', e.target.value)} disabled={!isQuadEnabled} className={`w-full border rounded px-1.5 py-1 font-mono text-right outline-none transition-colors ${!isQuadEnabled ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' : 'border-dashed border-slate-300 text-slate-800 focus:border-blue-500 focus:bg-white'}`}/>
+                                                    </td>
                                                     <td className="py-2 px-3 text-center border-l border-slate-100"><button onClick={() => removeSpecificDate(activeMonthData.id, dateRow.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1"><XCircle size={14} /></button></td>
                                                 </tr>
                                             ))}

@@ -346,7 +346,7 @@ import {
   Home, Map, Users, Settings, ChevronLeft, Menu, 
   RouteIcon, BarChart3, Plane, CreditCard, User, 
   Settings2, HelpCircle, Calendar, Briefcase, 
-  Landmark
+  Landmark , ShieldAlert
 } from 'lucide-react';
 import { useDashboardUI } from '@/app/context/DashboardUIContext';
 import { useUser } from '@/app/context/UserContext'; // <--- Import User Context
@@ -373,7 +373,7 @@ export function Sidebar() {
     // 2. Lead Management (New: Agents & Admins)
     { 
       label: "Leads", 
-      path: "/dashboard/leadss", 
+      path: "/dashboard/leads", 
       icon: Briefcase, 
       roles: ['admin', 'agent'] 
     },
@@ -423,6 +423,15 @@ export function Sidebar() {
       icon: BarChart3,
       roles: ['admin']
     },
+
+    // Crisis / Duty of Care (Admin & Employee Only)
+    { 
+      label: "Crisis Management", 
+      path: "/dashboard/crisis-management", 
+      icon: ShieldAlert,
+      roles: ['admin', 'employee']
+    },
+
 
     // 7. Travel Advisor (Admin & Employee)
     { 

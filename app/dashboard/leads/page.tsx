@@ -396,7 +396,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Plus, Phone, MapPin, DollarSign, Users, Briefcase, 
-  Calendar, ArrowRightCircle, Loader2, Search, AlignLeft, Inbox
+  Calendar, ArrowRightCircle, Loader2, Search, AlignLeft, Inbox , Edit2, Trash2
 } from 'lucide-react';
 import { useUser } from '@/app/context/UserContext';
 
@@ -474,6 +474,23 @@ export default function LeadsDashboard() {
     }
   };
 
+  // --- NEW: Delete Lead Function ---
+  const deleteLead = async (leadId: string) => {
+    if (!confirm("Are you sure you want to delete this inquiry?")) return;
+    try {
+      setLeads(prev => prev.filter(l => l._id !== leadId)); // Instantly remove from UI
+      await fetch("/api/leads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: leadId }),
+      });
+    } catch (error) {
+      alert("Failed to delete lead");
+      fetchLeads(); // Refresh if it fails
+    }
+  };
+
+
   const convertToItinerary = (lead: Lead) => {
      const params = new URLSearchParams({
         clientName: lead.customerName,
@@ -512,17 +529,23 @@ export default function LeadsDashboard() {
       return groups;
   }, [filteredLeads, groupBy]);
 
-  return (
+return (
     // 1. ROOT CONTAINER (Strict Bounds)
-    <div className="h-full flex flex-col relative overflow-hidden bg-[#eee] w-full min-w-0">
+    <div className="h-full flex flex-col relative overflow-hidden bg-black w-full min-w-0">
       
+      {/* --- BACKGROUND IMAGE WITH BLUR --- */}
+      <div 
+          className="absolute inset-0 z-0 bg-cover bg-center blur-sm scale-105"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1481487196290-c152efe083f5?q=80&w=1262&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')" }}
+      />
+      <div className="absolute inset-0 z-0 bg-black/50" />
+
       {/* 2. TOP TOOLBAR (Fixed) */}
-      <div className="bg-white border-b border-gray-200 px-8 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm shrink-0 relative z-20">
-        
+      <div className="bg-white/95 backdrop-blur-md border-b border-gray-200 px-8 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm shrink-0 relative z-20">
         {/* Title */}
         <div className="min-w-0 shrink-0">
           <h1 className="text-gray-900 font-extrabold text-xl tracking-tight flex items-center gap-2">
-             <Briefcase className="text-indigo-600" size={22}/> CRM Pipeline
+             <Briefcase className="text-indigo-600" size={22}/> CRM Dashboard
           </h1>
           <p className="text-gray-500 text-xs mt-1">Manage inquiries and track revenue.</p>
         </div>
@@ -622,6 +645,20 @@ export default function LeadsDashboard() {
                                                 <div key={lead._id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all group relative cursor-pointer">
                                                     
                                                     {/* Card Header */}
+                                                    {/* <div className="flex justify-between items-start mb-3">
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">
+                                                                {getInitials(lead.customerName)}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <h4 className="font-bold text-gray-900 text-sm truncate" title={lead.customerName}>{lead.customerName}</h4>
+                                                                <p className="text-[10px] text-gray-500 truncate flex items-center gap-1"><Phone size={10}/> {lead.phone}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div> */}
+
+
+                                                    {/* Card Header (Updated with Edit/Delete) */}
                                                     <div className="flex justify-between items-start mb-3">
                                                         <div className="flex items-center gap-3 min-w-0">
                                                             <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">
@@ -631,6 +668,24 @@ export default function LeadsDashboard() {
                                                                 <h4 className="font-bold text-gray-900 text-sm truncate" title={lead.customerName}>{lead.customerName}</h4>
                                                                 <p className="text-[10px] text-gray-500 truncate flex items-center gap-1"><Phone size={10}/> {lead.phone}</p>
                                                             </div>
+                                                        </div>
+                                                        
+                                                        {/* --- ACTION ICONS (Hidden until hover) --- */}
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/leads/${lead._id}/edit`); }} 
+                                                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                                                                title="Edit Inquiry"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); deleteLead(lead._id); }} 
+                                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                                                title="Delete Inquiry"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                     

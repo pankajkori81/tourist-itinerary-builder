@@ -23,6 +23,9 @@ const LeadSchema = new mongoose.Schema({
 
   // Role-Based Security: Who owns this lead?
   agentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+
+// 🌟 NEW: If this lead is converted, store the ID of the resulting Itinerary
+  convertedTripId: { type: String, default: null }
   
 }, { timestamps: true });
 

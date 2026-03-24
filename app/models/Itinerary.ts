@@ -65,8 +65,22 @@ const ItinerarySchema = new mongoose.Schema({
   currentVersion: { type: String, default: '1.0' },
   auditLog: [{ type: mongoose.Schema.Types.Mixed }],
 
+
+  // 🌟 10. NEW: Crisis Management (Duty of Care)
+  crisisManagement: {
+    safetyStatus: { 
+      type: String, 
+      enum: ['none', 'suspended', 'safe', 'sos', 'evacuated'], 
+      default: 'none' 
+    },
+    lastPingedAt: { type: Date },
+    emergencyNotes: { type: String, default: '' }
+  }
+
 }, { timestamps: true });
 
 // Prevent Mongoose from recompiling the model if it already exists
 const Itinerary = mongoose.models.Itinerary || mongoose.model("Itinerary", ItinerarySchema);
 export default Itinerary;
+
+
