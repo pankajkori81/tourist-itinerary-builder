@@ -225,5 +225,61 @@ export const CITIES_BY_COUNTRY: Record<string, RouteCityData[]> = {
   "Maldives": [
     { name: 'Male', type: 'city' },
     { name: 'Male Airport (MLE)', type: 'airport' },
-  ]
+  ],
+ 'Switzerland': [
+    // Major Hubs & Airports
+    { name: 'Zurich', type: 'city', state: 'Zurich' },
+    { name: 'Zurich Airport (ZRH)', type: 'airport', airportCode: 'ZRH', state: 'Zurich' },
+    { name: 'Geneva', type: 'city', state: 'Geneva' },
+    { name: 'Geneva Airport (GVA)', type: 'airport', airportCode: 'GVA', state: 'Geneva' },
+    { name: 'Basel', type: 'city', state: 'Basel-Stadt' },
+    { name: 'EuroAirport Basel Mulhouse Freiburg (BSL)', type: 'airport', airportCode: 'BSL', state: 'Basel-Stadt' },
+    
+    // The Capital
+    { name: 'Bern', type: 'city', state: 'Bern' },
+    { name: 'Bern Airport (BRN)', type: 'airport', airportCode: 'BRN', state: 'Bern' },
+
+    // Popular Tourist & Lake Destinations
+    { name: 'Lucerne', type: 'city', state: 'Lucerne' },
+    { name: 'Interlaken', type: 'city', state: 'Bern' },
+    { name: 'Lausanne', type: 'city', state: 'Vaud' },
+    { name: 'Montreux', type: 'city', state: 'Vaud' },
+    { name: 'Lugano', type: 'city', state: 'Ticino' },
+    { name: 'Locarno', type: 'city', state: 'Ticino' },
+    
+    // Famous Alpine/Ski Resort Towns
+    { name: 'Zermatt', type: 'city', state: 'Valais' },
+    { name: 'St. Moritz', type: 'city', state: 'Grisons' },
+    { name: 'Davos', type: 'city', state: 'Grisons' },
+    { name: 'Grindelwald', type: 'city', state: 'Bern' },
+    { name: 'Chur', type: 'city', state: 'Grisons' },
+  ],
+  'Spain': [
+    { name: 'Madrid', type: 'city', state: 'Madrid' },
+    { name: 'Adolfo Suárez Madrid–Barajas Airport (MAD)', type: 'airport', airportCode: 'MAD', state: 'Madrid' },
+    { name: 'Barcelona', type: 'city', state: 'Catalonia' },
+    { name: 'Josep Tarradellas Barcelona-El Prat Airport (BCN)', type: 'airport', airportCode: 'BCN', state: 'Catalonia' },
+    { name: 'Seville', type: 'city', state: 'Andalusia' },
+    { name: 'Seville Airport (SVQ)', type: 'airport', airportCode: 'SVQ', state: 'Andalusia' },
+    { name: 'Valencia', type: 'city', state: 'Valencian Community' },
+    { name: 'Ibiza', type: 'city', state: 'Balearic Islands' },
+    { name: 'Ibiza Airport (IBZ)', type: 'airport', airportCode: 'IBZ', state: 'Balearic Islands' },
+  ],
+  'Germany': [
+    { name: 'Berlin', type: 'city', state: 'Berlin' },
+    { name: 'Berlin Brandenburg Airport (BER)', type: 'airport', airportCode: 'BER', state: 'Berlin' },
+    { name: 'Munich', type: 'city', state: 'Bavaria' },
+    { name: 'Munich Airport (MUC)', type: 'airport', airportCode: 'MUC', state: 'Bavaria' },
+    { name: 'Frankfurt', type: 'city', state: 'Bavaria' },
+    { name: 'Frankfurt Airport (FRA)', type: 'airport', airportCode: 'FRA', state: 'Hesse' },
+    { name: 'Hamburg', type: 'city', state: 'Hamburg' },
+  ],
+  'Japan': [
+    { name: 'Tokyo', type: 'city', state: 'Tokyo' },
+    { name: 'Narita International Airport (NRT)', type: 'airport', airportCode: 'NRT', state: 'Chiba' },
+    { name: 'Haneda Airport (HND)', type: 'airport', airportCode: 'HND', state: 'Tokyo' },
+    { name: 'Kyoto', type: 'city', state: 'Kyoto' },
+    { name: 'Osaka', type: 'city', state: 'Osaka' },
+    { name: 'Kansai International Airport (KIX)', type: 'airport', airportCode: 'KIX', state: 'Osaka' },
+  ],
 };

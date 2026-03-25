@@ -400,16 +400,25 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, GripVertical, Plane, Building2, Search, X, Calendar, ArrowLeft, Clock, ArrowRight, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useItinerary } from '@/app/context/ItineraryContext';
-import { CITIES_BY_COUNTRY, TRANSPORT_MODES } from './constants'; 
+// import { CITIES_BY_COUNTRY, TRANSPORT_MODES } from './constants'; 
 
 
 
-// ... CitySelect Component (UPDATED FOR SMOOTH SEARCH) ...
-const CitySelect = ({ value, options, onChange }: { value: string, options: {name: string, type: 'city'|'airport'}[], onChange: (n:string, t:any) => void }) => {
+const CitySelect = ({ 
+  value, 
+  onChange 
+}: { 
+  value: string, 
+  onChange: (name: string, type: 'city' | 'airport') => void 
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { itineraryData } = useItinerary();
   const wrapperRef = useRef<HTMLDivElement>(null);
-  
+
+  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) setIsOpen(false);
@@ -418,43 +427,99 @@ const CitySelect = ({ value, options, onChange }: { value: string, options: {nam
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredOptions = options.filter(opt => opt.name.toLowerCase().includes(search.toLowerCase()));
+  // --- THE SEARCH ENGINE (DEBOUNCED) ---
+  useEffect(() => {
+    // Only search if user types at least 2 characters
+    if (search.length < 2) {
+      setResults([]);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const countries = itineraryData.selectedCountries?.join(',') || '';
+        const response = await fetch(`/api/locations/search?q=${encodeURIComponent(search)}&countries=${encodeURIComponent(countries)}`);
+        const json = await response.json();
+        
+        if (json.success) {
+          setResults(json.data);
+        }
+      } catch (error) {
+        console.error("Search API Error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, itineraryData.selectedCountries]);
 
   return (
     <div className={`relative w-full ${isOpen ? 'z-50' : 'z-auto'}`} ref={wrapperRef}>
       <div 
         onClick={() => setIsOpen(!isOpen)} 
-        className={`w-full px-4 py-3 border bg-white rounded-md text-sm flex items-center justify-between cursor-pointer transition-all ${isOpen ? 'border-blue-500 ring-1' : 'border-gray-200 hover:border-blue-400'}`}
+        className={`w-full px-4 py-3 border bg-white rounded-lg text-sm flex items-center justify-between cursor-pointer transition-all ${
+          isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-400'
+        }`}
       >
-        <span className={value ? "text-gray-900 font-medium" : "text-gray-400"}>{value || "Select City/Airport"}</span>
-        <span className="text-gray-400 text-xs">▼</span>
+        <span className={value ? "text-gray-900 font-bold" : "text-gray-400"}>
+          {value || "Search City or Airport..."}
+        </span>
+        <Search size={14} className="text-gray-400" />
       </div>
       
       {isOpen && (
-        <div className="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden left-0">
+        <div className="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden left-0 animate-in fade-in zoom-in duration-150">
           
-          {/* STATIC SEARCH BAR (Stops Event Bubbling) */}
           <div className="p-3 bg-gray-50 border-b shrink-0" onClick={(e) => e.stopPropagation()}>
             <input 
               type="text" 
-              placeholder="Search..." 
-              className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              placeholder="Start typing (e.g. Rome)..." 
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium" 
               value={search} 
               onChange={(e) => setSearch(e.target.value)} 
               autoFocus 
             />
           </div>
           
-          {/* SCROLLABLE LIST ZONE */}
-          <div className="max-h-[200px] overflow-y-auto">
-            {filteredOptions.map((opt, idx) => (
-               <div key={idx} onClick={() => { onChange(opt.name, opt.type); setIsOpen(false); setSearch(''); }} className="flex gap-3 px-3 py-2.5 text-sm hover:bg-blue-50 cursor-pointer">
-                 {opt.type === 'city' ? <Building2 size={16} className="text-gray-400"/> : <Plane size={16} className="text-blue-500"/>}
-                 <span>{opt.name}</span>
+          <div className="max-h-[250px] overflow-y-auto">
+            {isLoading && (
+               <div className="px-4 py-6 text-center text-sm text-blue-500 font-medium animate-pulse italic">
+                 Searching database...
+               </div>
+            )}
+
+            {!isLoading && results.map((opt, idx) => (
+               <div 
+                 key={idx} 
+                 onClick={() => { 
+                   onChange(opt.name, opt.type); 
+                   setIsOpen(false); 
+                   setSearch(''); 
+                 }} 
+                 className="flex flex-col gap-0.5 px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 group"
+               >
+                 <div className="flex items-center gap-2">
+                   {opt.type === 'city' ? <Building2 size={14} className="text-gray-400"/> : <Plane size={14} className="text-blue-500"/>}
+                   <span className="font-bold text-gray-800 group-hover:text-blue-700">{opt.name}</span>
+                 </div>
+                 <div className="text-[10px] text-gray-400 ml-5 font-medium uppercase tracking-wider">
+                   {opt.stateName ? `${opt.stateName}, ` : ''}{opt.countryName}
+                 </div>
                </div>
             ))}
-            {filteredOptions.length === 0 && (
-               <div className="px-3 py-4 text-center text-sm text-gray-400 italic">No cities found.</div>
+
+            {!isLoading && search.length >= 2 && results.length === 0 && (
+               <div className="px-3 py-8 text-center text-sm text-gray-400 italic">
+                 No matches found in your selected countries.
+               </div>
+            )}
+            
+            {search.length < 2 && !isLoading && (
+              <div className="px-3 py-8 text-center text-xs text-gray-400 uppercase tracking-widest font-bold">
+                Type 2+ characters to search
+              </div>
             )}
           </div>
 
@@ -484,9 +549,9 @@ export default function RoutingPage() {
     }
   ]);
 
-  const availableOptions = (itineraryData.selectedCountries || []).flatMap(
-    (country) => CITIES_BY_COUNTRY[country] || []
-  );
+  // const availableOptions = (itineraryData.selectedCountries || []).flatMap(
+  //   (country) => CITIES_BY_COUNTRY[country] || []
+  // );
 
   // 2. SECURITY GUARD: Redirect if Intro (Step 1) is not complete
   useEffect(() => {
@@ -718,7 +783,11 @@ export default function RoutingPage() {
                         <div className="space-y-3">
                              {route.cities.map((city: any, cityIndex: number) => (
                              <div key={cityIndex} className="flex items-center gap-2">
-                                <CitySelect value={city.name} options={availableOptions} onChange={(name, type) => updateCity(route.id, cityIndex, 'name', name)} />
+                                {/* <CitySelect value={city.name} options={availableOptions} onChange={(name, type) => updateCity(route.id, cityIndex, 'name', name)} /> */}
+                                <CitySelect 
+  value={city.name} 
+  onChange={(name, type) => updateCity(route.id, cityIndex, 'name', name)} 
+/>
                                 {route.cities.length > 1 && (
                                     <button onClick={() => removeCitySlot(route.id, cityIndex)} className="text-gray-300 hover:text-red-500 "><X size={16}/></button>
                                 )}
