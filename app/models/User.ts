@@ -1,82 +1,3 @@
-// import mongoose from "mongoose";
-
-// const UserSchema = new mongoose.Schema({
-//   name: { 
-//     type: String, 
-//     required: [true, "Name is required"],
-//     trim: true, // Auto-removes extra spaces
-//     minlength: [2, "Name must be at least 2 characters"]
-//   },
-//   email: { 
-//     type: String, 
-//     required: [true, "Email is required"], 
-//     unique: true,
-//     trim: true,
-//     lowercase: true, // 'Admin@Test.com' becomes 'admin@test.com'
-//     match: [
-//       /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 
-//       "Please enter a valid email address"
-//     ]
-//   },
-//   password: { 
-//     type: String, 
-//     required: [true, "Password is required"],
-//     // Note: This validates the HASH length in DB, not the user input. 
-//     // Input validation should happen in your API route/Zod.
-//   },
-//   role: { 
-//     type: String, 
-//     enum: ["admin", "employee"], 
-//     default: "employee" 
-//   },
-//   status: { 
-//     type: String, 
-//     enum: ["active", "inactive", "suspended"], // Added 'suspended' for security
-//     default: "active" 
-//   },
-  
-//   // --- NEW FIELDS FOR ROBUSTNESS ---
-//   profilePicture: { type: String, default: "" }, // UI Polish
-//   phone: { type: String, default: "" }, // For potential 2FA later
-  
-//   // Security Fields
-//   isVerified: { type: Boolean, default: false }, // Email verification status
-//   verificationToken: String,
-//   verificationTokenExpiry: Date,
-  
-//   forgotPasswordToken: String,
-//   forgotPasswordTokenExpiry: Date,
-  
-//   lastLogin: { type: Date }, // Audit trail
-// }, 
-// { 
-//   timestamps: true // Automatically adds 'createdAt' and 'updatedAt'
-// });
-
-// // Prevent model overwrite in Next.js development mode
-// const User = mongoose.models.User || mongoose.model("User", UserSchema);
-// export default User; 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // import mongoose from "mongoose";
 
@@ -102,14 +23,16 @@
 //     type: String, 
 //     required: [true, "Password is required"],
 //   },
+//   // 👇 UPDATE: Added 'agent' to enum
 //   role: { 
 //     type: String, 
-//     enum: ["admin", "employee"], 
+//     enum: ["admin", "employee", "agent"], 
 //     default: "employee" 
 //   },
+//   // 👇 UPDATE: Added 'pending' to enum for the approval flow
 //   status: { 
 //     type: String, 
-//     enum: ["active", "inactive", "suspended"], 
+//     enum: ["active", "inactive", "suspended", "pending"], 
 //     default: "active" 
 //   },
   
@@ -120,12 +43,20 @@
 //   // 1. Personal Information
 //   profilePicture: { type: String, default: "" }, 
 //   phone: { type: String, default: "" }, 
-//   address: { type: String, default: "" }, // <--- ADDED
+//   address: { type: String, default: "" }, 
 
 //   // 2. Professional Information
-//   department: { type: String, default: "" }, // <--- ADDED
-//   position: { type: String, default: "" },   // <--- ADDED
-//   dateOfJoining: { type: Date, default: Date.now }, // <--- ADDED
+//   department: { type: String, default: "" }, 
+//   position: { type: String, default: "" },   
+//   dateOfJoining: { type: Date, default: Date.now },
+//     // 👇 NEW FIELD: Specific for Travel Agents
+//   agencyName: { type: String, default: "" },
+
+//   // 👇 NEW: Financial & Targets for Employees/Agents
+//   monthlyTarget: { type: Number, default: 0 },
+//   commissionRate: { type: Number, default: 0 },
+
+
 
 //   // =========================================================
 
@@ -137,7 +68,7 @@
 //   forgotPasswordToken: String,
 //   forgotPasswordTokenExpiry: Date,
   
-//   lastLogin: { type: Date, default: null }, // Updated to default null
+//   lastLogin: { type: Date, default: null }, 
 // }, 
 // { 
 //   timestamps: true 
@@ -145,7 +76,14 @@
 
 // // Prevent model overwrite in Next.js development mode
 // const User = mongoose.models.User || mongoose.model("User", UserSchema);
-// export default User; 
+// export default User;
+
+
+
+
+
+
+
 
 
 
@@ -176,22 +114,16 @@ const UserSchema = new mongoose.Schema({
     type: String, 
     required: [true, "Password is required"],
   },
-  // 👇 UPDATE: Added 'agent' to enum
   role: { 
     type: String, 
     enum: ["admin", "employee", "agent"], 
     default: "employee" 
   },
-  // 👇 UPDATE: Added 'pending' to enum for the approval flow
   status: { 
     type: String, 
-    enum: ["active", "inactive", "suspended", "pending"], 
+    enum: ["active", "inactive", "suspended", "pending", "rejected"], 
     default: "active" 
   },
-  
-  // =========================================================
-  // 👇 UPDATED SECTION: Dynamic Profile Fields
-  // =========================================================
   
   // 1. Personal Information
   profilePicture: { type: String, default: "" }, 
@@ -202,26 +134,30 @@ const UserSchema = new mongoose.Schema({
   department: { type: String, default: "" }, 
   position: { type: String, default: "" },   
   dateOfJoining: { type: Date, default: Date.now },
-
-  // 👇 NEW FIELD: Specific for Travel Agents
   agencyName: { type: String, default: "" },
 
-  // =========================================================
+  // 👇 NEW FIELD: Employment Type (Needed for the new UI Cards)
+  employmentType: { 
+    type: String, 
+    enum: ["Fulltime", "Contract", "Part-time"], 
+    default: "Fulltime" 
+  },
 
-  // Security Fields
+  // 3. Financial & Targets for Employees/Agents
+  monthlyTarget: { type: Number, default: 0 },
+  commissionRate: { type: Number, default: 0 },
+
+  // 4. Security Fields
   isVerified: { type: Boolean, default: false }, 
   verificationToken: String,
   verificationTokenExpiry: Date,
-  
   forgotPasswordToken: String,
   forgotPasswordTokenExpiry: Date,
-  
   lastLogin: { type: Date, default: null }, 
 }, 
 { 
   timestamps: true 
 });
 
-// Prevent model overwrite in Next.js development mode
 const User = mongoose.models.User || mongoose.model("User", UserSchema);
 export default User;

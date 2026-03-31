@@ -456,7 +456,7 @@ export function Sidebar() {
       icon: User,
       roles: ['admin']
     },
-
+    
     // 10. Agent Approvals (New: Admin Only)
     {
       label: "Agent Approvals",
