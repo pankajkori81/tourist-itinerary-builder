@@ -796,7 +796,7 @@ export default function EmployeesPage() {
   const getEmpId = (id: string) => `#EMP-${id.substring(id.length - 4).toUpperCase()}`;
 
   return (
-    <div className="min-h-screen relative p-8 font-sans">
+    <div className="min-h-screen relative p-4 font-sans">
       
       {/* Background & Overlay */}
       <div className="fixed inset-0 z-0">
@@ -807,7 +807,7 @@ export default function EmployeesPage() {
       <div className="relative z-10 max-w-[1600px] mx-auto flex flex-col h-[calc(100vh-4rem)]">
           
           {/* --- TOP METRICS HEADER --- */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-4">
             <div>
               <h1 className="text-3xl font-bold text-white flex items-center gap-3 tracking-tight"><Users className="text-blue-400" size={32} />Internal Team</h1>
               <p className="text-sm text-gray-400 mt-1 ml-11 flex items-center gap-2">Active: <span className="text-green-400 font-bold">{metrics.active}</span> | Inactive: <span className="text-red-400 font-bold">{metrics.total - metrics.active}</span></p>
@@ -821,7 +821,7 @@ export default function EmployeesPage() {
           </div>
 
           {/* --- TOOLBAR (Filters, Import/Export, Add) --- */}
-          <div className="bg-white/10 border border-white/20 rounded-2xl p-4 mb-6 backdrop-blur-xl flex flex-wrap items-center justify-between gap-4 shadow-xl shrink-0">
+          <div className="bg-white/10 border border-white/20 rounded-2xl p-4 mb-4 backdrop-blur-xl flex flex-wrap items-center justify-between gap-4 shadow-xl shrink-0">
             
             <div className="flex flex-wrap items-center gap-3 flex-1">
               {/* Search */}
@@ -832,7 +832,7 @@ export default function EmployeesPage() {
               {/* Filters */}
               <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-2">
                 <Filter size={14} className="text-gray-400" />
-                <select value={filterType} onChange={e=>setFilterType(e.target.value)} className="bg-transparent text-sm text-gray-300 outline-none cursor-pointer"><option value="All">All Types</option><option value="Fulltime">Fulltime</option><option value="Contract">Contract</option></select>
+                <select value={filterType} onChange={e=>setFilterType(e.target.value)} className="bg-transparent text-sm text-gray-300 outline-none cursor-pointer"><option value="All" >All Types</option><option value="Fulltime">Fulltime</option><option value="Contract">Contract</option></select>
               </div>
               <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-2">
                 <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} className="bg-transparent text-sm text-gray-300 outline-none cursor-pointer"><option value="All">All Status</option><option value="Active">Active</option><option value="Suspended">Suspended</option></select>
@@ -863,13 +863,16 @@ export default function EmployeesPage() {
           ) : viewMode === 'list' ? (
             
             // --- LIST VIEW ---
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden shadow-2xl flex-1 flex flex-col min-h-0">
+
+
+<div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden shadow-2xl flex-1 flex flex-col min-h-0 mb-4">
               <div className="overflow-auto custom-scrollbar flex-1">
                 <table className="w-full text-left border-collapse relative">
                   <thead className="bg-white/5 text-gray-300 border-b border-white/10 text-xs uppercase tracking-wider sticky top-0 z-10 backdrop-blur-md">
                     <tr><th className="py-4 px-6">ID</th><th className="py-4 px-6">Employee</th><th className="py-4 px-6">Role & Dept</th><th className="py-4 px-6">Type</th><th className="py-4 px-6">Status</th><th className="py-4 px-6 text-right">Actions</th></tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 text-sm">
+                    {/* 👇 FIX 1: This MUST be paginatedEmployees! */}
                     {paginatedEmployees.map((emp) => (
                       <tr key={emp._id} className="hover:bg-white/5 transition-colors">
                         <td className="py-3 px-6 font-mono text-gray-400 text-xs">{getEmpId(emp._id)}</td>
@@ -882,11 +885,7 @@ export default function EmployeesPage() {
                         <td className="py-3 px-6">
                           <div className="flex flex-col gap-1"><span className={`w-fit inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${emp.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-white/10 text-gray-300 border border-white/20'}`}><Shield size={10} /> {emp.role}</span><span className="text-xs text-gray-400 flex items-center gap-1"><Briefcase size={12}/> {emp.department || "Unassigned"}</span></div>
                         </td>
-                        {/* <td className="py-3 px-6 text-gray-300 font-medium">{emp.employmentType}</td> */}
-                        {/* Updated List View Type Column to include fallback */}
-<td className="py-3 px-6 text-gray-300 font-medium">
-   {emp.employmentType || "Fulltime"}
-</td>
+                        <td className="py-3 px-6 text-gray-300 font-medium">{emp.employmentType || "Fulltime"}</td>
                         <td className="py-3 px-6"><span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${emp.status === 'active' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>{emp.status}</span></td>
                         <td className="py-3 px-6 text-right">
                             <div className="flex items-center justify-end gap-1">
@@ -897,6 +896,9 @@ export default function EmployeesPage() {
                         </td>
                       </tr>
                     ))}
+                    {paginatedEmployees.length === 0 && (
+                      <tr><td colSpan={6} className="py-10 text-center text-gray-400">No employees found.</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -905,10 +907,12 @@ export default function EmployeesPage() {
           ) : (
 
             // --- GRID VIEW ---
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0">
+
+<div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0 mb-4">
                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 pb-4">
+                 {/* 👇 FIX 1: This MUST be paginatedEmployees! */}
                  {paginatedEmployees.map(emp => (
-                    <div key={emp._id} className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-5 hover:bg-white-[0.15] transition-all shadow-xl group">
+                    <div key={emp._id} className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 hover:bg-white-[0.15] transition-all shadow-xl group">
                        <div className="flex justify-between items-start mb-4">
                           <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5 ${emp.status === 'active' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}><div className={`w-1.5 h-1.5 rounded-full ${emp.status === 'active' ? 'bg-green-400' : 'bg-red-400'}`}></div> {emp.status}</span>
                           <button onClick={() => {setEditData(emp); setIsEditModalOpen(true);}} className="text-gray-400 hover:text-white p-1"><Edit2 size={14}/></button>
@@ -921,12 +925,7 @@ export default function EmployeesPage() {
                        <div className="space-y-3 bg-black/20 rounded-xl p-4 border border-white/5">
                           <div className="flex justify-between items-center text-xs"><span className="text-gray-400">ID Number</span><span className="font-mono font-bold text-gray-200">{getEmpId(emp._id)}</span></div>
                           <div className="flex justify-between items-center text-xs"><span className="text-gray-400">Department</span><span className="font-medium text-gray-200">{emp.department || "-"}</span></div>
-                          {/* <div className="flex justify-between items-center text-xs"><span className="text-gray-400">Type</span><span className="font-medium text-gray-200">{emp.employmentType}</span></div> */}
-                          {/* Updated Grid View Type Row to include fallback */}
-<div className="flex justify-between items-center text-xs">
-   <span className="text-gray-400">Type</span>
-   <span className="font-medium text-gray-200">{emp.employmentType || "Fulltime"}</span>
-</div>
+                          <div className="flex justify-between items-center text-xs"><span className="text-gray-400">Type</span><span className="font-medium text-gray-200">{emp.employmentType || "Fulltime"}</span></div>
                           <div className="pt-2 border-t border-white/10 mt-2 flex flex-col gap-2">
                              <p className="text-xs text-gray-300 flex items-center gap-2 truncate"><Mail size={12} className="text-gray-500 shrink-0"/> {emp.email}</p>
                              <p className="text-xs text-gray-300 flex items-center gap-2"><Phone size={12} className="text-gray-500 shrink-0"/> {emp.phone || "No Phone"}</p>
@@ -939,22 +938,33 @@ export default function EmployeesPage() {
           )}
 
           {/* --- PAGINATION FOOTER --- */}
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center pt-4 shrink-0">
-               <p className="text-sm text-gray-400">Showing <span className="text-white font-bold">{(currentPage-1)*itemsPerPage + 1}</span> to <span className="text-white font-bold">{Math.min(currentPage*itemsPerPage, filteredEmployees.length)}</span> of <span className="text-white font-bold">{filteredEmployees.length}</span> entries</p>
+   
+{totalPages > 1 && (
+            <div className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-4 flex justify-between items-center shrink-0 shadow-lg">
+               <p className="text-sm text-gray-400">
+                 Showing <span className="text-white font-bold">{(currentPage-1)*itemsPerPage + 1}</span> to <span className="text-white font-bold">{Math.min(currentPage*itemsPerPage, filteredEmployees.length)}</span> of <span className="text-white font-bold">{filteredEmployees.length}</span> entries
+               </p>
                <div className="flex gap-2">
-                 <button onClick={()=>setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 transition-colors"><ChevronLeft size={18}/></button>
+                 <button onClick={()=>setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 transition-colors">
+                   <ChevronLeft size={18}/>
+                 </button>
                  <div className="flex items-center gap-1 px-2">
                    {Array.from({length: totalPages}, (_, i) => (
-                     <button key={i} onClick={()=>setCurrentPage(i+1)} className={`w-8 h-8 rounded-lg text-sm font-bold transition-colors ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:bg-white/10'}`}>{i+1}</button>
+                     <button key={i} onClick={()=>setCurrentPage(i+1)} className={`w-8 h-8 rounded-lg text-sm font-bold transition-colors ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:bg-white/10'}`}>
+                       {i+1}
+                     </button>
                    ))}
                  </div>
-                 <button onClick={()=>setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages} className="p-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 transition-colors"><ChevronRight size={18}/></button>
+                 <button onClick={()=>setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages} className="p-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 transition-colors">
+                   <ChevronRight size={18}/>
+                 </button>
                </div>
             </div>
           )}
       </div>
 
+
+          
       {/* ========================================= */}
       {/* MODALS: EXACT MATCH TO PREMIUM UI IMAGES */}
       {/* ========================================= */}
