@@ -674,8 +674,24 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
   }, [formData.numRooms]);
 
   // Price Engine Logic (Used for Sidebar display only now)
+  // const getPriceForDate = (room: RoomCategory, dateString: string): number => {
+  //   if (!dateString) return 0;
+  //   const date = new Date(dateString);
+  //   const year = date.getFullYear();
+  //   const monthIndex = date.getMonth(); 
+  //   const monthKey = MONTH_KEYS[monthIndex];
+
+  //   const rateCard = room.rateCards.find((rc: { year: number; }) => rc.year === year);
+  //   // @ts-ignore
+  //   return rateCard ? (rateCard.rates[monthKey] || 0) : 0;
+  // };
+
+
+
+  // Price Engine Logic (Used for Sidebar display only now)
   const getPriceForDate = (room: RoomCategory, dateString: string): number => {
-    if (!dateString) return 0;
+    if (!dateString || !room || !room.rateCards) return 0;
+    
     const date = new Date(dateString);
     const year = date.getFullYear();
     const monthIndex = date.getMonth(); 
@@ -685,6 +701,8 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
     // @ts-ignore
     return rateCard ? (rateCard.rates[monthKey] || 0) : 0;
   };
+
+  
 
   const handleChange = (field: keyof Stay, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
