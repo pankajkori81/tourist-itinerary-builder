@@ -366,8 +366,8 @@ export const CITY_ATTRACTIONS: Record<string, any[]> = {
 // Transport Constants
 export const TRANSPORT_MODES = [
   { id: 'vehicle', label: 'Vehicle', icon: Car },
-  { id: 'flight', label: 'Flight', icon: Plane },
   { id: 'rail', label: 'Rail', icon: Train },
+  { id: 'flight', label: 'Flight', icon: Plane },
   { id: 'ferry', label: 'Ferry', icon: Ship },
 ];
 

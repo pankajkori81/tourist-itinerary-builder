@@ -1732,13 +1732,62 @@ export default function DaywisePage() {
     return ghosts;
   };
 
-  const displayItems = [
-    ...getGhostStays(),
-    ...currentDay.activities,
-    ...currentDay.stays,
-    ...currentDay.transports,
-    ...(currentDay.meals || [])
-  ]; 
+  // const displayItems = [
+  //   ...getGhostStays(),
+  //   ...currentDay.activities,
+  //   ...currentDay.stays,
+  //   ...currentDay.transports,
+  //   ...(currentDay.meals || [])
+  // ]; 
+
+
+
+
+  // ==========================================
+  // 🌟 NEW: CHRONOLOGICAL TIME SORTING ALGORITHM
+  // ==========================================
+  const getSortedDisplayItems = () => {
+    // 1. Gather all items for the day into one unsorted list
+    const allItems = [
+      ...getGhostStays(),
+      ...currentDay.activities,
+      ...currentDay.stays,
+      ...currentDay.transports,
+      ...(currentDay.meals || [])
+    ];
+
+    // 2. The Math Helper: Converts "HH:MM" string into pure minutes past midnight
+    const timeToMinutes = (timeStr?: string) => {
+      if (!timeStr) return 1439; // If no time exists, assign 1439 mins (23:59) so it drops to the bottom
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) return 1439;
+      return (hours * 60) + minutes;
+    };
+
+    // 3. Normalize the times, attach mathematical value, and sort!
+    return allItems.map(item => {
+      let timeStr = "23:59"; // Default fallback
+      
+      if (item.type === 'stay' && item.isContinued) {
+          timeStr = "00:00"; // Ghost Stays (waking up at hotel) forced to Midnight so they stay at the top
+      } else if (item.type === 'stay') {
+          timeStr = item.checkInTime || "14:00"; // Standard hotel check-in
+      } else if (item.type === 'transport') {
+          timeStr = item.pickupTime; // Transport relies on pickup
+      } else if (item.type === 'activity') {
+          timeStr = item.startTime; // Activities rely on start time
+      } else if (item.type === 'meal') {
+          timeStr = item.time || "23:59"; // Meals rely on reservation time
+      }
+
+      // Return the item with our new secret sorting variable attached
+      return { ...item, _sortMinutes: timeToMinutes(timeStr) };
+      
+    }).sort((a, b) => a._sortMinutes - b._sortMinutes); // 4. Sort lowest to highest
+  };
+
+  // Assign the sorted array so the rest of your JSX renders it flawlessly
+  const displayItems = getSortedDisplayItems();
 
   const handleBack = async () => router.push('/dashboard/itinerary/routing');
   
@@ -1786,14 +1835,7 @@ export default function DaywisePage() {
                     </p>
                  </div>
 
-                 {/* CENTER: Guiding Instruction (Points to the buttons) */}
-                 {/* <div className="hidden xl:flex flex-col items-center justify-center">
-                     <div className="bg-blue-500/10 border border-blue-500/20 px-5 py-2 rounded-full flex items-center gap-3 shadow-inner">
-                        <PlusSquare size={16} className="text-blue-400" />
-                        <span className="text-sm text-blue-100 font-medium tracking-wide">Build your itinerary</span>
-                        <ArrowRight size={16} className="text-blue-400 animate-pulse" />
-                     </div>
-                 </div> */}
+
 
                  {/* CENTER: Guiding Instruction (Vibrant Pointer) */}
                  <div className="hidden xl:flex flex-col items-center justify-center">
@@ -1816,21 +1858,6 @@ export default function DaywisePage() {
               {/* Main List Area */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
               
-
-                {/* 🌟 FIX: Professional Empty State CTA */}
-                {/* {displayItems.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-16 px-6 mt-4 bg-white/5 border-2 border-dashed border-white/20 rounded-2xl backdrop-blur-sm text-center shadow-inner">
-                     <div className="w-16 h-16 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-blue-500/10">
-                         <Calendar size={32} />
-                     </div>
-                     <h3 className="text-xl font-bold text-white mb-2">Plan your itinerary for Day {currentDay.dayNumber}</h3>
-                     <p className="text-gray-400 text-sm max-w-lg leading-relaxed">
-                        Build out your timeline by adding stay, activities, transport and meals above.
-                     </p>
-                  </div>
-                )} */}
-
-
                 {/* 🌟 FIX: Professional Empty State CTA (Luminous Canvas) */}
                 {displayItems.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-20 px-6 mt-4 bg-[#0f172a]/50 border-2 border-dashed border-blue-400/40 rounded-2xl backdrop-blur-md text-center shadow-[inset_0_0_50px_rgba(37,99,235,0.05)] relative overflow-hidden">
@@ -1967,6 +1994,8 @@ export default function DaywisePage() {
                     )}
 
                     {/* TRANSPORT CARD */}
+
+                    {/* TRANSPORT CARD */}
                     {item.type === 'transport' && (
                         <div className={`bg-white rounded-xl p-5 shadow-lg border-l-4 ${item.inclusionType === 'excluded' ? 'border-red-500' : 'border-green-500'} flex gap-5 group`}>
                             <div className={`w-24 rounded-lg flex-shrink-0 flex flex-col items-center justify-center border ${item.inclusionType === 'excluded' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
@@ -1974,14 +2003,23 @@ export default function DaywisePage() {
                                 <span className="text-[10px] font-bold uppercase mt-1 tracking-wider">{item.mode}</span>
                             </div>
                             <div className="flex-1 flex flex-col justify-between">
+                                
+                                {/* Header Details */}
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <div className="flex items-center gap-3">
                                             <h4 className="font-bold text-xl text-gray-800 flex items-center gap-2">{item.vehicleType || 'Transport'}</h4>
                                             <StatusBadge status={item.inclusionType} />
                                         </div>
-                                        {supplierName && <div className="mt-1 inline-flex items-center gap-1 bg-green-50 text-green-800 px-2 py-0.5 rounded text-[10px] border border-green-100"><Briefcase size={10} /><span className="font-bold">By: {supplierName}</span></div>}
-                                        <span className="text-[10px] bg-gray-100 text-gray-600 px-5 py-0.5 mt-2 rounded-full border border-gray-200 font-bold uppercase inline-block ml-2">{item.subType}</span>
+                                        
+                                        <div className="flex items-center gap-2 mt-1">
+                                            {supplierName && <div className="inline-flex items-center gap-1 bg-green-50 text-green-800 px-2 py-0.5 rounded text-[10px] border border-green-100"><Briefcase size={10} /><span className="font-bold">By: {supplierName}</span></div>}
+                                            {['flight', 'rail', 'ferry'].includes(item.mode) ? (
+                                                <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 font-bold uppercase">Transit Ticket</span>
+                                            ) : (
+                                                <span className="text-[10px] bg-gray-100 text-gray-600 px-3 py-0.5 rounded-full border border-gray-200 font-bold uppercase">{item.subType}</span>
+                                            )}
+                                        </div>
                                     </div>
                                     
                                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1989,22 +2027,100 @@ export default function DaywisePage() {
                                             <button onClick={() => handleDeleteItem('transport', item.id)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16}/></button>
                                     </div>
                                 </div>
-                                {item.serviceDescription && <div className="mt-2 mb-1"><p className="text-sm text-gray-600 leading-relaxed border-l-2 border-gray-200 pl-3 py-1 italic">“{item.serviceDescription}”</p></div>}
-                                <div className="mt-2 grid grid-cols-12 gap-3 mb-1">
-                                    <div className="col-span-12 bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col justify-center">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></div>
-                                            <div className="flex items-center justify-start w-full overflow-hidden"><span className="text-xs font-bold text-gray-700 truncate mr-2">Pickup: {item.pickupLocation || 'Not set'}</span><span className="text-xs font-bold text-gray-700 whitespace-nowrap ml-5">Time: {item.pickupTime}</span></div>
+
+                                {/* Dynamic Logistics Block */}
+                                <div className="mt-4">
+                                    {['flight', 'rail', 'ferry'].includes(item.mode) ? (
+                                        // ============================================
+                                        // TICKET MODE UI (Rail, Flight, Ferry)
+                                        // ============================================
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            {/* Times */}
+                                            <div>
+                                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1"><Clock size={10}/> Schedule</div>
+                                                <div className="text-xs font-bold text-gray-800">
+                                                    {item.pickupTime || '--:--'} <span className="text-gray-500 font-normal mx-1">to</span> {item.dropoffTime || '--:--'}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Route */}
+                                            <div>
+                                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1"><MapPin size={10}/> Route</div>
+                                                <div className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                                    <span className="truncate max-w-[100px]" title={item.pickupLocation}>{item.pickupLocation || 'Not Set'}</span> 
+                                                    <ArrowRight size={12} className="text-gray-600 flex-shrink-0"/> 
+                                                    <span className="truncate max-w-[100px]" title={item.dropoffLocation}>{item.dropoffLocation || 'Not Set'}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Duration */}
+                                            <div>
+                                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Duration</div>
+                                                <div className="text-xs font-bold text-green-700 bg-green-100/50 inline-block px-1.5 py-0.5 rounded">{item.duration || '--'}</div>
+                                            </div>
+
+                                            {/* Travel Info / Ref */}
+                                            <div>
+                                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Travel Info</div>
+                                                <div className="text-[11px] font-semibold text-gray-600 truncate flex flex-col gap-0.5" title={item.serviceDescription}>
+                                                    {item.flightNumber && <span className="text-blue-600 font-bold">Ref: {item.flightNumber}</span>}
+                                                    <span>{item.serviceDescription || 'No details added'}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center mt-2 gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></div>
-                                            <div className="flex items-center justify-start w-full overflow-hidden"><span className="text-xs font-bold text-gray-700 truncate mr-2">{item.subType === 'transfer' ? `Drop: ${item.dropoffLocation || 'Not set'}` : `Duration: ${item.duration}`}</span></div>
+                                    ) : (
+                                        // ============================================
+                                        // VEHICLE MODE UI (Car Transfer / Disposal)
+                                        // ============================================
+                                    
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            {/* Col 1: Pickup Block */}
+                                            <div>
+                                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Pickup
+                                                </div>
+                                                <div className="text-xs font-bold text-gray-800 truncate" title={item.pickupLocation}>{item.pickupLocation || 'Not Set'}</div>
+                                                <div className="text-[10px] font-bold text-blue-600 mt-1">{item.pickupTime || '--:--'}</div>
+                                            </div>
+
+                                            {/* Col 2: Drop-off OR Duration Block */}
+                                            <div>
+                                                {item.subType === 'transfer' ? (
+                                                    <>
+                                                        <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-red-400"></div> Drop-off
+                                                        </div>
+                                                        <div className="text-xs font-bold text-gray-800 truncate" title={item.dropoffLocation}>{item.dropoffLocation || 'Not Set'}</div>
+                                                        <div className="text-[10px] font-bold text-blue-600 mt-1">{item.dropoffTime || '--:--'}</div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
+                                                            <Clock size={10} className="text-gray-400" /> Duration
+                                                        </div>
+                                                        <div className="text-xs font-bold text-gray-800 bg-white px-2 py-0.5 rounded border border-gray-200 shadow-sm inline-block">
+                                                            {item.duration || '--'}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            {/* Col 3: Journey Description / Ref */}
+                                            <div>
+                                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Journey Info</div>
+                                                <div className="text-[11px] font-semibold text-gray-600 flex flex-col gap-0.5">
+                                                    {item.flightNumber && <span className="text-blue-600 font-bold">Ref: {item.flightNumber}</span>}
+                                                    <span className="line-clamp-2" title={item.serviceDescription}>{item.serviceDescription || 'No details added'}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
+                        
                     )}
+                    
 
                     {/* MEAL CARD */}
                     {item.type === 'meal' && (
