@@ -452,6 +452,8 @@ import { Plus, Trash2, GripVertical, Plane, Building2, Search, X, Calendar, Arro
 import { useRouter } from 'next/navigation';
 import { useItinerary } from '@/app/context/ItineraryContext';
 
+
+
 const CitySelect = ({ 
   value, 
   onChange 
@@ -466,19 +468,28 @@ const CitySelect = ({
   const { itineraryData } = useItinerary();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
+  // 1. Keep the input box synced with the actual saved value when closed
+  useEffect(() => {
+      if (!isOpen) {
+          setSearch(value || '');
+      }
+  }, [value, isOpen]);
+
+  // 2. Click Outside Logic (The "Abort" Action)
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) setIsOpen(false);
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+          setIsOpen(false);
+          setSearch(value || ''); // 🌟 100% LOGIC: Revert to the saved value if they click away!
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [value]);
 
-  // --- THE SEARCH ENGINE (DEBOUNCED) ---
+  // 3. The Search Engine (Debounced)
   useEffect(() => {
-    // Only search if user types at least 2 characters
-    if (search.length < 2) {
+    if (search.length < 2 || search === value) {
       setResults([]);
       return;
     }
@@ -498,53 +509,78 @@ const CitySelect = ({
       } finally {
         setIsLoading(false);
       }
-    }, 300); // 300ms delay
+    }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, itineraryData.selectedCountries]);
+  }, [search, value, itineraryData.selectedCountries]);
+
+  // 4. Manual Entry Logic
+  const handleManualSubmit = () => {
+      if (search.trim().length > 0) {
+          onChange(search.trim(), 'city');
+          setIsOpen(false);
+      }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+          e.preventDefault();
+          handleManualSubmit();
+      }
+  };
 
   return (
     <div className={`relative w-full ${isOpen ? 'z-50' : 'z-auto'}`} ref={wrapperRef}>
+      
+      {/* The Closed State / Trigger Button */}
       <div 
-        onClick={() => setIsOpen(!isOpen)} 
+        onClick={() => {
+            setIsOpen(true);
+            setSearch(value || ''); // Ensure they see what they are editing
+        }} 
         className={`w-full px-4 py-3 border bg-white rounded-lg text-sm flex items-center justify-between cursor-pointer transition-all ${
           isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-400'
         }`}
       >
-        <span className={value ? "text-gray-900 font-bold" : "text-gray-400"}>
-          {value || "Search City or Airport..."}
+        <span className={value && !isOpen ? "text-gray-900 font-bold" : "text-gray-400"}>
+          {isOpen ? "Type to search..." : (value || "Search City or Airport...")}
         </span>
         <Search size={14} className="text-gray-400" />
       </div>
       
+      {/* The Open Dropdown State */}
       {isOpen && (
         <div className="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden left-0 animate-in fade-in zoom-in duration-150">
           
+          {/* The Actual Input Box */}
           <div className="p-3 bg-gray-50 border-b shrink-0" onClick={(e) => e.stopPropagation()}>
             <input 
               type="text" 
               placeholder="Start typing (e.g. Rome)..." 
-              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium" 
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-900" 
               value={search} 
               onChange={(e) => setSearch(e.target.value)} 
+              onKeyDown={handleKeyDown}
               autoFocus 
             />
           </div>
           
-          <div className="max-h-[250px] overflow-y-auto">
+          <div className="max-h-[300px] overflow-y-auto flex flex-col">
+            
+            {/* Loading State */}
             {isLoading && (
                <div className="px-4 py-6 text-center text-sm text-blue-500 font-medium animate-pulse italic">
                  Searching database...
                </div>
             )}
 
+            {/* Database Results */}
             {!isLoading && results.map((opt, idx) => (
                <div 
                  key={idx} 
                  onClick={() => { 
                    onChange(opt.name, opt.type); 
                    setIsOpen(false); 
-                   setSearch(''); 
                  }} 
                  className="flex flex-col gap-0.5 px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 group"
                >
@@ -558,12 +594,23 @@ const CitySelect = ({
                </div>
             ))}
 
-            {!isLoading && search.length >= 2 && results.length === 0 && (
-               <div className="px-3 py-8 text-center text-sm text-gray-400 italic">
-                 No matches found in your selected countries.
-               </div>
+            {/* The Manual Override Button */}
+            {!isLoading && search.trim().length > 0 && search !== value && (
+                <div 
+                    onClick={handleManualSubmit}
+                    className="px-4 py-3 mt-auto bg-green-50 hover:bg-green-100 border-t border-green-200 cursor-pointer transition-colors group flex items-center justify-between"
+                >
+                    <div className="flex items-center gap-2">
+                        <div className="bg-green-200 text-green-700 p-1 rounded"><Plus size={14} /></div>
+                        <span className="font-bold text-green-800 text-sm group-hover:text-green-900 truncate max-w-[200px]">
+                            Use "{search.trim()}"
+                        </span>
+                    </div>
+                    <span className="text-[10px] text-green-600 font-bold uppercase tracking-wider shrink-0">Manual Entry</span>
+                </div>
             )}
-            
+
+            {/* Empty State Instructions */}
             {search.length < 2 && !isLoading && (
               <div className="px-3 py-8 text-center text-xs text-gray-400 uppercase tracking-widest font-bold">
                 Type 2+ characters to search
@@ -577,11 +624,137 @@ const CitySelect = ({
   );
 };
 
+// const CitySelect = ({ 
+//   value, 
+//   onChange 
+// }: { 
+//   value: string, 
+//   onChange: (name: string, type: 'city' | 'airport') => void 
+// }) => {
+//   const [isOpen, setIsOpen] = useState(false);
+//   const [search, setSearch] = useState('');
+//   const [results, setResults] = useState<any[]>([]);
+//   const [isLoading, setIsLoading] = useState(false);
+//   const { itineraryData } = useItinerary();
+//   const wrapperRef = useRef<HTMLDivElement>(null);
+
+//   // Close dropdown on outside click
+//   useEffect(() => {
+//     function handleClickOutside(event: MouseEvent) {
+//       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) setIsOpen(false);
+//     }
+//     document.addEventListener("mousedown", handleClickOutside);
+//     return () => document.removeEventListener("mousedown", handleClickOutside);
+//   }, []);
+
+//   // --- THE SEARCH ENGINE (DEBOUNCED) ---
+//   useEffect(() => {
+//     // Only search if user types at least 2 characters
+//     if (search.length < 2) {
+//       setResults([]);
+//       return;
+//     }
+
+//     const delayDebounceFn = setTimeout(async () => {
+//       setIsLoading(true);
+//       try {
+//         const countries = itineraryData.selectedCountries?.join(',') || '';
+//         const response = await fetch(`/api/locations/search?q=${encodeURIComponent(search)}&countries=${encodeURIComponent(countries)}`);
+//         const json = await response.json();
+        
+//         if (json.success) {
+//           setResults(json.data);
+//         }
+//       } catch (error) {
+//         console.error("Search API Error:", error);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     }, 300); // 300ms delay
+
+//     return () => clearTimeout(delayDebounceFn);
+//   }, [search, itineraryData.selectedCountries]);
+
+//   return (
+//     <div className={`relative w-full ${isOpen ? 'z-50' : 'z-auto'}`} ref={wrapperRef}>
+//       <div 
+//         onClick={() => setIsOpen(!isOpen)} 
+//         className={`w-full px-4 py-3 border bg-white rounded-lg text-sm flex items-center justify-between cursor-pointer transition-all ${
+//           isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-400'
+//         }`}
+//       >
+//         <span className={value ? "text-gray-900 font-bold" : "text-gray-400"}>
+//           {value || "Search City or Airport..."}
+//         </span>
+//         <Search size={14} className="text-gray-400" />
+//       </div>
+      
+//       {isOpen && (
+//         <div className="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden left-0 animate-in fade-in zoom-in duration-150">
+          
+//           <div className="p-3 bg-gray-50 border-b shrink-0" onClick={(e) => e.stopPropagation()}>
+//             <input 
+//               type="text" 
+//               placeholder="Start typing (e.g. Rome)..." 
+//               className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium" 
+//               value={search} 
+//               onChange={(e) => setSearch(e.target.value)} 
+//               autoFocus 
+//             />
+//           </div>
+          
+//           <div className="max-h-[250px] overflow-y-auto">
+//             {isLoading && (
+//                <div className="px-4 py-6 text-center text-sm text-blue-500 font-medium animate-pulse italic">
+//                  Searching database...
+//                </div>
+//             )}
+
+//             {!isLoading && results.map((opt, idx) => (
+//                <div 
+//                  key={idx} 
+//                  onClick={() => { 
+//                    onChange(opt.name, opt.type); 
+//                    setIsOpen(false); 
+//                    setSearch(''); 
+//                  }} 
+//                  className="flex flex-col gap-0.5 px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 group"
+//                >
+//                  <div className="flex items-center gap-2">
+//                    {opt.type === 'city' ? <Building2 size={14} className="text-gray-400"/> : <Plane size={14} className="text-blue-500"/>}
+//                    <span className="font-bold text-gray-800 group-hover:text-blue-700">{opt.name}</span>
+//                  </div>
+//                  <div className="text-[10px] text-gray-400 ml-5 font-medium uppercase tracking-wider">
+//                    {opt.stateName ? `${opt.stateName}, ` : ''}{opt.countryName}
+//                  </div>
+//                </div>
+//             ))}
+
+//             {!isLoading && search.length >= 2 && results.length === 0 && (
+//                <div className="px-3 py-8 text-center text-sm text-gray-400 italic">
+//                  No matches found in your selected countries.
+//                </div>
+//             )}
+            
+//             {search.length < 2 && !isLoading && (
+//               <div className="px-3 py-8 text-center text-xs text-gray-400 uppercase tracking-widest font-bold">
+//                 Type 2+ characters to search
+//               </div>
+//             )}
+//           </div>
+
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
 
 export default function RoutingPage() {
   const router = useRouter();
   // 1. Get completeStep
-  const { itineraryData, updateRoutingData, saveItinerary, isSaving, saveSuccess, completeStep } = useItinerary();
+  // const { itineraryData, updateRoutingData, saveItinerary, isSaving, saveSuccess, completeStep } = useItinerary();
+  const { itineraryData, updateRoutingData, updateItineraryData, saveItinerary, isSaving, saveSuccess, completeStep } = useItinerary();
   
   const [isHydrated, setIsHydrated] = useState(false);
   const [startDate, setStartDate] = useState<string>('');
@@ -715,25 +888,55 @@ export default function RoutingPage() {
     }));
   };
 
+
+
   const handleNext = async () => {
     const hasEmptyCities = routes.some(r => r.cities.some((c:any) => !c.name));
     if(hasEmptyCities) {
         alert("Please select cities for all days before proceeding.");
         return;
     }
+
+    // 🌟 NEW: GLOBAL CLEANUP SCRIPT (Upgraded for BOTH ways) 🌟
+    // This scans every hotel in the itinerary. If the user changed the routing nights
+    // (up or down), it instantly forces the hotels to match *before* the Create Day page loads!
+    if (itineraryData.dayWiseActivities && itineraryData.dayWiseActivities.length > 0) {
+        let hasChanges = false;
+        
+        const updatedDays = itineraryData.dayWiseActivities.map((day: any) => {
+            if (!day.stays || day.stays.length === 0) return day;
+
+            // 1. Find the current routing limit for this specific day's city
+            const matchingRoute = routes.find((route: any) =>
+                route.cities?.some((c: any) => c.name?.toLowerCase() === day.city?.toLowerCase())
+            );
+            const maxNights = matchingRoute ? (parseInt(String(matchingRoute.nights)) || 1) : 1;
+
+            // 2. Check and correct each stay if it does not EXACTLY match the routing
+            const correctedStays = day.stays.map((stay: any) => {
+                if (stay.nights !== maxNights) { // 👈 FIX: Changed from > to !==
+                    hasChanges = true;
+                    return { ...stay, nights: maxNights };
+                }
+                return stay;
+            });
+
+            return { ...day, stays: correctedStays };
+        });
+
+        // 3. Save the cleaned-up data to global memory instantly
+        if (hasChanges) {
+            updateItineraryData({ dayWiseActivities: updatedDays } as any);
+        }
+    }
+
     await saveItinerary('quick'); 
-    // 3. UNLOCK CREATE DAY
+    
+    // UNLOCK CREATE DAY
     completeStep('routing');
     router.push('/dashboard/itinerary/create-day');
   };
 
-  // Helper function to format the date to "March 15, 2026"
-  // const formatTableDate = (dateStr: string) => {
-  //   if (!dateStr) return '';
-  //   const [year, month, day] = dateStr.split('-');
-  //   const date = new Date(Number(year), Number(month) - 1, Number(day));
-  //   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  // };
 
   // Helper function to format the table date to "March 15, 2026"
   const formatTableDate = (dateStr: string) => {
@@ -780,29 +983,7 @@ export default function RoutingPage() {
           <div className="flex items-center gap-4 flex-wrap">
              {saveSuccess && <span className="text-green-400 text-xs font-bold animate-pulse">Saved!</span>}
              {isSaving && <span className="text-blue-400 text-xs font-bold">Saving...</span>}
-             
-             {/* 🌟 FIX: Upgraded Date Picker UI. Increased widths and paddings to prevent date cutting. */}
-             {/* <div className="flex  items-center bg-gray-200 p-1 rounded-xl border border-gray-400 shadow-inner">
-                <div className="relative flex items-center">
-                
-                    <input 
-                        type="date" 
-                        value={startDate} 
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="pl-5 pr-4 py-2 bg-transparent text-gray-800 text-sm font-semibold focus:outline-none cursor-pointer w-[150px]" 
-                    />
-                </div>
-                <div className="h-6 w-px bg-gray-400 mx-1"></div>
-                <div className="relative flex items-center opacity-70">
-                    <Calendar size={14} className="absolute left-2 text-gray-600 pointer-events-none" />
-                    <input 
-                        type="date" 
-                        value={endDate} 
-                        disabled 
-                        className="pl-6 pr-4 py-2 bg-transparent text-gray-800 text-sm font-semibold focus:outline-none cursor-not-allowed w-[150px]" 
-                    />
-                </div>
-            </div> */}
+            
 
             {/* 🌟 FIX: Locked American Format (MM/DD/YYYY) with Custom Overlay */}
              <div className="flex items-center bg-gray-200 p-1 rounded-xl border border-gray-400 shadow-inner">

@@ -135,18 +135,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// 🔵 POST: Create a brand new itinerary
-// export async function POST(req: NextRequest) {
-//   await dbConnect();
-//   try {
-//     const body = await req.json();
-//     const newItinerary = await Itinerary.create(body);
-//     return NextResponse.json({ success: true, data: newItinerary });
-//   } catch (error: any) { 
-//     console.error("POST Itinerary Error:", error);
-//     return NextResponse.json({ success: false, message: "Failed to create itinerary" }, { status: 500 }); 
-//   }
-// }
+
 
 
 // 🔵 POST: Create a brand new itinerary (Or Clone an existing one)

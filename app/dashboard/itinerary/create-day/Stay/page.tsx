@@ -572,6 +572,7 @@ import {
 } from '../constants/daywiseConstants';
 import { getStays, StayData, RoomCategory } from '@/utils/srmStorage';
 import { useSRM } from '@/app/context/SRMContext'; 
+import { useItinerary } from '@/app/context/ItineraryContext';
 
 interface StayFormProps {
   initialData?: Stay;
@@ -586,7 +587,22 @@ const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep
 
 export default function StayForm({ initialData, city, dayDate, onSave, onCancel }: StayFormProps) {
   
+  const { itineraryData } = useItinerary();
   const { suppliers } = useSRM();
+
+  // 🌟 STEP 1: Smart Nights Calculator
+  // Look through the Routing Data to find this exact city and get the planned nights
+  const defaultNights = useMemo(() => {
+    if (!itineraryData?.routingData?.routes) return 1;
+    
+    // Find the route block that contains this city
+    const matchingRoute = itineraryData.routingData.routes.find((route: any) => 
+        route.cities?.some((c: any) => c.name?.toLowerCase() === city.toLowerCase())
+    );
+
+    // Return the nights from that route, or fallback to 1 if something goes wrong
+    return matchingRoute ? (parseInt(String(matchingRoute.nights)) || 1) : 1;
+  }, [itineraryData, city]);
 
   // Initialize State
   const [formData, setFormData] = useState<Stay>(initialData || {
@@ -597,7 +613,10 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
     address: city,
     rating: '4.5',
     category: 'Hotel',
-    stayType: 'Luxury',
+    
+    // Smart Link: Uses global category from Create Page
+    stayType: itineraryData?.tripCategory || 'Luxury', 
+    
     roomCategory: 'Standard Room',
     roomName: 'Standard Room',
     inclusionType: 'included',
@@ -605,8 +624,11 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
     checkInTime: '14:00',
     checkOutDate: '',     
     checkOutTime: '11:00',
-    nights: 1,
-    costPerNight: 0, // Kept in data structure but input removed
+    
+    // 🌟 STEP 2: Inject the dynamically calculated nights!
+    nights: defaultNights, 
+    
+    costPerNight: 0, 
     numRooms: 1,
     roomOccupancy: [2], 
     customImage: '',
@@ -614,9 +636,21 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
     linkedSupplierId: '' 
   });
 
+
+
   const [showSidebar, setShowSidebar] = useState(true);
   const [srmHotels, setSrmHotels] = useState<StayData[]>([]); 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+// 🌟 STEP 3: The Watcher (Auto-Corrects Nights BOTH Ways)
+  // This constantly listens to the Routing page. If the routing nights change 
+  // (up OR down), it forces the hotel nights to sync perfectly.
+  useEffect(() => {
+    // Check if the routing nights differ from the hotel's currently saved nights
+    if (defaultNights !== formData.nights) {
+      setFormData(prev => ({ ...prev, nights: defaultNights }));
+    }
+  }, [defaultNights]); // Only trigger this when the routing 'defaultNights' changes
 
   // Smart Supplier Logic
   const availableSuppliers = useMemo(() => {

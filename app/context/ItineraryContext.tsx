@@ -633,6 +633,7 @@ export interface StepperStatus { intro: 'completed' | 'incomplete'; routing: 'lo
 export interface AuditLogEntry { version: string; action: 'ADD' | 'EDIT' | 'DELETE' | 'STATUS'; module: string; details: string; userRole: string; timestamp: string; }
 
 export interface ItineraryData extends Omit<StoredItineraryData, 'status'> {
+  includedOptionals: never[];
   companyMarkup: number; tripCategory: string; tripExperience: string; stepperStatus: StepperStatus; status: ItineraryStatus; currentVersion: string; auditLog: AuditLogEntry[];
 }
 
@@ -666,7 +667,8 @@ const DEFAULT_ITINERARY: ItineraryData = {
   tripId: '', numberOfTravelers: 2, isMasterItinerary: false, tripName: '', tripType: '', tripStyle: '', packageType: 'land', creatingFor: 'guest', showFlightDetails: false, showTravelerDetails: true, selectedCountries: [], selectedCurrency: 'USD', flights: [], travelers: [], agentTravelers: [], routingData: undefined, dayWiseActivities: [], tripCategory: '', tripExperience: '', status: 'draft', currentVersion: '1.0',
   auditLog: [{ version: '1.0', action: 'STATUS', module: 'System', details: 'Itinerary Created', userRole: 'system', timestamp: new Date().toISOString() }],
   stepperStatus: { intro: 'incomplete', routing: 'locked', createDay: 'locked', review: 'locked', costing: 'locked', preview: 'locked' },
-  companyMarkup: 0, startDate: function (startDate: any): unknown { throw new Error('Function not implemented.'); }
+  companyMarkup: 0, startDate: function (startDate: any): unknown { throw new Error('Function not implemented.'); },
+  includedOptionals: []
 };
 
 export function ItineraryProvider({ children }: { children: React.ReactNode }) {

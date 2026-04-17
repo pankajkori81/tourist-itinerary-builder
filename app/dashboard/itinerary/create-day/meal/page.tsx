@@ -663,7 +663,7 @@ export default function MealForm({ initialData, city, dayDate, onSave, onCancel 
           
 
              <div className="flex gap-2">
-                <div className="flex-1">
+                {/* <div className="flex-1">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Restaurant Name <span className="text-red-500">*</span></label>
                   <input 
                     type="text" 
@@ -671,6 +671,17 @@ export default function MealForm({ initialData, city, dayDate, onSave, onCancel 
                     onChange={(e) => handleChange('restaurantName', e.target.value)}
                     className="w-full p-3 bg-orange-50 border border-orange-100 rounded-lg text-sm font-bold text-gray-800 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                     placeholder="Search or Type Name..."
+                  />
+                </div> */}
+
+              <div className="flex-1">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Restaurant Name (Optional)</label>
+                  <input 
+                    type="text" 
+                    value={formData.restaurantName}
+                    onChange={(e) => handleChange('restaurantName', e.target.value)}
+                    className="w-full p-3 bg-orange-50 border border-orange-100 rounded-lg text-sm font-bold text-gray-800 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                    placeholder="Leave blank for standard hotel meal..."
                   />
                 </div>
                 <button 
