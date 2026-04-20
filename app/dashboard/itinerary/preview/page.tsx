@@ -438,13 +438,14 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { Download , Share2, X, Loader2, Mail} from "lucide-react";
+import { Download , Share2, X, Loader2, Mail, ArrowLeft} from "lucide-react";
 // import toast, { Toaster } from 'react-hot-toast';
 import { useItinerary } from '@/app/context/ItineraryContext';
 import { DayPlan } from '../create-day/constants/daywiseConstants';
 import { useUser } from '@/app/context/UserContext';
 import { useCurrency } from '@/hooks/useCurrency'; 
 import { calculateTripCosts } from '@/utils/costingLogic'; 
+import { useRouter } from 'next/navigation';
 
 
 // --- HELPERS (Copied from Costing Sheet for consistency) ---
@@ -462,6 +463,7 @@ const formatDate = (dateStr?: string) => {
 
 export default function PreviewPage() {
   const { itineraryData } = useItinerary();
+  const router = useRouter();
   const { user } = useUser();
   const printRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -711,7 +713,12 @@ export default function PreviewPage() {
         hiddenWrapper.style.position = 'absolute';
         hiddenWrapper.style.left = '-9999px';
         hiddenWrapper.style.top = '0px';
-        hiddenWrapper.style.width = `${tableWidth}px`;
+        // hiddenWrapper.style.width = `${tableWidth}px`;
+
+        // 👇 FIX 1: Add + 2px to the width to prevent right-border clipping
+        hiddenWrapper.style.width = `${tableWidth + 2}px`;
+        // 👇 FIX 2: Add 1px padding to ensure the border doesn't touch the absolute edge of the canvas
+        hiddenWrapper.style.paddingRight = '1px';
         hiddenWrapper.style.backgroundColor = '#ffffff';
 
         // Clone table
@@ -933,19 +940,34 @@ return (
                     </tr>
                 </thead>
 
-                {rawDayPlans.map((day, idx) => {
+{rawDayPlans.map((day, idx) => {
                         const items = getRenderableItemsForDay(idx, day);
+                        
+                        // 👇 NEW: Dynamic Date Calculation!
+                        // This takes the Ref Date from Costing (simulationDate) or Routing and calculates the exact date for this specific day.
+                        let displayDate = 'TBA';
+                        const baseStartDate = (itineraryData as any).simulationDate || itineraryData.routingData?.startDate;
+                        
+                        if (day.date) {
+                            displayDate = formatDate(day.date);
+                        } else if (baseStartDate) {
+                            const d = new Date(baseStartDate);
+                            d.setDate(d.getDate() + (day.dayNumber - 1)); // Add the day number offset
+                            displayDate = formatDate(d.toISOString());
+                        }
+
                         return (
                             <tbody 
                                 key={day.dayNumber} 
-                                // Attach ref to each day using the Map
                                 ref={(el) => { if (el) dayRefsMap.current.set(day.dayNumber, el); }}
                                 style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
                             >
                                 
-                                {/* Day Heading Row */}
+                                {/* 👇 FIX: Render the newly calculated displayDate instead of day.date */}
                                 <tr style={{ backgroundColor: '#fefce8', borderTop: '2px solid #636363ff' }}>
-                                    <td colSpan={4} style={{ backgroundColor: '#f3f4f6', color: '#303030', padding: '8px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold' }}>DAY {day.dayNumber} | {formatDate(day.date)}</td>
+                                    <td colSpan={4} style={{ backgroundColor: '#f3f4f6', color: '#303030', padding: '8px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold' }}>
+                                        DAY {day.dayNumber} | {displayDate} 
+                                    </td>
                                 </tr>
 
                                 {/* Leisure Day Check */}
@@ -956,9 +978,8 @@ return (
                                         <td colSpan={2} style={{ border: '1px solid #636363ff', padding: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Leisure day. No activities scheduled.</td>
                                     </tr>
                                 )}
-
-                                {/* Items Rendering Loop */}
-
+                                
+                  
                                 {/* Items Rendering Loop */}
                                 {items.map((item, itemIdx) => {
                                     
@@ -1007,6 +1028,8 @@ return (
                                                     }}>
                                                         {badgeText}
                                                     </div>
+
+                                                    
                                             </td>
 
                                             {/* Col 4: Description (Leave your existing Col 4 code here!) */}
@@ -1297,7 +1320,19 @@ return (
         <div style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', marginTop: '32px', padding: '24px', textAlign: 'center', fontSize: '12px', color: '#505050ff' }}>
             <p>Generated by Travdek. Prices and availability are subject to change.</p>
         </div>
+
       </div>
+
+
+  {/* 👇 Wrapper forces the button to the far left corner */}
+    <div className="w-full max-w-[410mm] flex justify-start mt-4 mb-8">
+        <button
+            onClick={() => router.push('/dashboard/itinerary/costing')}
+            className="flex items-center gap-2 text-gray-500 hover:text-gray-800 px-6 py-3 rounded-lg font-bold hover:bg-gray-200 transition-all"
+        >
+            <ArrowLeft size={18} /> Back to Costing
+        </button>
+    </div>
 
       {/* 👇 NEW SHARE MODAL UI PAasted HERE */}
       {isShareModalOpen && (

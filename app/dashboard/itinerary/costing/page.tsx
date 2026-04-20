@@ -3004,8 +3004,8 @@ export default function CostingPage() {
         </div>
 
         {/* Bottom: Admin Action Logic (Aligned Right) */}
-        <div className="flex items-center justify-end gap-4">
-          {/* Warning if the admin tries to go to preview without approving the agent's request first */}
+        {/* <div className="flex items-center justify-end gap-4">
+         
           {itineraryData.status === "pending_costing" && (
             <div className="flex items-center text-orange-600 font-bold text-sm bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 shadow-sm">
               <AlertTriangle size={16} className="mr-2" /> Approve Costing to
@@ -3019,6 +3019,37 @@ export default function CostingPage() {
           >
             Go to Preview <ArrowRight size={18} />
           </button>
+        </div> */}
+
+
+        <div className="flex items-center justify-between w-full gap-4">
+          
+          {/* NEW: Left Side - Back Button */}
+          <button
+            onClick={() => router.push("/dashboard/itinerary/review")}
+            className="flex items-center gap-2 text-gray-500 hover:text-gray-800 px-6 py-3 rounded-lg font-bold hover:bg-gray-200 transition-all"
+          >
+            <ArrowLeft size={18} /> Back to Review
+          </button>
+
+          {/* Right Side: Warning & Preview Button Wrapper */}
+          <div className="flex items-center gap-4">
+            {/* Warning if the admin tries to go to preview without approving the agent's request first */}
+            {itineraryData.status === "pending_costing" && (
+              <div className="flex items-center text-orange-600 font-bold text-sm bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 shadow-sm">
+                <AlertTriangle size={16} className="mr-2" /> Approve Costing to
+                unlock for Employees/Agents
+              </div>
+            )}
+
+            <button
+              onClick={() => router.push("/dashboard/itinerary/preview")}
+              className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-105"
+            >
+              Go to Preview <ArrowRight size={18} />
+            </button>
+          </div>
+
         </div>
       </div>
     </div>

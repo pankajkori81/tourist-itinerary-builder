@@ -708,21 +708,6 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
   }, [formData.numRooms]);
 
   // Price Engine Logic (Used for Sidebar display only now)
-  // const getPriceForDate = (room: RoomCategory, dateString: string): number => {
-  //   if (!dateString) return 0;
-  //   const date = new Date(dateString);
-  //   const year = date.getFullYear();
-  //   const monthIndex = date.getMonth(); 
-  //   const monthKey = MONTH_KEYS[monthIndex];
-
-  //   const rateCard = room.rateCards.find((rc: { year: number; }) => rc.year === year);
-  //   // @ts-ignore
-  //   return rateCard ? (rateCard.rates[monthKey] || 0) : 0;
-  // };
-
-
-
-  // Price Engine Logic (Used for Sidebar display only now)
   const getPriceForDate = (room: RoomCategory, dateString: string): number => {
     if (!dateString || !room || !room.rateCards) return 0;
     
@@ -740,6 +725,22 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
 
   const handleChange = (field: keyof Stay, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+
+  // --- CLEAR STAY LOGIC ---
+  const handleClearStay = () => {
+    setFormData(prev => ({
+      ...prev,
+      hotelName: '',
+      description: '',
+      rating: '4.5',
+      customImage: '',
+      roomCategory: 'Standard Room',
+      address: city,
+      linkedSupplierId: ''
+    }));
+    setShowSidebar(true);
   };
 
   const handleRoomOccupancyChange = (index: number, value: number) => {
@@ -815,10 +816,8 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
           
           {/* SECTION A: HOTEL DETAILS */}
           <section className="space-y-4">
-             
-      
-
-             <div className="flex gap-2">
+ 
+              <div className="flex gap-2 items-start">
                 <div className="flex-1">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Stay Name <span className="text-red-500">*</span></label>
                   <input 
@@ -829,13 +828,24 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
                     className="w-full p-3 bg-purple-50 border border-purple-100 rounded-lg text-sm font-bold text-gray-800 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                   />
                 </div>
-                <button 
-                   onClick={() => setShowSidebar(!showSidebar)}
-                   className={`mt-6 px-3 border rounded-lg transition-colors ${showSidebar ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-500'}`}
-                   title="Toggle Hotel List"
-                >
-                  <PlusCircle size={20} />
-                </button>
+                
+                {formData.hotelName ? (
+                    <button 
+                        onClick={handleClearStay} 
+                        className="mt-6 px-3 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors shadow-sm flex items-center justify-center" 
+                        title="Clear Stay"
+                    >
+                        <X size={20} />
+                    </button>
+                ) : (
+                    <button 
+                       onClick={() => setShowSidebar(true)}
+                       className="mt-6 px-3 py-2.5 bg-purple-50 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors shadow-sm flex items-center justify-center"
+                       title="View SRM Inventory"
+                    >
+                      <PlusCircle size={20} />
+                    </button>
+                )}
               </div>
 
               <div className="grid grid-cols-12 gap-4">

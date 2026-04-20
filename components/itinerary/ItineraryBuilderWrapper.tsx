@@ -1034,17 +1034,6 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
   const [errorMessage, setErrorMessage] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  // Tab Definitions mapped to Status Keys
-  // const tabs = [
-  //   { id: 'INTRO', label: 'INTRO', path: '/dashboard/itinerary/create', statusKey: 'intro' },
-  //   { id: 'ROUTING', label: 'ROUTING', path: '/dashboard/itinerary/routing', statusKey: 'routing' },
-  //   { id: 'CREATE DAY', label: 'CREATE DAY', path: '/dashboard/itinerary/create-day', statusKey: 'createDay' },
-  //   // 👇 NEW TAB ADDED HERE
-  //   { id: 'REVIEW', label: 'REVIEW', path: '/dashboard/itinerary/review', statusKey: 'review' },
-  //   { id: 'COSTING', label: 'COSTING', path: '/dashboard/itinerary/costing', statusKey: 'costing' },
-  //   { id: 'PREVIEW', label: 'PREVIEW', path: '/dashboard/itinerary/preview', statusKey: 'preview' },
-  // ];
-
 
   // 🌟 FIX 1: Dynamically hide the COSTING tab if the user is NOT an admin
   const tabs = [
@@ -1075,21 +1064,17 @@ useEffect(() => {
   }
 }, [toastMessage]);
 
-  // 👇 HIGHLIGHT: Updated Locking Logic (Review-First Flow)
+
+
+  // // 🌟 FIX 2: Update Locking Logic so Employees can jump straight from Review -> Preview
   // const getTabState = (tabId: string) => {
   //     const globalStatus = itineraryData.status || 'draft';
       
-  //     // 1. Determine Completion of previous steps
   //     const introDone = !!itineraryData.tripName;
-  //  // 👇 FIXED: Added safe navigation ?. to prevent "Cannot read property routes of undefined"
   //     const routingDone = !!(introDone && itineraryData.routingData?.routes && itineraryData.routingData.routes.length > 0);
-  //     // Create Day is "done" if we have at least one activity/hotel, or if we moved past it
   //     const hasDayItems = (itineraryData.dayWiseActivities?.length || 0) > 0;
   //     const createDayDone = routingDone && hasDayItems;
-      
-  //     // Review is done if status is NOT draft (meaning it was submitted at least once)
   //     const reviewDone = ['pending_costing', 'reedit_requested', 'approved'].includes(globalStatus);
-      
   //     const costingDone = reviewDone && globalStatus === 'approved';
 
   //     let isLocked = false;
@@ -1109,20 +1094,21 @@ useEffect(() => {
   //             isCompleted = createDayDone;
   //             break;
   //         case 'REVIEW':
-  //             // Only locked if Create Day isn't "done"
   //             isLocked = !createDayDone; 
   //             isCompleted = reviewDone;
   //             break;
   //         case 'COSTING':
-  //             if (user?.role === 'admin') {
-  //                 isLocked = !reviewDone; // Admin can access if submitted
-  //             } else {
-  //                 isLocked = !costingDone; // Agents/Employees locked until APPROVED
-  //             }
+  //             isLocked = !reviewDone; 
   //             isCompleted = costingDone;
   //             break;
   //         case 'PREVIEW':
-  //             isLocked = !costingDone; 
+  //             // Admins must wait for costing to be done. 
+  //             // Employees just wait for the status to be 'approved'!
+  //             if (user?.role === 'admin') {
+  //                 isLocked = !costingDone;
+  //             } else {
+  //                 isLocked = globalStatus !== 'approved';
+  //             }
   //             isCompleted = false; 
   //             break;
   //     }
@@ -1131,16 +1117,76 @@ useEffect(() => {
   // };
 
 
-  // 🌟 FIX 2: Update Locking Logic so Employees can jump straight from Review -> Preview
+  // // 🌟 FIX 2: Sequential Unlocking & Role-Based Logic
+  // const getTabState = (tabId: string) => {
+  //     const globalStatus = itineraryData.status || 'draft';
+      
+  //     // Step Progression Checks
+  //     const introDone = !!itineraryData.tripName;
+  //     const routingDone = !!(introDone && itineraryData.routingData?.routes && itineraryData.routingData.routes.length > 0);
+  //     const hasDayItems = (itineraryData.dayWiseActivities?.length || 0) > 0;
+  //     const createDayDone = routingDone && hasDayItems;
+      
+  //     const isSubmittedForCosting = ['pending_costing', 'reedit_requested', 'approved'].includes(globalStatus);
+  //     const isApproved = globalStatus === 'approved';
+
+  //     let isLocked = false;
+  //     let isCompleted = false;
+
+  //     switch(tabId) {
+  //         case 'INTRO':
+  //             isLocked = false;
+  //             isCompleted = introDone;
+  //             break;
+  //         case 'ROUTING':
+  //             isLocked = !introDone; // Unlocks when Intro is done
+  //             isCompleted = routingDone;
+  //             break;
+  //         case 'CREATE DAY':
+  //             isLocked = !routingDone; // Unlocks when Routing is done
+  //             isCompleted = createDayDone;
+  //             break;
+  //         case 'REVIEW':
+  //             isLocked = !createDayDone; // Unlocks when Days are built
+  //             isCompleted = isSubmittedForCosting;
+  //             break;
+  //         case 'COSTING':
+  //             // Admin Only Tab: Unlocks as soon as the itinerary has days built!
+  //             isLocked = !createDayDone; 
+  //             isCompleted = isApproved;
+  //             break;
+  //         case 'PREVIEW':
+  //             // Admins can access Preview anytime after days are built.
+  //             // Employees/Agents MUST wait until the global status is 'approved'.
+  //             if (user?.role === 'admin') {
+  //                 isLocked = !createDayDone; 
+  //             } else {
+  //                 isLocked = !isApproved;
+  //             }
+  //             isCompleted = false; 
+  //             break;
+  //     }
+
+  //     return { isLocked, isCompleted };
+  // };
+
+
+
+  // 🌟 FIX 2: Sequential Unlocking & Role-Based Logic (With Green Ticks Fix)
   const getTabState = (tabId: string) => {
       const globalStatus = itineraryData.status || 'draft';
       
+      // Step Progression Checks
       const introDone = !!itineraryData.tripName;
       const routingDone = !!(introDone && itineraryData.routingData?.routes && itineraryData.routingData.routes.length > 0);
       const hasDayItems = (itineraryData.dayWiseActivities?.length || 0) > 0;
       const createDayDone = routingDone && hasDayItems;
-      const reviewDone = ['pending_costing', 'reedit_requested', 'approved'].includes(globalStatus);
-      const costingDone = reviewDone && globalStatus === 'approved';
+      
+      const isSubmittedForCosting = ['pending_costing', 'reedit_requested', 'approved'].includes(globalStatus);
+      const isApproved = globalStatus === 'approved';
+      
+      // 👇 NEW: Check if Admin has already saved prices in the Costing tab!
+      const hasPricingData = !!(itineraryData.pricingMatrix && Object.keys(itineraryData.pricingMatrix).length > 0);
 
       let isLocked = false;
       let isCompleted = false;
@@ -1159,28 +1205,27 @@ useEffect(() => {
               isCompleted = createDayDone;
               break;
           case 'REVIEW':
-              isLocked = !createDayDone; 
-              isCompleted = reviewDone;
+              isLocked = !createDayDone;
+              // 👇 Shows green tick if submitted, approved, OR if Admin moved forward and added pricing
+              isCompleted = isSubmittedForCosting || isApproved || hasPricingData;
               break;
           case 'COSTING':
-              isLocked = !reviewDone; 
-              isCompleted = costingDone;
+              isLocked = !createDayDone; 
+              // 👇 Shows green tick if approved OR if Admin has added pricing
+              isCompleted = isApproved || hasPricingData;
               break;
           case 'PREVIEW':
-              // Admins must wait for costing to be done. 
-              // Employees just wait for the status to be 'approved'!
               if (user?.role === 'admin') {
-                  isLocked = !costingDone;
+                  isLocked = !createDayDone; 
               } else {
-                  isLocked = globalStatus !== 'approved';
+                  isLocked = !isApproved;
               }
-              isCompleted = false; 
+              isCompleted = false; // Last step doesn't need a checkmark
               break;
       }
 
       return { isLocked, isCompleted };
   };
-
 
 
   const handleTabChange = (tab: any) => {
@@ -1346,8 +1391,6 @@ useEffect(() => {
       )}
 
 
-      {/* 👇 NEW: SLIDING HISTORY DRAWER */}
-
       {/* 👇 NEW: PREMIUM SLIDING HISTORY DRAWER */}
       <div className={`fixed top-0 right-0 h-full border border-gray-400 w-[340px] bg-[#001e3a] shadow-[0_0_40px_rgba(0,0,0,0.3)] z-[60] transform transition-transform duration-300 ease-in-out flex flex-col ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}`}>
          
@@ -1443,9 +1486,7 @@ useEffect(() => {
             onClick={() => setIsHistoryOpen(false)}
          />
       )}
-      {/* 👆 END OF DRAWER */}
-      
-      {/* 👆 END OF DRAWER */}
+  
     </div>
   );
 }

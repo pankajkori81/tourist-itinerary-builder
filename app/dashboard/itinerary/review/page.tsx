@@ -689,7 +689,7 @@ import React, { useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { Download, FileText, Send, ArrowRight, Clock, AlertTriangle, Printer, GripVertical, User } from "lucide-react";
+import { Download, FileText, Send, ArrowRight, Clock, AlertTriangle, Printer, GripVertical, User, ArrowLeft } from "lucide-react";
 
 // 🌟 Import Drag and Drop components
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -1260,7 +1260,7 @@ export default function ReviewPage() {
             {/* DETAILS GRID */}
             <div style={{ borderTop: '1px solid #636363ff' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '13px' }}>
-                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Generated:</div>
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Release Date:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>{new Date().toLocaleDateString()}</div>
                     
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Travelers:</div>
@@ -1713,10 +1713,12 @@ export default function ReviewPage() {
         
 
 
-      {/* --- FOOTER ACTION BAR --- */}
+   
+
+  {/* --- FOOTER ACTION BAR --- */}
       <div className="w-full max-w-[410mm] mt-4 flex flex-col items-end gap-4">
             
-            {/* 🌟 NEW: THE PRICE DISPLAY FOR APPROVED EMPLOYEES/AGENTS */}
+            {/* 1. THE PRICE DISPLAY FOR APPROVED EMPLOYEES/AGENTS */}
             {user?.role !== 'admin' && isApproved && (
                 <div className="w-full sm:w-[400px] shrink-0 flex flex-col gap-0 bg-white p-6 rounded-xl shadow-lg border border-gray-300">
                     
@@ -1755,75 +1757,77 @@ export default function ReviewPage() {
                 </div>
             )}
 
-            <div className="flex gap-4">
-                {user?.role === 'admin' && (
-                    <>
-                        {isReEdit && (
-                            <div className="flex items-center text-orange-600 font-bold mr-4">
-                                <AlertTriangle size={18} className="mr-2"/> Waiting for Agent/Employee to edit
-                            </div>
-                        )}
-                        <button 
-                            onClick={() => router.push('/dashboard/itinerary/costing')}
-                            className="flex items-center gap-2 bg-green-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-green-700 transition-transform hover:scale-105"
-                        >
-                            Proceed to Costing <ArrowRight size={18}/>
-                        </button>
-                    </>
-                )}
-    
-                {(user?.role === 'agent' || user?.role === 'employee') && (
-                    <>
-                        {isPending && (
-                            <div className="flex items-center gap-3 text-orange-700 bg-orange-50 px-6 py-3 rounded-lg border border-orange-200 font-bold shadow-sm">
-                                <Clock size={20} className="animate-pulse"/> 
-                                <div>
-                                    <span className="block text-sm">Pricing Request Sent</span>
-                                    <span className="block text-[10px] opacity-80 uppercase">Waiting for Admin</span>
+            {/* 2. NAVIGATION & ACTION BUTTONS WRAPPER */}
+            <div className="flex justify-between items-center w-full mt-4">
+                
+                {/* Left Side: BACK BUTTON */}
+                <button 
+                    onClick={() => router.push('/dashboard/itinerary/create-day')} 
+                    className="flex items-center gap-2 text-gray-500 hover:text-gray-800 px-6 py-3 rounded-lg font-bold hover:bg-gray-200 transition-all"
+                >
+                    <ArrowLeft size={18} /> Back to Edit
+                </button>
+
+                {/* Right Side: SUBMIT/PROCEED BUTTONS */}
+                <div className="flex gap-4">
+                    {user?.role === 'admin' && (
+                        <>
+                            {isReEdit && (
+                                <div className="flex items-center text-orange-600 font-bold mr-4">
+                                    <AlertTriangle size={18} className="mr-2"/> Waiting for Agent/Employee to edit
                                 </div>
-                            </div>
-                        )}
-                        {isReEdit && (
+                            )}
                             <button 
-                                onClick={handleSubmitCosting}
-                                className="flex items-center gap-2 bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all hover:scale-105"
+                                onClick={() => router.push('/dashboard/itinerary/costing')}
+                                className="flex items-center gap-2 bg-green-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-green-700 transition-transform hover:scale-105"
                             >
-                                Resubmit for Costing <Send size={18}/>
+                                Proceed to Costing <ArrowRight size={18}/>
                             </button>
-                        )}
-                        
-                        {/* 🌟 FIX: If approved, employees go to Preview now! */}
-                        {isApproved && (
-                            <button 
-                                onClick={() => router.push('/dashboard/itinerary/preview')}
-                                className="flex items-center gap-2 bg-green-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-green-700 transition-all hover:scale-105"
-                            >
-                                Proceed to Preview <ArrowRight size={18}/>
-                            </button>
-                        )}
-                        
-                        {!isPending && !isApproved && !isReEdit && (
-                            <button 
-                                onClick={handleSubmitCosting}
-                                className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-105"
-                            >
-                                Submit for Costing <Send size={18}/>
-                            </button>
-                        )}
-                    </>
-                )}
-            </div>
-      </div>
+                        </>
+                    )}
 
-    </div>
-  );
-} 
-
-
-
-
-
-
-
-
-
+                    {(user?.role === 'agent' || user?.role === 'employee') && (
+                        <>
+                            {isPending && (
+                                <div className="flex items-center gap-3 text-orange-700 bg-orange-50 px-6 py-3 rounded-lg border border-orange-200 font-bold shadow-sm">
+                                    <Clock size={20} className="animate-pulse"/> 
+                                    <div>
+                                        <span className="block text-sm">Pricing Request Sent</span>
+                                        <span className="block text-[10px] opacity-80 uppercase">Waiting for Admin</span>
+                                    </div>
+                                </div>
+                            )}
+                            {isReEdit && (
+                                <button 
+                                    onClick={handleSubmitCosting}
+                                    className="flex items-center gap-2 bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all hover:scale-105"
+                                >
+                                    Resubmit for Costing <Send size={18}/>
+                                </button>
+                            )}
+                            
+                            {isApproved && (
+                                <button 
+                                    onClick={() => router.push('/dashboard/itinerary/preview')}
+                                    className="flex items-center gap-2 bg-green-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-green-700 transition-all hover:scale-105"
+                                >
+                                    Proceed to Preview <ArrowRight size={18}/>
+                                </button>
+                            )}
+                            
+                            {!isPending && !isApproved && !isReEdit && (
+                                <button 
+                                    onClick={handleSubmitCosting}
+                                    className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-105"
+                                >
+                                    Submit for Costing <Send size={18}/>
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div> {/* <-- Closes Right Side Buttons Wrapper */}
+            </div> {/* <-- Closes Justify-Between Wrapper */}
+        </div> {/* <-- Closes the FOOTER ACTION BAR */}
+      </div> 
+    );
+}
