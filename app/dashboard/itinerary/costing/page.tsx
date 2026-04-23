@@ -3022,9 +3022,80 @@ export default function CostingPage() {
         </div> */}
 
 
+        <div className="flex items-center justify-between w-full gap-4 relative px-1 mt-8">
+          
+          {/* 🌟 1. HIDDEN SVG FILTER FOR THE GOOEY EFFECT */}
+          <svg xmlns="http://www.w3.org/2000/svg" version="1.1" className="hidden absolute">
+            <defs>
+              <filter id="goo">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+                <feBlend in="SourceGraphic" in2="goo" />
+              </filter>
+            </defs>
+          </svg>
+
+          {/* 🌟 2. SHINE ANIMATION STYLES */}
+          <style>{`
+            @keyframes shine {
+              0% { left: -100px; }
+              60% { left: 100%; }
+              100% { left: 100%; }
+            }
+            .group:hover .shine-effect {
+              animation: shine 1.5s ease-out infinite;
+            }
+          `}</style>
+
+          {/* Left Side: BACK BUTTON (Light-Mode Gooey Effect) */}
+          <button
+            onClick={() => router.push("/dashboard/itinerary/review")}
+            className="group relative z-10 inline-flex items-center px-5 py-2 text-gray-600 font-bold bg-white border border-gray-300 rounded-lg overflow-hidden transition-colors duration-700 ease-in-out hover:text-white hover:border-gray-700 shadow-sm"
+          >
+            {/* Button Content */}
+            <span className="relative z-20 flex items-center gap-2">
+              <ArrowLeft size={18} /> Back to Review
+            </span>
+
+            {/* Gooey Blobs Container */}
+            <div
+              className="absolute inset-0 z-0 overflow-hidden pointer-events-none rounded-lg"
+              style={{ filter: 'url(#goo)' }}
+            >
+              <div className="absolute top-0 -left-[5%] w-[34%] h-full bg-gray-700 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out group-hover:translate-y-0" />
+              <div className="absolute top-0 left-[30%] w-[34%] h-full bg-gray-700 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out delay-[60ms] group-hover:translate-y-0" />
+              <div className="absolute top-0 left-[66%] w-[34%] h-full bg-gray-700 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out delay-[25ms] group-hover:translate-y-0" />
+            </div>
+          </button>
+
+          {/* Right Side: Warning & Preview Button Wrapper */}
+          <div className="flex items-center gap-4">
+            
+            {/* Warning if the admin tries to go to preview without approving the agent's request first */}
+            {itineraryData.status === "pending_costing" && (
+              <div className="flex items-center text-orange-600 font-bold text-sm bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 shadow-sm">
+                <AlertTriangle size={16} className="mr-2" /> Approve Costing to unlock for Employees/Agents
+              </div>
+            )}
+
+            {/* "Go to Preview" Button (Animated Shine) */}
+            <button
+              onClick={() => router.push("/dashboard/itinerary/preview")}
+              className="group relative overflow-hidden flex items-center justify-center gap-2 px-8 py-2 bg-blue-600 text-white font-bold rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.15)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
+            >
+              <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+              <span className="relative z-10">Go to Preview</span>
+              <ArrowRight size={18} className="relative z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-1" />
+            </button>
+            
+          </div>
+
+        </div>
+
+{/* 
         <div className="flex items-center justify-between w-full gap-4">
           
-          {/* NEW: Left Side - Back Button */}
+       
           <button
             onClick={() => router.push("/dashboard/itinerary/review")}
             className="flex items-center gap-2 text-gray-500 hover:text-gray-800 px-6 py-3 rounded-lg font-bold hover:bg-gray-200 transition-all"
@@ -3032,9 +3103,9 @@ export default function CostingPage() {
             <ArrowLeft size={18} /> Back to Review
           </button>
 
-          {/* Right Side: Warning & Preview Button Wrapper */}
+       
           <div className="flex items-center gap-4">
-            {/* Warning if the admin tries to go to preview without approving the agent's request first */}
+            
             {itineraryData.status === "pending_costing" && (
               <div className="flex items-center text-orange-600 font-bold text-sm bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 shadow-sm">
                 <AlertTriangle size={16} className="mr-2" /> Approve Costing to
@@ -3050,7 +3121,7 @@ export default function CostingPage() {
             </button>
           </div>
 
-        </div>
+        </div> */}
       </div>
     </div>
   );

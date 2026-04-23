@@ -1693,7 +1693,7 @@ export default function DaywisePage() {
         </div>
       </div>
       
-      <div className="flex justify-between items-center mr-5 mb-5 ">
+      {/* <div className="flex justify-between items-center mr-5 mb-5 ">
          <button onClick={handleBack} className="flex items-center gap-2 text-gray-400 hover:text-white px-6 py-3 rounded-lg font-medium hover:bg-white/5"><ArrowLeft size={18} /> Back</button>
 
          <div className="flex gap-3">
@@ -1704,7 +1704,76 @@ export default function DaywisePage() {
                 Next Step: Review Itinerary <ArrowRight size={18} />
              </button>
          </div>
-      </div>
+      </div> */}
+
+
+            {/* 3. NAVIGATION BUTTONS */}
+            <div className="flex justify-between items-center mt-6 mb-5 px-3 relative">
+              
+              {/* 🌟 1. HIDDEN SVG FILTER FOR THE GOOEY EFFECT */}
+              <svg xmlns="http://www.w3.org/2000/svg" version="1.1" className="hidden absolute">
+                <defs>
+                  <filter id="goo">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                    <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+                    <feBlend in="SourceGraphic" in2="goo" />
+                  </filter>
+                </defs>
+              </svg>
+      
+              {/* 🌟 2. ANIMATED BACK BUTTON (Gooey Glass Effect) */}
+              <button 
+                onClick={() => router.back()} 
+                className="group relative z-10 inline-flex items-center px-6 py-2 text-gray-400 font-medium uppercase tracking-wide bg-white/5 backdrop-blur-sm border border-gray-600 rounded-lg overflow-hidden transition-colors duration-700 ease-in-out hover:text-white hover:border-gray-400 shadow-sm"
+              >
+                {/* Button Content (Placed above the blobs) */}
+                <span className="relative z-20 flex items-center gap-2">
+                  <ArrowLeft size={18} /> Back
+                </span>
+      
+                {/* Gooey Blobs Container */}
+                <div 
+                  className="absolute inset-0 z-0 overflow-hidden pointer-events-none rounded-lg"
+                  style={{ filter: 'url(#goo)' }}
+                >
+                  {/* Blob 1 */}
+                  <div className="absolute top-0 -left-[5%] w-[34%] h-full bg-gray-600 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out group-hover:translate-y-0" />
+                  {/* Blob 2 (Delayed) */}
+                  <div className="absolute top-0 left-[30%] w-[34%] h-full bg-gray-600 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out delay-[60ms] group-hover:translate-y-0" />
+                  {/* Blob 3 (Most Delayed) */}
+                  <div className="absolute top-0 left-[66%] w-[34%] h-full bg-gray-600 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out delay-[25ms] group-hover:translate-y-0" />
+                </div>
+              </button>
+      
+      
+              {/* 🌟 3. ANIMATED NEXT BUTTON (Shine Effect) */}
+              <style>{`
+                @keyframes shine {
+                  0% { left: -100px; }
+                  60% { left: 100%; }
+                  100% { left: 100%; }
+                }
+                .group:hover .shine-effect {
+                  animation: shine 1.5s ease-out infinite;
+                }
+              `}</style>
+      
+              <button 
+                onClick={handleNext} 
+                className="group relative overflow-hidden flex items-center justify-center gap-2.5 px-8 py-2 bg-blue-600 text-white font-bold text-[15px] rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.2)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
+              >
+                {/* The Shine Effect Element */}
+                <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+                
+                <span className="relative z-10">Next Step: Create Day</span>
+                
+                <ArrowRight 
+                  size={20} 
+                  className="relative z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-1" 
+                />
+              </button>
+      
+            </div>
     </div>
   );
 }

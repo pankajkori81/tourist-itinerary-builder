@@ -955,11 +955,21 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
     clearItineraryStorage();
     
     // 3. 🌟 THE QUICK-SAVE BUG FIX: Assign an immediate ID so "Quick Save" hits the DB on click #1!
+    // const newId = `TRIP-${Date.now().toString()}`;
+    // setItineraryData({ 
+    //     ...DEFAULT_ITINERARY, 
+    //     id: newId, // Gives the database an anchor point immediately
+    //     tripId: newId.slice(-6),
+    //     status: 'draft'
+    // });
+
+
+    // 3. 🌟 THE FIX: Give it a Database Anchor (id), but leave the visual Trip ID BLANK!
     const newId = `TRIP-${Date.now().toString()}`;
     setItineraryData({ 
         ...DEFAULT_ITINERARY, 
-        id: newId, // Gives the database an anchor point immediately
-        tripId: newId.slice(-6),
+        id: newId, // The hidden database anchor (Keep this!)
+        tripId: '', // 👈 GLITCH FIXED: No more random numbers. Leave it blank until a country is chosen!
         status: 'draft'
     });
   };

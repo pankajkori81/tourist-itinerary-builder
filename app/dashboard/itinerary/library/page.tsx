@@ -941,50 +941,7 @@ const loadLibraries = async () => {
 
      setLibraries(filtered);
     setLoading(false);
-    
-    // // 3. STRICT ISOLATION OF TABS
-    // if (activeTab === 'templates') {
-    //     filtered = savedLibraries.filter(lib => lib.isMasterItinerary === true);
-    // } 
-    // else if (activeTab === 'pending') {
-    //     // Only show pending requests
-    //     filtered = pendingReqs;
-    // } 
-    // else if (activeTab === 'quotes') { 
-    //     // Only show active quotes that are NOT pending
-    //     filtered = savedLibraries.filter(lib => 
-    //         lib.isMasterItinerary === false && 
-    //         (lib.bookingStatus === 'quote' || !lib.bookingStatus) &&
-    //         lib.status !== 'pending_costing' && // Don't show pending items in active quotes
-    //         lib.status !== 'reedit_requested' &&
-    //         lib.status !== 'draft'
-    //     );
 
-    //     // Apply Data Wall rules for Active Quotes
-    //     if (user?.role === 'agent') {
-    //         filtered = filtered.filter(lib => lib.assignedAgentId === user._id);
-    //     } else if (user?.role === 'employee') {
-    //         filtered = filtered.filter(lib => !lib.assignedAgentId);
-    //     }
-    // }
-
-    // // 👇 NEW: DRAFTS FILTER LOGIC
-    // else if (activeTab === 'drafts') {
-    //     filtered = savedLibraries.filter(lib => 
-    //         lib.isMasterItinerary === false && 
-    //         lib.status === 'draft'
-    //     );
-
-    //     // Apply same security rules to drafts
-    //     if (user?.role === 'agent') {
-    //         filtered = filtered.filter(lib => lib.assignedAgentId === user._id);
-    //     } else if (user?.role === 'employee') {
-    //         filtered = filtered.filter(lib => !lib.assignedAgentId);
-    //     }
-    // }
-    
-    // setLibraries(filtered);
-    // setLoading(false);
   };
 
   const handleOpenManager = (id: string, e: React.MouseEvent) => {
@@ -1283,10 +1240,41 @@ const handleDelete = async (id: string) => {
                             )}
 
                             <div className="p-5 flex-1 flex flex-col">
-                                <div className="flex justify-between items-start mb-2 pr-8"> 
+                                {/* <div className="flex justify-between items-start mb-2 pr-8"> 
                                     <h3 className="font-bold text-gray-800 text-lg leading-tight line-clamp-2" title={item.tripName}>
                                         {item.tripName}
                                     </h3>
+                                </div> */}
+
+
+                                {/* <div className="flex justify-between items-start mb-2 pr-8"> 
+                                    <div>
+                                      
+                                        <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 mb-1.5 inline-block shadow-sm">
+                                            {item.tripId || 'ID Pending'}
+                                        </span>
+                                        
+                                        <h3 className="font-bold text-gray-800 text-lg leading-tight line-clamp-2" title={item.tripName}>
+                                            {item.tripName}
+                                        </h3>
+                                    </div>
+                                </div> */}
+
+
+                                <div className="flex justify-between items-start mb-2 pr-8"> 
+                                    <div className="flex flex-col gap-2">
+                                        
+                                        {/* 👇 THE NEW UNIVERSAL TRIP ID BADGE */}
+                                        <div>
+                                            <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 shadow-sm">
+                                                {(item.tripId && !item.tripId.startsWith('TRIP-')) ? item.tripId : 'ID Pending...'}
+                                            </span>
+                                        </div>
+                                        
+                                        <h3 className="font-bold text-gray-800 text-lg leading-tight line-clamp-2" title={item.tripName}>
+                                            {item.tripName}
+                                        </h3>
+                                    </div>
                                 </div>
                                 
                                 <div className="space-y-2 mt-2 mb-4">

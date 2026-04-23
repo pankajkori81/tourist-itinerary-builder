@@ -1340,13 +1340,49 @@ return (
 
 
   {/* 👇 Wrapper forces the button to the far left corner */}
-    <div className="w-full max-w-[410mm] flex justify-start mt-4 mb-8">
+    {/* <div className="w-full max-w-[410mm] flex justify-start mt-4 mb-8">
         <button
             onClick={() => router.push('/dashboard/itinerary/costing')}
             className="flex items-center gap-2 text-gray-500 hover:text-gray-800 px-6 py-3 rounded-lg font-bold hover:bg-gray-200 transition-all"
         >
             <ArrowLeft size={18} /> Back to Costing
         </button>
+    </div> */}
+
+    <div className="w-full max-w-[410mm] flex justify-start mt-4 mb-8 relative px-2">
+        
+        {/* 🌟 HIDDEN SVG FILTER FOR THE GOOEY EFFECT */}
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" className="hidden absolute">
+            <defs>
+                <filter id="goo">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                    <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+                    <feBlend in="SourceGraphic" in2="goo" />
+                </filter>
+            </defs>
+        </svg>
+
+        {/* 🌟 ANIMATED BACK BUTTON (Gooey Glass Effect) */}
+        <button
+            onClick={() => router.push('/dashboard/itinerary/costing')}
+            className="group relative z-10 inline-flex items-center px-5 py-2 text-gray-600 font-bold bg-white border border-gray-300 rounded-lg overflow-hidden transition-colors duration-700 ease-in-out hover:text-white hover:border-gray-700 shadow-sm"
+        >
+            {/* Button Content */}
+            <span className="relative z-20 flex items-center gap-2">
+                <ArrowLeft size={18} /> Back to Costing
+            </span>
+
+            {/* Gooey Blobs Container */}
+            <div
+                className="absolute inset-0 z-0 overflow-hidden pointer-events-none rounded-lg"
+                style={{ filter: 'url(#goo)' }}
+            >
+                <div className="absolute top-0 -left-[5%] w-[34%] h-full bg-gray-700 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out group-hover:translate-y-0" />
+                <div className="absolute top-0 left-[30%] w-[34%] h-full bg-gray-700 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out delay-[60ms] group-hover:translate-y-0" />
+                <div className="absolute top-0 left-[66%] w-[34%] h-full bg-gray-700 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out delay-[25ms] group-hover:translate-y-0" />
+            </div>
+        </button>
+
     </div>
 
       {/* 👇 NEW SHARE MODAL UI PAasted HERE */}

@@ -1154,7 +1154,7 @@ useEffect(() => {
         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1600')", backgroundSize: 'cover' }}
       />
 
-      {!isFullWidthPage && (
+      {/* {!isFullWidthPage && (
         <div className="relative z-10 bg-[#0f172a]/90 backdrop-blur-md border-b border-gray-700 px-4 py-3 flex items-center justify-between shrink-0 h-16">
           <div className="flex items-center gap-4">
              <h2 className="text-white font-bold text-lg tracking-wide">
@@ -1167,7 +1167,7 @@ useEffect(() => {
           
           <div className="flex items-center gap-3">
 
-            {/* 👇 NEW: View History Button */}
+        
             <button 
               onClick={() => setIsHistoryOpen(true)}
               className="px-4 py-2 bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white rounded-sm text-sm font-bold transition-all flex items-center gap-2 shadow-sm border border-gray-600"
@@ -1192,16 +1192,160 @@ useEffect(() => {
             </button>
           </div>
         </div>
+      )} */}
+
+{!isFullWidthPage && (
+        <div className="relative z-10 bg-[#0f172a]/90 backdrop-blur-md border-b border-gray-700 px-5 py-3 flex items-center justify-between shrink-0 h-16 shadow-sm">
+          
+          {/* 🌟 SHINE ANIMATION STYLES */}
+          <style>{`
+            @keyframes shine {
+              0% { left: -100px; }
+              60% { left: 100%; }
+              100% { left: 100%; }
+            }
+            .group:hover .shine-effect {
+              animation: shine 1.5s ease-out infinite;
+            }
+          `}</style>
+
+          {/* Left Side: Title & Library Button */}
+     {/* Left Side: Title & Library Button */}
+          <div className="flex items-center">
+             
+             {/* Title container gets a fixed width to match the sidebar, pushing the button forward */}
+             <div className="w-[206px] shrink-0 ">
+                 <h2 className="text-white font-bold text-lg tracking-wide ml-3">
+                   Itinerary <span className="text-blue-400">Builder</span>
+                 </h2>
+             </div>
+             
+             {/* Library Button */}
+             <button 
+                onClick={libraryPage} 
+                className="group relative overflow-hidden hidden md:flex px-6 py-2 bg-blue-600 text-white font-bold text-sm rounded-md border border-transparent hover:border-white/40 shadow-lg shadow-blue-900/20 transition-all duration-300 ease-out hover:bg-blue-700 hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#0f172a]"
+             >
+                <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+                <span className="relative z-10">Library</span>
+             </button>
+             
+          </div>
+          
+          {/* Right Side: Action Buttons */}
+          <div className="flex items-center gap-3.5">
+
+            {/* History Button */}
+            <button 
+              onClick={() => setIsHistoryOpen(true)}
+              className="group relative overflow-hidden px-5 py-2 bg-gray-800 text-gray-200 border border-gray-700 hover:border-gray-400 hover:bg-gray-900 hover:text-white rounded-md text-sm font-bold transition-all duration-300 ease-out hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-[#0f172a] flex items-center gap-2 shadow-md"
+            >
+              <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-30 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+              <span className="relative z-10 flex items-center gap-2">
+                <History className="w-4 h-4" /> History
+              </span>
+            </button>
+            
+            {/* Quick Save Button */}
+            <button 
+              onClick={handleQuickSave} 
+              disabled={isSaving} 
+              className="group relative overflow-hidden px-5 py-2 bg-blue-600 text-white border border-transparent hover:border-white/40 rounded-md text-sm font-bold transition-all duration-300 ease-out hover:bg-blue-700 hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#0f172a] flex items-center gap-2 shadow-lg shadow-blue-900/20 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+              <span className="relative z-10 flex items-center gap-2">
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
+                {isSaving ? 'Saving...' : 'Quick Save'}
+              </span>
+            </button>
+            
+            {/* Save & Exit Button */}
+            <button 
+              onClick={handleSaveAndExit} 
+              disabled={isSaving}
+              className="group relative overflow-hidden px-6 py-2 bg-green-600 text-white border border-transparent hover:border-white/40 rounded-md text-sm font-bold transition-all duration-300 ease-out hover:bg-green-700 hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-[#0f172a] flex items-center gap-2 shadow-lg shadow-green-900/20 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+              <span className="relative z-10 flex items-center gap-2">Save & Exit</span>
+            </button>
+
+          </div>
+        </div>
       )}
 
-      <div className="relative z-10 flex flex-1 overflow-hidden">
+  
+  {/* Inner Sidebar (Tabs) with Locking Logic */}
+
+  <div className="relative z-10 flex flex-1 overflow-hidden">
         
         {/* Inner Sidebar (Tabs) with Locking Logic */}
         {!isFullWidthPage && (
           <div className="w-55 bg-gradient-to-br from-[#0f172a]  to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
             <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
               <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
-              {/* 👇 FIX: Dynamically display the newly generated Trip ID! */}
+              <p className="text-blue-300 text-xs font-mono mb-2">
+                 Ref ID. {itineraryData.tripId || 'Pending...'}
+              </p>
+
+              <span className="bg-blue-900/50 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider">
+                    v{itineraryData.currentVersion || '1.0'}
+                 </span>
+            </div>
+
+            <nav className="space-y-2.5">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                
+                // 👇 LOGIC PRESERVED PERFECTLY
+                const { isLocked, isCompleted } = getTabState(tab.id);
+
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab)}
+                    disabled={isLocked}
+                    // 👇 NEW PREMIUM ANIMATION CLASSES ADDED
+                    className={`group relative overflow-hidden w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-300 ease-out flex items-center justify-between outline-none
+                    ${isActive 
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 hover:bg-blue-700 hover:scale-[1.03] active:scale-95 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#0f172a]' 
+                        : isLocked 
+                            ? 'text-gray-500 cursor-not-allowed opacity-60' 
+                            : 'text-gray-400 hover:bg-white/10 hover:text-white hover:scale-[1.03] active:scale-95 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-[#0f172a]'
+                    }`}
+                  >
+                    {/* 🌟 The Shine Effect (Disabled if the tab is locked) */}
+                    {!isLocked && (
+                      <div className={`shine-effect absolute top-0 -left-[100px] w-[100px] h-full pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0 ${isActive ? 'opacity-60' : 'opacity-20'}`} />
+                    )}
+
+                    {/* Content wrapped in z-10 so it stays above the shine reflection */}
+                    <div className="relative z-10 flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                            {isLocked && <Lock size={12} />}
+                            {isCompleted && !isLocked && <CheckCircle2 size={12} className={isActive ? "text-white" : "text-green-400"} />}
+                            {tab.label}
+                        </div>
+                        {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"/>}
+                    </div>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        )}
+
+        {/* Dynamic Page Content */}
+        <main className={`flex-1 overflow-y-auto bg-gray-50/5 relative ${!isFullWidthPage ? 'p-0' : ''}`}>
+          {children}
+        </main>
+      </div>
+      {/* <div className="relative z-10 flex flex-1 overflow-hidden">
+        
+      
+        {!isFullWidthPage && (
+          <div className="w-55 bg-gradient-to-br from-[#0f172a]  to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
+            <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
+              <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
+             
               <p className="text-blue-300 text-xs font-mono mb-2">
                  Ref ID. {itineraryData.tripId || 'Pending...'}
               </p>
@@ -1244,11 +1388,10 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Dynamic Page Content */}
         <main className={`flex-1 overflow-y-auto bg-gray-50/5 relative ${!isFullWidthPage ? 'p-0' : ''}`}>
           {children}
         </main>
-      </div>
+      </div> */}
 
       {/* Error Popup Code */}
       {showErrorPopup && (

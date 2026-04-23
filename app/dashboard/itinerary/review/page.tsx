@@ -1795,9 +1795,135 @@ export default function ReviewPage() {
             )}
 
             {/* 2. NAVIGATION & ACTION BUTTONS WRAPPER */}
-            <div className="flex justify-between items-center w-full mt-4">
+
+            <div className="flex justify-between items-center w-full mt-8 relative px-1">
                 
-                {/* Left Side: BACK BUTTON */}
+                {/* 🌟 1. HIDDEN SVG FILTER FOR THE GOOEY EFFECT */}
+                <svg xmlns="http://www.w3.org/2000/svg" version="1.1" className="hidden absolute">
+                    <defs>
+                        <filter id="goo">
+                            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+                            <feBlend in="SourceGraphic" in2="goo" />
+                        </filter>
+                    </defs>
+                </svg>
+
+                {/* 🌟 2. SHINE ANIMATION STYLES */}
+                <style>{`
+                    @keyframes shine {
+                        0% { left: -100px; }
+                        60% { left: 100%; }
+                        100% { left: 100%; }
+                    }
+                    .group:hover .shine-effect {
+                        animation: shine 1.5s ease-out infinite;
+                    }
+                `}</style>
+
+                {/* Left Side: BACK BUTTON (Light-Mode Gooey Effect) */}
+                <button 
+                    onClick={() => router.push('/dashboard/itinerary/create-day')} 
+                    className="group relative z-10 inline-flex items-center px-5 py-2 text-gray-600 font-bold bg-white border border-gray-300 rounded-lg overflow-hidden transition-colors duration-700 ease-in-out hover:text-white hover:border-gray-700 shadow-sm"
+                >
+                    {/* Button Content */}
+                    <span className="relative z-20 flex items-center gap-2">
+                        <ArrowLeft size={18} /> Back to Edit
+                    </span>
+
+                    {/* Gooey Blobs Container (Dark Gray blobs for light background) */}
+                    <div 
+                        className="absolute inset-0 z-0 overflow-hidden pointer-events-none rounded-lg"
+                        style={{ filter: 'url(#goo)' }}
+                    >
+                        <div className="absolute top-0 -left-[5%] w-[34%] h-full bg-gray-700 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out group-hover:translate-y-0" />
+                        <div className="absolute top-0 left-[30%] w-[34%] h-full bg-gray-700 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out delay-[60ms] group-hover:translate-y-0" />
+                        <div className="absolute top-0 left-[66%] w-[34%] h-full bg-gray-700 rounded-full scale-[1.4] translate-y-[125%] transition-transform duration-700 ease-in-out delay-[25ms] group-hover:translate-y-0" />
+                    </div>
+                </button>
+
+
+                {/* Right Side: SUBMIT/PROCEED BUTTONS */}
+                <div className="flex gap-4">
+                    
+                    {/* --- ADMIN ACTIONS --- */}
+                    {user?.role === 'admin' && (
+                        <>
+                            {isReEdit && (
+                                <div className="flex items-center text-orange-600 font-bold mr-4">
+                                    <AlertTriangle size={18} className="mr-2"/> Waiting for Agent/Employee to edit
+                                </div>
+                            )}
+                            <button 
+                                onClick={() => router.push('/dashboard/itinerary/costing')}
+                                className="group relative overflow-hidden flex items-center justify-center gap-2 px-8 py-2 bg-green-600 text-white font-bold rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.15)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
+                            >
+                                <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+                                <span className="relative z-10">Proceed to Costing</span>
+                                <ArrowRight size={18} className="relative z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-1" />
+                            </button>
+                        </>
+                    )}
+
+                    {/* --- AGENT / EMPLOYEE ACTIONS --- */}
+                    {(user?.role === 'agent' || user?.role === 'employee') && (
+                        <>
+                            {/* Pending State */}
+                            {isPending && (
+                                <div className="flex items-center gap-3 text-orange-700 bg-orange-50 px-6 py-2 rounded-lg border border-orange-200 font-bold shadow-sm">
+                                    <Clock size={20} className="animate-pulse"/> 
+                                    <div>
+                                        <span className="block text-sm">Pricing Request Sent</span>
+                                        <span className="block text-[10px] opacity-80 uppercase">Waiting for Admin</span>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Resubmit State */}
+                            {isReEdit && (
+                                <button 
+                                    onClick={handleSubmitCosting}
+                                    className="group relative overflow-hidden flex items-center justify-center gap-2 px-8 py-2 bg-orange-600 text-white font-bold rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.15)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
+                                >
+                                    <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+                                    <span className="relative z-10">Resubmit for Costing</span>
+                                    <Send size={18} className="relative z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                </button>
+                            )}
+                            
+                            {/* Approved State */}
+                            {isApproved && (
+                                <button 
+                                    onClick={() => router.push('/dashboard/itinerary/preview')}
+                                    className="group relative overflow-hidden flex items-center justify-center gap-2 px-8 py-2 bg-green-600 text-white font-bold rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.15)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
+                                >
+                                    <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+                                    <span className="relative z-10">Proceed to Preview</span>
+                                    <ArrowRight size={18} className="relative z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-1" />
+                                </button>
+                            )}
+                            
+                            {/* Base Draft State */}
+                            {!isPending && !isApproved && !isReEdit && (
+                                <button 
+                                    onClick={handleSubmitCosting}
+                                    className="group relative overflow-hidden flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 text-white font-bold rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.15)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
+                                >
+                                    <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+                                    <span className="relative z-10">Submit for Costing</span>
+                                    {/* Notice the cool send icon animation here! */}
+                                    <Send size={18} className="relative z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div> 
+            </div>
+
+
+            {/* <div className="flex justify-between items-center w-full mt-4">
+                
+            
                 <button 
                     onClick={() => router.push('/dashboard/itinerary/create-day')} 
                     className="flex items-center gap-2 text-gray-500 hover:text-gray-800 px-6 py-3 rounded-lg font-bold hover:bg-gray-200 transition-all"
@@ -1805,7 +1931,7 @@ export default function ReviewPage() {
                     <ArrowLeft size={18} /> Back to Edit
                 </button>
 
-                {/* Right Side: SUBMIT/PROCEED BUTTONS */}
+               
                 <div className="flex gap-4">
                     {user?.role === 'admin' && (
                         <>
@@ -1862,8 +1988,8 @@ export default function ReviewPage() {
                             )}
                         </>
                     )}
-                </div> {/* <-- Closes Right Side Buttons Wrapper */}
-            </div> {/* <-- Closes Justify-Between Wrapper */}
+                </div> 
+            </div>  */}
         </div> {/* <-- Closes the FOOTER ACTION BAR */}
       </div> 
     );

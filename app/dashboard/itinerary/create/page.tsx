@@ -507,7 +507,7 @@ import { getLibrary } from "@/utils/itineraryStorage"; // 👈 Added this to fet
 
 // --- CONSTANTS ---
 const TRIP_CATEGORIES = ["Classic", "Premium", "Deluxe", "Luxury"];
-const TRIP_STYLES = ["Join-in / Shared", "Small Group", "Large Group", "Tailor Made"];
+const TRIP_STYLES = ["Join-in / Shared", "Small Group", "Large Group", "Tailor Made", "Mix&Match" ];
 const TRIP_EXPERIENCES = [
   "Architecture", "Festival", "Culture", "Photography", 
   "Culinary", "Sports", "Wildlife", "Signature (First Time Traveler)"
@@ -563,7 +563,34 @@ export default function CreateItineraryPage() {
     updateItineraryData({ [field]: value });
   };
 
-  // 🌟 STEP 2: THE AUTO-GENERATOR ENGINE
+
+  // 🌟 1. THE SMART ID GENERATOR HELPER
+  const generateSmartId = async (primaryCountry: string) => {
+      const year = new Date().getFullYear();
+      const code = COUNTRY_CODES[primaryCountry] || "XX";
+      const library = await getLibrary(); 
+      const existingCount = library.filter((t: any) =>
+          t.selectedCountries?.[0] === primaryCountry &&
+          t.tripId?.includes(year.toString()) &&
+          t.id !== itineraryData.id 
+      ).length;
+      return `${existingCount + 1}-${code}50-${year}`;
+  };
+
+  // 🌟 2. THE DRAFT AUTO-FIXER (Fixes bad IDs on load)
+  useEffect(() => {
+      const autoFixId = async () => {
+          const currentId = itineraryData.tripId || '';
+          // If the DB forced a dummy 'TRIP-' ID, and we have a country selected, fix it instantly!
+          if (currentId.startsWith('TRIP-') && itineraryData.selectedCountries?.length > 0) {
+              const smartId = await generateSmartId(itineraryData.selectedCountries[0]);
+              updateItineraryData({ tripId: smartId });
+          }
+      };
+      autoFixId();
+  }, [itineraryData.tripId, itineraryData.selectedCountries]);
+
+  // 🌟 3. THE UPDATED COUNTRY TOGGLE
   const toggleCountry = async (country: string) => {
     const currentList = itineraryData.selectedCountries || [];
     let newList;
@@ -574,34 +601,60 @@ export default function CreateItineraryPage() {
       newList = [...currentList, country];
     }
     
-    let newTripId = itineraryData.tripId;
+    let newTripId = itineraryData.tripId || '';
 
-    // Logic: Only generate a new ID if we select our VERY FIRST country, 
-    // or if the primary (first) country changes because we unselected the original one.
     if (newList.length > 0) {
         const primaryCountry = newList[0];
+        // Check if the ID is blank or a dummy fallback
+        const isFallback = newTripId.startsWith('TRIP-') || newTripId === '';
         
-        if (currentList[0] !== primaryCountry || !newTripId) {
-            const year = new Date().getFullYear();
-            const code = COUNTRY_CODES[primaryCountry] || "XX";
-            
-            // Peek into the database to see how many trips match this country and year
-            const library = await getLibrary(); 
-            const existingCount = library.filter((t: any) =>
-                t.selectedCountries?.[0] === primaryCountry && // Match Primary Country
-                t.tripId?.includes(year.toString()) &&         // Match Current Year
-                t.id !== itineraryData.id                      // Don't count this exact draft if already saved
-            ).length;
-
-            // Generate the final intelligent ID!
-            newTripId = `${existingCount + 1}-${code}50-${year}`;
+        if (currentList[0] !== primaryCountry || isFallback) {
+            newTripId = await generateSmartId(primaryCountry);
         }
     } else {
-        newTripId = ''; // Clear it out if no countries are selected
+        newTripId = ''; 
     }
 
     updateItineraryData({ selectedCountries: newList, tripId: newTripId });
-  };   
+  };
+  // const toggleCountry = async (country: string) => {
+  //   const currentList = itineraryData.selectedCountries || [];
+  //   let newList;
+    
+  //   if (currentList.includes(country)) {
+  //     newList = currentList.filter(c => c !== country);
+  //   } else {
+  //     newList = [...currentList, country];
+  //   }
+    
+  //   let newTripId = itineraryData.tripId;
+
+  //   // Logic: Only generate a new ID if we select our VERY FIRST country, 
+  //   // or if the primary (first) country changes because we unselected the original one.
+  //   if (newList.length > 0) {
+  //       const primaryCountry = newList[0];
+        
+  //       if (currentList[0] !== primaryCountry || !newTripId) {
+  //           const year = new Date().getFullYear();
+  //           const code = COUNTRY_CODES[primaryCountry] || "XX";
+            
+  //           // Peek into the database to see how many trips match this country and year
+  //           const library = await getLibrary(); 
+  //           const existingCount = library.filter((t: any) =>
+  //               t.selectedCountries?.[0] === primaryCountry && // Match Primary Country
+  //               t.tripId?.includes(year.toString()) &&         // Match Current Year
+  //               t.id !== itineraryData.id                      // Don't count this exact draft if already saved
+  //           ).length;
+
+  //           // Generate the final intelligent ID!
+  //           newTripId = `${existingCount + 1}-${code}50-${year}`;
+  //       }
+  //   } else {
+  //       newTripId = ''; // Clear it out if no countries are selected
+  //   }
+
+  //   updateItineraryData({ selectedCountries: newList, tripId: newTripId });
+  // };   
 
   const handleMasterItineraryChange = (isMaster: boolean) => {
     if (isMaster) {
@@ -634,7 +687,8 @@ export default function CreateItineraryPage() {
     <div className="p-4 md:p-6 h-full overflow-y-auto pb-20">
       <div className="max-w-5xl mx-auto">
         
-        <div className="bg-white/5 backdrop-blur-md rounded-lg shadow-lg border border-white/20 p-6">
+        {/* <div className="bg-white/5 backdrop-blur-md rounded-lg shadow-lg border border-white/20 p-6"> */}
+<div className="group relative overflow-hidden bg-white/5 backdrop-blur-md rounded-lg shadow-lg border border-white/20 p-6 transition-all duration-500 ease-out hover:bg-white/5 hover:backdrop-blur-lg hover:border-white/40 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] hover:-translate-y-1">
           
           {/* 1. MASTER ITINERARY TOGGLE */}
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-500/30">
@@ -819,11 +873,46 @@ export default function CreateItineraryPage() {
           </div>
 
           {/* 6. NEXT STEP BUTTON */}
-          <div className="mt-10 pt-6 border-t border-white/10 flex justify-end">
+          {/* <div className="mt-10 pt-6 border-t border-white/10 flex justify-end">
             <button onClick={handleNextStep} className="group flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-full font-semibold shadow-lg shadow-blue-900/20 transition-all transform hover:scale-[1.02]">
               Next Step: Routing
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </button>
+          </div> */}
+
+
+          {/* 6. NEXT STEP BUTTON */}
+          <div className="mt-10 pt-6 border-t border-white/10 flex justify-end">
+            
+            {/* Local style for the infinite shine animation */}
+            <style>{`
+              @keyframes shine {
+                0% { left: -100px; }
+                60% { left: 100%; }
+                100% { left: 100%; }
+              }
+              .group:hover .shine-effect {
+                animation: shine 1.5s ease-out infinite;
+              }
+            `}</style>
+
+            <button
+              onClick={handleNextStep}
+              className="group relative overflow-hidden flex items-center justify-center gap-2.5 px-8 py-2 bg-blue-600 text-white font-bold text-[15px] rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.2)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
+            >
+              {/* 🌟 The Shine Effect Element */}
+              <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+              
+              {/* Button Text */}
+              <span className="relative z-10">Next Step: Routing</span>
+              
+              {/* Animated Arrow Icon */}
+              <ArrowRight 
+                size={20} 
+                className="relative z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-1" 
+              />
+            </button>
+
           </div>
 
         </div>
