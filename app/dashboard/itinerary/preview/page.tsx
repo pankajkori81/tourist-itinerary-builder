@@ -679,13 +679,13 @@ export default function PreviewPage() {
         const headerCanvas = await html2canvas(headerSectionRef.current, H2C_OPTS);
         const headerH = toMm(headerCanvas);
         ensureFits(headerH);
-        currentY += placeCanvas(headerCanvas, currentY) + 8;
+        currentY += placeCanvas(headerCanvas, currentY) + 4;
       }
 
       // ─────────────────────────────────────────────────────────
       // B. NATIVE TEXT FOR "ITINERARY DETAILS" (Crisp 10px Font)
       // ─────────────────────────────────────────────────────────
-      ensureFits(15);
+      ensureFits(8);
       pdf.setFontSize(10); // As requested!
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(220, 38, 38); // Red color to match Preview Page (#dc2626)
@@ -699,7 +699,7 @@ export default function PreviewPage() {
       pdf.setLineWidth(0.5);
       pdf.line(MARGIN_MM, currentY + 6, MARGIN_MM + textWidth, currentY + 6); 
       
-      currentY += 10; // Spacing before table
+      currentY += 9; // Spacing before table
 
       // ─────────────────────────────────────────────────────────
       // C. THE MAGIC TRICK: OFF-SCREEN TABLE CLONING
@@ -869,7 +869,7 @@ return (
                     <h1 style={{ color: '#dc2626', fontSize: '30px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, lineHeight: '1.1' }}>{itineraryData.tripName || "Luxury Getaway"}</h1>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '12px', fontSize: '14px', fontWeight: 'bold', color: '#202020ff' }}>
                         <span style={{ color:'#bb0000ff' ,  padding: '4px 8px', borderRadius: '4px' }}>{totalDays} Days | {totalNights} Nights</span>
-                        <span style={{ color:'#202020ff',  padding: '4px 8px', borderRadius: '4px' }}>Ref: ######</span>
+                        {/* <span style={{ color:'#202020ff',  padding: '4px 8px', borderRadius: '4px' }}>Ref: ######</span> */}
                     </div>
                 </div>
                 <div style={{ backgroundColor: '#dc2626', color: '#ffffff', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '250px', textAlign: 'center' }}>
@@ -884,37 +884,52 @@ return (
        
 
             {/* DETAILS GRID (Preview Page) */}
-            <div style={{ borderTop: '1px solid #636363ff' }}>
+            {/* DETAILS GRID */}
+            <div style={{ borderTop: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '12px' }}>
+                    
+                    {/* ROW 1: Ref ID & Travelers */}
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Ref. ID:</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{itineraryData.tripId || "Pending..."}</div>
+                    
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Travelers:</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>{itineraryData.numberOfTravelers} Pax</div>
+
+                    {/* ROW 2: Release Date & Trip Validity */}
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Release Date:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{formatDate(new Date().toISOString())}</div>
                     
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Trip Validity:</div>
-                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>{itineraryData.seasonStartDate ? formatDate(itineraryData.seasonStartDate) : formatDate(itineraryData.routingData?.startDate)} 
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>
+                        {itineraryData.seasonStartDate ? formatDate(itineraryData.seasonStartDate) : formatDate(itineraryData.routingData?.startDate)} 
                         {' to '} 
-                        {itineraryData.seasonEndDate ? formatDate(itineraryData.seasonEndDate) : formatDate(itineraryData.routingData?.endDate)}</div>
-                    
+                        {itineraryData.seasonEndDate ? formatDate(itineraryData.seasonEndDate) : formatDate(itineraryData.routingData?.endDate)}
+                    </div>
+
+                    {/* ROW 3: Country */}
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Country:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff', textTransform: 'uppercase', gridColumn: 'span 3' }}>{itineraryData.selectedCountries?.join(', ') || "India"}</div>
                     
-                    {/* 🌟 FIX: Using the new citiesWithNights variable */}
+                    {/* ROW 4: Cities */}
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Cities:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff', textTransform: 'uppercase', gridColumn: 'span 3' }}>{citiesWithNights}</div>
                     
+                    {/* ROW 5: Start / End & Route */}
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Start / End:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{startCity} / {endCity}</div>
                     
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Route:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>{itineraryData.selectedCountries?.length || 1} Country | {routes.length} Cities</div>
                     
-                    {/* 🌟 NEW: Added Package Type and Trip Style row */}
-                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff' }}>Package:</div>
-                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase', borderRight: '1px solid #636363ff' }}>{itineraryData.packageType || "Premium"}</div>
-
+                {/* ROW 6: Type & Package */}
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff' }}>Type:</div>
-                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase' }}>{itineraryData.tripStyle || "TBA"}</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase', borderRight: '1px solid #636363ff' }}>{itineraryData.tripStyle || "TBA"}</div>
+
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff' }}>Package:</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase' }}>{itineraryData.packageType || "Premium"}</div>
                 </div>
             </div>
+   
         </div>
 
         {/* 👇 ITINERARY Details Label (Ref added, font size fixed to 10px in PDF) */}

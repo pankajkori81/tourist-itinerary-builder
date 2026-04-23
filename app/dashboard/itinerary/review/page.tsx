@@ -1191,20 +1191,35 @@ export default function ReviewPage() {
 //     }
 //   };
 
-  // --- SUBMIT LOGIC ---
-  const handleSubmitCosting = () => {
-      completeStep('review');
-      submitForCosting(); 
+//   // --- SUBMIT LOGIC ---
+//   const handleSubmitCosting = () => {
+//       completeStep('review');
+//       submitForCosting(); 
       
-      const allLibs = JSON.parse(localStorage.getItem('itinerary_library') || '[]');
-      const idx = allLibs.findIndex((i:any) => i.id === itineraryData.id);
-      if (idx !== -1) {
-          allLibs[idx].status = 'pending_costing';
-          localStorage.setItem('itinerary_library', JSON.stringify(allLibs));
-      }
+//       const allLibs = JSON.parse(localStorage.getItem('itinerary_library') || '[]');
+//       const idx = allLibs.findIndex((i:any) => i.id === itineraryData.id);
+//       if (idx !== -1) {
+//           allLibs[idx].status = 'pending_costing';
+//           localStorage.setItem('itinerary_library', JSON.stringify(allLibs));
+//       }
+      
+//       alert("Itinerary submitted for Costing! Admin has been notified.");
+//       window.location.reload(); 
+//   };
+
+
+// --- SUBMIT LOGIC ---
+  const handleSubmitCosting = async () => {
+      completeStep('review');
+      
+      // 👇 FIX 1: Update the global context state properly
+      updateItineraryData({ status: 'pending_costing' });
+      
+      // 👇 FIX 2: Use your actual DB save function instead of localStorage!
+      await saveItinerary('quick');
       
       alert("Itinerary submitted for Costing! Admin has been notified.");
-      window.location.reload(); 
+    //   router.push('/dashboard/itinerary/library'); // Better UX than a hard reload
   };
 
   const isPending = currentStatus === 'pending_costing';
@@ -1258,33 +1273,55 @@ export default function ReviewPage() {
             </div>
             
             {/* DETAILS GRID */}
-            <div style={{ borderTop: '1px solid #636363ff' }}>
+
+
+            {/* DETAILS GRID */}
+            <div style={{ borderTop: '1px solid #989898', borderBottom: '1px solid #989898' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '13px' }}>
-                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Release Date:</div>
-                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>{new Date().toLocaleDateString()}</div>
+                    
+                    {/* ROW 1: Trip ID & Travelers */}
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Ref / Trip ID:</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>{itineraryData.tripId || "Pending..."}</div>
                     
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Travelers:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #989898' }}>{itineraryData.numberOfTravelers} Pax</div>
+
                     
+                    {/* ROW 2: Release Date & Type */}
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Release Date:</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>
+                        {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                   
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Type:</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase', borderBottom: '1px solid #989898' }}>{itineraryData.tripStyle || "TBA"}</div>
+
+
+                    {/* ROW 3: Countries */}
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Countries:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #989898', textTransform: 'uppercase', gridColumn: 'span 3' }}>{itineraryData.selectedCountries?.join(', ') || "TBA"}</div>
                     
-                    {/* 🌟 FIX: Using the new citiesWithNights variable */}
+                    
+                    {/* ROW 4: Cities */}
                     <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Cities:</div>
                     <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #989898', textTransform: 'uppercase', gridColumn: 'span 3' }}>{citiesWithNights}</div>
                 
-                {/* Start/End paired with Type */}
-                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Start / End:</div>
-                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{startCity} / {endCity}</div>
+                    
+                    {/* ROW 5: Start/End & Route */}
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Start / End:</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>{startCity} / {endCity}</div>
 
-                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Type:</div>
-                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase', borderBottom: '1px solid #636363ff' }}>{itineraryData.tripStyle || "TBA"}</div>
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898', borderBottom: '1px solid #989898' }}>Route:</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #989898' }}>{itineraryData.selectedCountries?.length || 1} Country | {routes.length} Cities</div>
 
-                    {/* Route stretched across the bottom */}
-                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff' }}>Route:</div>
-                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', gridColumn: 'span 3' }}>{itineraryData.selectedCountries?.length || 1} Country | {routes.length} Cities</div>
+
+                    {/* ROW 6: Package (Spans 3 cols to balance the grid!) */}
+                    <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #989898' }}>Package:</div>
+                    <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase', gridColumn: 'span 3' }}>{itineraryData.packageType || "LAND"}</div>
+                    
+                </div>
             </div>
-             </div>
+    
         </div>
 
         {/* ITINERARY BODY */}

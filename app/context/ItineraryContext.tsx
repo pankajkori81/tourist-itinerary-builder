@@ -695,6 +695,25 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
     init();
   }, []);
 
+
+  // 🌟 INDUSTRY STANDARD: EMERGENCY BACKUP & TAB PROTECTION 🌟
+  useEffect(() => {
+    // 1. Emergency Browser Backup (Saves every keystroke locally)
+    if (itineraryData.tripName || itineraryData.id) {
+        localStorage.setItem('emergency_itinerary_backup', JSON.stringify(itineraryData));
+    }
+
+    // 2. Tab Close Protection (Browser Warning)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        if (itineraryData.tripName && !saveSuccess) {
+            e.preventDefault();
+            e.returnValue = ''; // Triggers the browser's "Are you sure you want to leave?" popup
+        }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [itineraryData, saveSuccess]);
+
   const updateItineraryData = useCallback((data: Partial<ItineraryData>) => {
     setItineraryData(prev => ({ ...prev, ...data }));
   }, []);
@@ -729,34 +748,6 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
         return updatedData;
     });
   }, []);
-
-
-  // 🌟 NEW: GLOBAL DRAG AND DROP REORDER LOGIC 🌟
-  // const reorderDays = useCallback((startIndex: number, endIndex: number) => {
-  //   setItineraryData(prev => {
-  //     if (!prev.dayWiseActivities || prev.dayWiseActivities.length === 0) return prev;
-      
-  //     // 1. Copy the array
-  //     const newDays = Array.from(prev.dayWiseActivities);
-      
-  //     // 2. Remove the dragged day from its old position and insert it at the new position
-  //     const [movedDay] = newDays.splice(startIndex, 1);
-  //     newDays.splice(endIndex, 0, movedDay);
-
-  //     // 3. Automatically rewrite the dayNumber so they stay sequential (Day 1, Day 2, etc.)
-  //     const updatedDays = newDays.map((day, index) => ({
-  //       ...day,
-  //       dayNumber: index + 1
-  //     }));
-
-  //     const updatedItinerary = { ...prev, dayWiseActivities: updatedDays };
-  //     saveItineraryToStorage(updatedItinerary);
-  //     return updatedItinerary;
-  //   });
-  // }, []);
-
-
-
 
 
   // 🌟 NEW: GLOBAL DRAG AND DROP REORDER LOGIC (SYNCED WITH ROUTING) 🌟
@@ -931,15 +922,66 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  // const clearSavedItinerary = () => {
+  //   clearItineraryStorage();
+  //   setItineraryData({ ...DEFAULT_ITINERARY, tripId: `TRIP-${Date.now().toString().slice(-6)}` });
+  // };
+
+
   const clearSavedItinerary = () => {
+    // 1. Check for abandoned emergency backup
+    const backup = localStorage.getItem('emergency_itinerary_backup');
+    
+    if (backup) {
+      try {
+        const parsedBackup = JSON.parse(backup);
+        // Only prompt if there is actual data (like a trip name or days added)
+        if (parsedBackup.tripName || (parsedBackup.dayWiseActivities && parsedBackup.dayWiseActivities.length > 0)) {
+            const wantsToRecover = window.confirm(`We found an unsaved itinerary draft for "${parsedBackup.tripName || 'Untitled'}". Would you like to recover it?\n\nClick OK to recover, or Cancel to discard it and start fresh.`);
+            
+            if (wantsToRecover) {
+              setItineraryData(parsedBackup);
+              saveItineraryToStorage(parsedBackup);
+              return; // Stop here, load the backup!
+            }
+        }
+      } catch (e) {
+        console.error("Failed to parse backup", e);
+      }
+    }
+
+    // 2. If they clicked Cancel (or no backup exists), wipe safely
+    localStorage.removeItem('emergency_itinerary_backup');
     clearItineraryStorage();
-    setItineraryData({ ...DEFAULT_ITINERARY, tripId: `TRIP-${Date.now().toString().slice(-6)}` });
+    
+    // 3. 🌟 THE QUICK-SAVE BUG FIX: Assign an immediate ID so "Quick Save" hits the DB on click #1!
+    const newId = `TRIP-${Date.now().toString()}`;
+    setItineraryData({ 
+        ...DEFAULT_ITINERARY, 
+        id: newId, // Gives the database an anchor point immediately
+        tripId: newId.slice(-6),
+        status: 'draft'
+    });
   };
+
+
 
   const saveItinerary = async (type: 'quick' | 'full' | 'exit'): Promise<boolean> => {
     setIsSaving(true);
     try {
-      const dataToSave = { ...itineraryData, selectedCurrency: itineraryData.selectedCurrency || 'USD' };
+      let finalStatus = itineraryData.status;
+
+      // 👇 THE MAGIC STEP: If they click "Save & Exit" on a Master Template, 
+      // publish it so it moves out of Drafts and into the Master Templates tab!
+      if (type === 'exit' && itineraryData.isMasterItinerary && itineraryData.status === 'draft') {
+          finalStatus = 'active';
+      }
+
+      const dataToSave = { 
+          ...itineraryData, 
+          status: finalStatus, // Use the new status
+          selectedCurrency: itineraryData.selectedCurrency || 'USD' 
+      };
       
       // Save locally first so UI feels fast
       saveItineraryToStorage(dataToSave);
@@ -947,13 +989,16 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
       // Save to DB
       if (type === 'exit' || itineraryData.id) {
         await saveToLibrary(dataToSave);
-        // Important: If it's a new trip, DB assigns an ID. Sync it.
+        // Sync ID if the DB created a new one
         if (dataToSave.id && !itineraryData.id) {
            setItineraryData(prev => ({ ...prev, id: dataToSave.id }));
         }
       }
 
-      if (type === 'exit') clearItineraryStorage();
+      if (type === 'exit') {
+          clearItineraryStorage();
+          localStorage.removeItem('emergency_itinerary_backup'); // Clear backup
+      }
       
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
@@ -967,6 +1012,44 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
       setIsSaving(false);
     }
   };
+
+  
+  // const saveItinerary = async (type: 'quick' | 'full' | 'exit'): Promise<boolean> => {
+  //   setIsSaving(true);
+  //   try {
+  //     const dataToSave = { ...itineraryData, selectedCurrency: itineraryData.selectedCurrency || 'USD' };
+      
+  //     // Save locally first so UI feels fast
+  //     saveItineraryToStorage(dataToSave);
+      
+  //     // Save to DB
+  //     if (type === 'exit' || itineraryData.id) {
+  //       await saveToLibrary(dataToSave);
+  //       // Important: If it's a new trip, DB assigns an ID. Sync it.
+  //       if (dataToSave.id && !itineraryData.id) {
+  //          setItineraryData(prev => ({ ...prev, id: dataToSave.id }));
+  //       }
+  //     }
+
+  //     // if (type === 'exit') clearItineraryStorage();
+
+  //     if (type === 'exit') {
+  //         clearItineraryStorage();
+  //         localStorage.removeItem('emergency_itinerary_backup'); // Clear backup on clean exit
+  //     }
+      
+  //     setSaveSuccess(true);
+  //     setTimeout(() => setSaveSuccess(false), 2000);
+  //     showToast("Itinerary saved successfully!", "success");
+  //     return true;
+  //   } catch (e) {
+  //     console.error(e);
+  //     showToast("Failed to save itinerary.", "error");
+  //     return false;
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
 
   return (
     <ItineraryContext.Provider value={{

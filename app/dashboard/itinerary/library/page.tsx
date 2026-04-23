@@ -756,13 +756,6 @@ const ConfirmTripModal = ({ isOpen, onClose, onConfirm, itinerary }: { isOpen: b
   const pricing = useMemo(() => {
       if (!itinerary) return { total: 0, pp: 0 };
 
-    //   if (itinerary.useFixedPrice && itinerary.fixedDepartures) {
-    //       const activeFixed = itinerary.fixedDepartures.find(d => d.isSelected);
-    //       if (activeFixed) {
-    //           return { total: activeFixed.price * paxCount, pp: activeFixed.price };
-    //       }
-    //   }
-
 
     // 👇 FIX 3: Pulls from 2-Tier structure instead of old flat structure
       if (itinerary.useFixedPrice && itinerary.fixedDepartures && itinerary.selectedDepartureId) {
@@ -874,7 +867,9 @@ export default function LibraryPage() {
   const { user } = useUser(); 
 
   // 👇 ADDED 'pending' to activeTab state for Admins
-  const [activeTab, setActiveTab] = useState<'templates' | 'quotes' | 'pending'>('templates'); 
+//   const [activeTab, setActiveTab] = useState<'templates' | 'quotes' | 'pending'>('templates'); 
+  // 👇 ADDED 'drafts' to activeTab state
+  const [activeTab, setActiveTab] = useState<'templates' | 'quotes' | 'pending' | 'drafts'>('templates');
   const [libraries, setLibraries] = useState<StoredItineraryData[]>([]);
   const [pendingCount, setPendingCount] = useState(0); // Track pending requests
   const [loading, setLoading] = useState(true);
@@ -889,44 +884,6 @@ export default function LibraryPage() {
     loadLibraries();
   }, [activeTab, user]); 
 
-//   const loadLibraries = () => {
-//     setLoading(true);
-//     const savedLibraries = getLibrary();
-    
-//     // Calculate global pending count for Admin Badge
-//     const pendingReqs = savedLibraries.filter(lib => !lib.isMasterItinerary && (lib.status === 'pending_costing' || lib.status === 'reedit_requested'));
-//     setPendingCount(pendingReqs.length);
-
-//     let filtered: StoredItineraryData[] = [];
-    
-//     if (activeTab === 'templates') {
-//         filtered = savedLibraries.filter(lib => lib.isMasterItinerary === true);
-//     } 
-//     // 👇 NEW ADMIN INBOX TAB: Only shows trips needing pricing approval
-//     else if (activeTab === 'pending') {
-//         filtered = pendingReqs;
-//     } 
-//     else { // Active Quotes
-//         filtered = savedLibraries.filter(lib => 
-//             lib.isMasterItinerary === false && 
-//             (lib.bookingStatus === 'quote' || !lib.bookingStatus)
-//         );
-
-//         // 👇 THE "DATA WALL" IMPLEMENTATION
-//         if (user?.role === 'agent') {
-//             // Rule 1: Agents ONLY see trips strictly assigned to their ID
-//             filtered = filtered.filter(lib => lib.assignedAgentId === user._id);
-//         } else if (user?.role === 'employee') {
-//             // Rule 2: Employees ONLY see internal trips (assignedAgentId is empty)
-//             filtered = filtered.filter(lib => !lib.assignedAgentId);
-//         }
-//         // Rule 3: Admin sees everything in active quotes
-//     }
-    
-//     setLibraries(filtered);
-//     setLoading(false);
-//   };
-
 
 
 const loadLibraries = async () => {
@@ -935,22 +892,33 @@ const loadLibraries = async () => {
     // 👇 Await the database call
     const savedLibraries = await getLibrary();
     
-    // Calculate global pending count for Admin Badge
-    const pendingReqs = savedLibraries.filter(lib => !lib.isMasterItinerary && (lib.status === 'pending_costing' || lib.status === 'reedit_requested'));
+    // 👇 FIX: Removed the `!lib.isMasterItinerary` condition! 
+    // Now the Admin will see ALL pricing requests, whether they are Templates or Quotes.
+    const pendingReqs = savedLibraries.filter(lib => 
+        lib.status === 'pending_costing' || lib.status === 'reedit_requested'
+    );
     setPendingCount(pendingReqs.length);
 
     let filtered: StoredItineraryData[] = [];
     
+    // // 3. STRICT ISOLATION OF TABS
     if (activeTab === 'templates') {
-        filtered = savedLibraries.filter(lib => lib.isMasterItinerary === true);
+        // 👇 FIX: Hide drafts! Templates must be fully saved/active to show here.
+        filtered = savedLibraries.filter(lib => 
+            lib.isMasterItinerary === true && 
+            lib.status !== 'draft' 
+        );
     } 
     else if (activeTab === 'pending') {
         filtered = pendingReqs;
     } 
-    else { 
+    else if (activeTab === 'quotes') { 
         filtered = savedLibraries.filter(lib => 
             lib.isMasterItinerary === false && 
-            (lib.bookingStatus === 'quote' || !lib.bookingStatus)
+            (lib.bookingStatus === 'quote' || !lib.bookingStatus) &&
+            lib.status !== 'pending_costing' && 
+            lib.status !== 'reedit_requested' &&
+            lib.status !== 'draft' 
         );
 
         if (user?.role === 'agent') {
@@ -959,11 +927,65 @@ const loadLibraries = async () => {
             filtered = filtered.filter(lib => !lib.assignedAgentId);
         }
     }
-    
-    setLibraries(filtered);
-    setLoading(false);
-  };
+    else if (activeTab === 'drafts') {
+        // 👇 FIX: Show ALL drafts here! (Removed the isMasterItinerary restriction)
+        filtered = savedLibraries.filter(lib => lib.status === 'draft');
 
+        // Apply security rules
+        if (user?.role === 'agent') {
+            filtered = filtered.filter(lib => lib.assignedAgentId === user._id);
+        } else if (user?.role === 'employee') {
+            filtered = filtered.filter(lib => !lib.assignedAgentId);
+        }
+    }
+
+     setLibraries(filtered);
+    setLoading(false);
+    
+    // // 3. STRICT ISOLATION OF TABS
+    // if (activeTab === 'templates') {
+    //     filtered = savedLibraries.filter(lib => lib.isMasterItinerary === true);
+    // } 
+    // else if (activeTab === 'pending') {
+    //     // Only show pending requests
+    //     filtered = pendingReqs;
+    // } 
+    // else if (activeTab === 'quotes') { 
+    //     // Only show active quotes that are NOT pending
+    //     filtered = savedLibraries.filter(lib => 
+    //         lib.isMasterItinerary === false && 
+    //         (lib.bookingStatus === 'quote' || !lib.bookingStatus) &&
+    //         lib.status !== 'pending_costing' && // Don't show pending items in active quotes
+    //         lib.status !== 'reedit_requested' &&
+    //         lib.status !== 'draft'
+    //     );
+
+    //     // Apply Data Wall rules for Active Quotes
+    //     if (user?.role === 'agent') {
+    //         filtered = filtered.filter(lib => lib.assignedAgentId === user._id);
+    //     } else if (user?.role === 'employee') {
+    //         filtered = filtered.filter(lib => !lib.assignedAgentId);
+    //     }
+    // }
+
+    // // 👇 NEW: DRAFTS FILTER LOGIC
+    // else if (activeTab === 'drafts') {
+    //     filtered = savedLibraries.filter(lib => 
+    //         lib.isMasterItinerary === false && 
+    //         lib.status === 'draft'
+    //     );
+
+    //     // Apply same security rules to drafts
+    //     if (user?.role === 'agent') {
+    //         filtered = filtered.filter(lib => lib.assignedAgentId === user._id);
+    //     } else if (user?.role === 'employee') {
+    //         filtered = filtered.filter(lib => !lib.assignedAgentId);
+    //     }
+    // }
+    
+    // setLibraries(filtered);
+    // setLoading(false);
+  };
 
   const handleOpenManager = (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); 
@@ -971,18 +993,6 @@ const loadLibraries = async () => {
     setIsManageDatesOpen(true);
   };
 
-//   const handleSaveDates = (departures: FixedDeparture[]) => {
-//     if (!activeManagerId) return;
-//     const master = getItineraryById(activeManagerId);
-//     if (master) {
-//         master.fixedDepartures = departures;
-//         master.isFixedDeparture = departures.length > 0; 
-//         const allLibs = getLibrary();
-//         const idx = allLibs.findIndex(i => i.id === activeManagerId);
-//         if(idx !== -1) { allLibs[idx] = master; localStorage.setItem('itinerary_library', JSON.stringify(allLibs)); }
-//         loadLibraries();
-//     }
-//   };
 
 
 const handleSaveDates = async (departures: FixedDeparture[]) => {
@@ -1002,21 +1012,6 @@ const handleSaveDates = async (departures: FixedDeparture[]) => {
   };
 
 
-//   const handleUseTemplate = (item: StoredItineraryData) => {
-//     if (item.fixedDepartures && item.fixedDepartures.length > 0) {
-//         setSelectedTemplate(item);
-//         setIsDateSelectorOpen(true);
-//     } else {
-//         const cloned = cloneItinerary(item.id!, true, user?._id); 
-//         if (cloned) {
-//              alert(`Template copied to Active Quotes! Please set dates.`);
-//              setActiveTab('quotes'); 
-//              loadLibraries();
-//         }
-//     }
-//   };
-
-
 
 const handleUseTemplate = async (item: StoredItineraryData) => {
     if (item.fixedDepartures && item.fixedDepartures.length > 0) {
@@ -1032,102 +1027,6 @@ const handleUseTemplate = async (item: StoredItineraryData) => {
         }
     }
   };
-
-//   const handleConfirmDateSelection = (departure: FixedDeparture) => {
-//      if (!selectedTemplate) return;
-//      const cloned = cloneItinerary(selectedTemplate.id!, true, user?._id); 
-     
-//      if (cloned) {
-//          const startDateObj = new Date(departure.date); 
-//          const toDateStr = (date: Date) => date.toISOString().split('T')[0];
-//          let currentDayDate = new Date(startDateObj);
-//          const updatedRoutes = (cloned.routingData?.routes || []).map(route => {
-//              const rowDate = toDateStr(currentDayDate);
-//              const nights = parseInt(String(route.nights) || '0');
-//              currentDayDate.setDate(currentDayDate.getDate() + nights);
-//              return { ...route, date: rowDate };
-//          });
-//          const finalEndDate = toDateStr(currentDayDate);
-
-//          cloned.routingData = { startDate: departure.date, endDate: finalEndDate, routes: updatedRoutes };
-//          cloned.useFixedPrice = true; 
-//          cloned.selectedDepartureId = departure.id;
-//          if(cloned.fixedDepartures) { cloned.fixedDepartures = cloned.fixedDepartures.map(d => ({ ...d, isSelected: d.id === departure.id })); }
-
-//          const allLibs = getLibrary();
-//          const idx = allLibs.findIndex(i => i.id === cloned.id);
-//          if(idx !== -1) { allLibs[idx] = cloned; localStorage.setItem('itinerary_library', JSON.stringify(allLibs)); }
-
-//          setIsDateSelectorOpen(false); setSelectedTemplate(null); setActiveTab('quotes'); loadLibraries(); 
-//      }
-//   };
-
-
-// // 👇 FIX 1: Updated to receive the exact date and specific ID
-//   const handleConfirmDateSelection = (exactDate: string, specificDepartureId: string) => {
-//      if (!selectedTemplate) return;
-//      const cloned = cloneItinerary(selectedTemplate.id!, true, user?._id); 
-     
-//      if (cloned) {
-//          const startDateObj = new Date(exactDate); 
-//          const toDateStr = (date: Date) => date.toISOString().split('T')[0];
-//          let currentDayDate = new Date(startDateObj);
-         
-//          const updatedRoutes = (cloned.routingData?.routes || []).map(route => {
-//              const rowDate = toDateStr(currentDayDate);
-//              const nights = parseInt(String(route.nights) || '0');
-//              currentDayDate.setDate(currentDayDate.getDate() + nights);
-//              return { ...route, date: rowDate };
-//          });
-//          const finalEndDate = toDateStr(currentDayDate);
-
-//          cloned.routingData = { startDate: exactDate, endDate: finalEndDate, routes: updatedRoutes };
-//          cloned.useFixedPrice = true; 
-//          // 👇 Saves the exact ID so Costing Page knows which date was picked
-//          cloned.selectedDepartureId = specificDepartureId; 
-
-//          const allLibs = getLibrary();
-//          const idx = allLibs.findIndex(i => i.id === cloned.id);
-//          if(idx !== -1) { allLibs[idx] = cloned; localStorage.setItem('itinerary_library', JSON.stringify(allLibs)); }
-
-//          setIsDateSelectorOpen(false); setSelectedTemplate(null); setActiveTab('quotes'); loadLibraries(); 
-//      }
-//   };
-
-
-
-// const handleConfirmDateSelection = async (exactDate: string, specificDepartureId: string) => {
-//      if (!selectedTemplate) return;
-     
-//      // 👇 Await clone
-//      const cloned = await cloneItinerary(selectedTemplate.id!, true, user?._id); 
-     
-//      if (cloned) {
-//          const startDateObj = new Date(exactDate); 
-//          const toDateStr = (date: Date) => date.toISOString().split('T')[0];
-//          let currentDayDate = new Date(startDateObj);
-         
-//          const updatedRoutes = (cloned.routingData?.routes || []).map(route => {
-//              const rowDate = toDateStr(currentDayDate);
-//              const nights = parseInt(String(route.nights) || '0');
-//              currentDayDate.setDate(currentDayDate.getDate() + nights);
-//              return { ...route, date: rowDate };
-//          });
-//          const finalEndDate = toDateStr(currentDayDate);
-
-//          cloned.routingData = { startDate: exactDate, endDate: finalEndDate, routes: updatedRoutes };
-//          cloned.useFixedPrice = true; 
-//          cloned.selectedDepartureId = specificDepartureId; 
-
-//          // 👇 Save to DB instead of localStorage
-//          await saveToLibrary(cloned);
-
-//          setIsDateSelectorOpen(false); 
-//          setSelectedTemplate(null); 
-//          setActiveTab('quotes'); 
-//          await loadLibraries(); 
-//      }
-//   };
 
 
 
@@ -1173,16 +1072,6 @@ const handleConfirmDateSelection = async (exactDate: string, specificDepartureId
      }
   };
 
-  
-
-//   const handleConfirmTrip = (guestName: string, calculatedPrice: number, pax: number) => {
-//       if (!confirmModal.itinerary?.id) return;
-//       const success = updateItineraryStatus(confirmModal.itinerary.id, 'confirmed', { leadGuestName: guestName, finalSellPrice: calculatedPrice, numberOfTravelers: pax });
-//       if(success) { setConfirmModal({isOpen: false, itinerary: null}); loadLibraries(); router.push('/dashboard/trips'); } 
-//       else { alert("Failed to confirm trip."); }
-//   };
-
-
 
 const handleConfirmTrip = async (guestName: string, calculatedPrice: number, pax: number) => {
       if (!confirmModal.itinerary?.id) return;
@@ -1226,28 +1115,6 @@ const handleConfirmTrip = async (guestName: string, calculatedPrice: number, pax
     router.push('/dashboard/itinerary/create');
   };
 
-//   const handleEdit = (id: string) => {
-//     if (getItineraryById(id)) {
-//       sessionStorage.setItem('editing_itinerary_id', id);
-//       router.push('/dashboard/itinerary/create');
-//     }
-//   };
-
-// const handleEdit = (id: string) => {
-//     // 1. DIRECTLY tell the Global Context to load the new data into memory RIGHT NOW.
-//     const isLoaded = loadItineraryForEdit(id);
-    
-//     if (isLoaded) {
-//       // 2. Keep the sessionStorage backup just in case the user hits F5 later
-//       sessionStorage.setItem('editing_itinerary_id', id);
-      
-//       // 3. Now route to the page. The Context already has the exact Austria data ready!
-//       router.push('/dashboard/itinerary/create');
-//     } else {
-//       alert("Error: Could not load the itinerary data.");
-//     }
-//   };
-
 
 const handleEdit = async (id: string) => {
     // 1. DIRECTLY tell the Global Context to load the new data from MongoDB RIGHT NOW.
@@ -1264,12 +1131,6 @@ const handleEdit = async (id: string) => {
     }
   };
 
-//   const handleDelete = (id: string) => {
-//     if (window.confirm('Are you sure you want to delete this itinerary? This action cannot be undone.')) { 
-//         deleteFromLibrary(id); 
-//         loadLibraries(); 
-//     }
-//   };
 
 
 const handleDelete = async (id: string) => {
@@ -1305,6 +1166,14 @@ const handleDelete = async (id: string) => {
                 className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'quotes' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
                 Active Quotes
+            </button>
+
+            {/* 👇 NEW: DRAFTS TAB BUTTON */}
+            <button 
+                onClick={() => setActiveTab('drafts')}
+                className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'drafts' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                Drafts
             </button>
             {/* 👇 ADMIN NOTIFICATION INBOX */}
             {user?.role === 'admin' && (
@@ -1389,6 +1258,9 @@ const handleDelete = async (id: string) => {
                             )}
 
                             {/* 2. QUOTE / PENDING BADGES */}
+                        
+
+                            {/* 2. QUOTE / PENDING / DRAFT BADGES */}
                             {(activeTab === 'quotes' || activeTab === 'pending') && (
                                 <div className="absolute top-4 right-12 flex flex-col gap-1 items-end">
                                     {item.routingData?.startDate && (
@@ -1399,6 +1271,12 @@ const handleDelete = async (id: string) => {
                                     {isPending && (
                                         <div className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold uppercase rounded border border-orange-200 shadow-sm animate-pulse">
                                             Pricing Requested
+                                        </div>
+                                    )}
+                                    {/* 👇 NEW: VISIBLE DRAFT BADGE */}
+                                    {item.status === 'draft' && activeTab === 'quotes' && (
+                                        <div className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold uppercase rounded border border-gray-300 shadow-sm">
+                                            Draft
                                         </div>
                                     )}
                                 </div>
@@ -1470,6 +1348,13 @@ const handleDelete = async (id: string) => {
                                                 <CheckCircle size={14}/> Confirm
                                             </button>
                                         </>
+                                    )}
+
+                                    {/* 👇 NEW: DRAFTS ACTION BAR */}
+                                    {activeTab === 'drafts' && (
+                                        <button onClick={() => handleEdit(item.id!)} className="w-full py-2 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-2 border border-gray-200">
+                                            <Edit size={14}/> Continue Editing
+                                        </button>
                                     )}
 
                                     {/* PENDING APPROVALS ACTION BAR (ADMIN ONLY) */}

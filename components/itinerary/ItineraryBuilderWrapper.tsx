@@ -1066,112 +1066,6 @@ useEffect(() => {
 
 
 
-  // // 🌟 FIX 2: Update Locking Logic so Employees can jump straight from Review -> Preview
-  // const getTabState = (tabId: string) => {
-  //     const globalStatus = itineraryData.status || 'draft';
-      
-  //     const introDone = !!itineraryData.tripName;
-  //     const routingDone = !!(introDone && itineraryData.routingData?.routes && itineraryData.routingData.routes.length > 0);
-  //     const hasDayItems = (itineraryData.dayWiseActivities?.length || 0) > 0;
-  //     const createDayDone = routingDone && hasDayItems;
-  //     const reviewDone = ['pending_costing', 'reedit_requested', 'approved'].includes(globalStatus);
-  //     const costingDone = reviewDone && globalStatus === 'approved';
-
-  //     let isLocked = false;
-  //     let isCompleted = false;
-
-  //     switch(tabId) {
-  //         case 'INTRO':
-  //             isLocked = false;
-  //             isCompleted = introDone;
-  //             break;
-  //         case 'ROUTING':
-  //             isLocked = !introDone;
-  //             isCompleted = routingDone;
-  //             break;
-  //         case 'CREATE DAY':
-  //             isLocked = !routingDone;
-  //             isCompleted = createDayDone;
-  //             break;
-  //         case 'REVIEW':
-  //             isLocked = !createDayDone; 
-  //             isCompleted = reviewDone;
-  //             break;
-  //         case 'COSTING':
-  //             isLocked = !reviewDone; 
-  //             isCompleted = costingDone;
-  //             break;
-  //         case 'PREVIEW':
-  //             // Admins must wait for costing to be done. 
-  //             // Employees just wait for the status to be 'approved'!
-  //             if (user?.role === 'admin') {
-  //                 isLocked = !costingDone;
-  //             } else {
-  //                 isLocked = globalStatus !== 'approved';
-  //             }
-  //             isCompleted = false; 
-  //             break;
-  //     }
-
-  //     return { isLocked, isCompleted };
-  // };
-
-
-  // // 🌟 FIX 2: Sequential Unlocking & Role-Based Logic
-  // const getTabState = (tabId: string) => {
-  //     const globalStatus = itineraryData.status || 'draft';
-      
-  //     // Step Progression Checks
-  //     const introDone = !!itineraryData.tripName;
-  //     const routingDone = !!(introDone && itineraryData.routingData?.routes && itineraryData.routingData.routes.length > 0);
-  //     const hasDayItems = (itineraryData.dayWiseActivities?.length || 0) > 0;
-  //     const createDayDone = routingDone && hasDayItems;
-      
-  //     const isSubmittedForCosting = ['pending_costing', 'reedit_requested', 'approved'].includes(globalStatus);
-  //     const isApproved = globalStatus === 'approved';
-
-  //     let isLocked = false;
-  //     let isCompleted = false;
-
-  //     switch(tabId) {
-  //         case 'INTRO':
-  //             isLocked = false;
-  //             isCompleted = introDone;
-  //             break;
-  //         case 'ROUTING':
-  //             isLocked = !introDone; // Unlocks when Intro is done
-  //             isCompleted = routingDone;
-  //             break;
-  //         case 'CREATE DAY':
-  //             isLocked = !routingDone; // Unlocks when Routing is done
-  //             isCompleted = createDayDone;
-  //             break;
-  //         case 'REVIEW':
-  //             isLocked = !createDayDone; // Unlocks when Days are built
-  //             isCompleted = isSubmittedForCosting;
-  //             break;
-  //         case 'COSTING':
-  //             // Admin Only Tab: Unlocks as soon as the itinerary has days built!
-  //             isLocked = !createDayDone; 
-  //             isCompleted = isApproved;
-  //             break;
-  //         case 'PREVIEW':
-  //             // Admins can access Preview anytime after days are built.
-  //             // Employees/Agents MUST wait until the global status is 'approved'.
-  //             if (user?.role === 'admin') {
-  //                 isLocked = !createDayDone; 
-  //             } else {
-  //                 isLocked = !isApproved;
-  //             }
-  //             isCompleted = false; 
-  //             break;
-  //     }
-
-  //     return { isLocked, isCompleted };
-  // };
-
-
-
   // 🌟 FIX 2: Sequential Unlocking & Role-Based Logic (With Green Ticks Fix)
   const getTabState = (tabId: string) => {
       const globalStatus = itineraryData.status || 'draft';
@@ -1307,7 +1201,10 @@ useEffect(() => {
           <div className="w-55 bg-gradient-to-br from-[#0f172a]  to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
             <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
               <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
-              <p className="text-blue-300 text-xs font-mono">Ref No. ####### </p>
+              {/* 👇 FIX: Dynamically display the newly generated Trip ID! */}
+              <p className="text-blue-300 text-xs font-mono mb-2">
+                 Ref ID. {itineraryData.tripId || 'Pending...'}
+              </p>
 
               <span className="bg-blue-900/50 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider">
                     v{itineraryData.currentVersion || '1.0'}
