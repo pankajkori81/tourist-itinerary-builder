@@ -438,7 +438,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { Download , Share2, X, Loader2, Mail, ArrowLeft} from "lucide-react";
+import { Download , Share2, X, Loader2, Mail, ArrowLeft, BedDouble, Bus, Camera, Car, Plane, Ship, Train, Utensils} from "lucide-react";
 // import toast, { Toaster } from 'react-hot-toast';
 import { useItinerary } from '@/app/context/ItineraryContext';
 import { DayPlan } from '../create-day/constants/daywiseConstants';
@@ -831,7 +831,7 @@ return (
     <div className="min-h-screen bg-gray-100 p-8 flex flex-col items-center gap-6">
       
       {/* TOOLBAR */}
-      <div className="w-full max-w-[370mm] flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="w-full max-w-[390mm] flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200">
          <h2 className="font-bold text-gray-700">Print Preview</h2>
       
          <div className="flex gap-3">
@@ -856,31 +856,80 @@ return (
         ref={printRef}
         id="pdf-content"
         style={{ backgroundColor: '#ffffff', color: '#1f2937', fontFamily: 'Arial, sans-serif' }} 
-        className="w-full max-w-[370mm] min-h-[297mm] shadow-2xl p-0"
+        className="w-full max-w-[390mm] min-h-[297mm] shadow-2xl p-0"
       >
         
         {/* 👇 HEADER SECTION (Ref added!) */}
-        <div ref={headerSectionRef} style={{ borderBottom: '4px solid #dc2626' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch' }}>
-                <div style={{ flex: 1, padding: '24px' }}>
-                    <div style={{ height: '48px', marginBottom: '16px' }}>
-                        <img src="/logo.png" alt="Company Logo" style={{ height: '100%', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    </div>
-                    <h1 style={{ color: '#dc2626', fontSize: '30px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, lineHeight: '1.1' }}>{itineraryData.tripName || "Luxury Getaway"}</h1>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px', fontSize: '14px', fontWeight: 'bold', color: '#202020ff' }}>
-                        <span style={{ color:'#bb0000ff' ,  padding: '4px 8px', borderRadius: '4px' }}>{totalDays} Days | {totalNights} Nights</span>
-                        {/* <span style={{ color:'#202020ff',  padding: '4px 8px', borderRadius: '4px' }}>Ref: ######</span> */}
-                    </div>
-                </div>
-                <div style={{ backgroundColor: '#dc2626', color: '#ffffff', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '250px', textAlign: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.9, marginBottom: '4px' }}>Starting at</span>
-                    <span style={{ fontSize: '30px', fontWeight: '800', letterSpacing: '-0.025em', lineHeight: '1' }}>
-                       $ {finalPerPerson.toLocaleString(undefined, { currency: currency, maximumFractionDigits: 0 })}
-                        <span style={{ fontSize: '16px', fontWeight: '500', marginLeft: '4px' }}>PP*</span>
-                    </span>
-                    <span style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.8, marginTop: '4px', letterSpacing: '0.05em' }}>{costLabel}</span>
-                </div>
+  
+            <div ref={headerSectionRef} style={{ borderBottom: '2px solid #e5e7eb', padding: '32px 24px', backgroundColor: '#fff' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+        
+        {/* LEFT SIDE: Trip Name & Duration */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: '16px', textTransform: 'uppercase' }}>
+            <h1 style={{ color: '#001d6a', fontSize: '32px', fontWeight: 'bold', margin: '0 0 4px 0', lineHeight: '1.2' }}>
+                {itineraryData.tripName || "Draft Itinerary"}
+            </h1>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#001d6a' }}>
+                {totalDays} Days | {totalNights} Nights
             </div>
+        </div>
+
+        {/* RIGHT SIDE: Logo & Contact Details */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+            
+            {/* Logo */}
+            <div style={{ height: '50px', marginBottom: '14px' }}>
+                <img 
+                    src="/logo.png" 
+                    alt="Company Logo" 
+                    style={{ height: '100%', objectFit: 'contain', objectPosition: 'left center' }} 
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }} 
+                />
+            </div>
+
+            {/* Contact Details */}
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '6px', 
+                fontSize: '13px', 
+                fontFamily: 'inherit',
+                minWidth: '240px' 
+            }}>
+      
+
+            {/* Email */}
+<div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
+    <i className="fa-solid fa-envelope" style={{ color: '#712400', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+    <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Email:</span>
+    <span style={{ color: '#001d6a', fontWeight: 'bold' }}>Sandeep@TravDek.com</span>
+</div>
+
+{/* Phone */}
+<div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
+    <i className="fa-solid fa-phone" style={{ color: '#000000', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+    <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Tel:</span>
+    <span style={{ color: '#001d6a', fontWeight: 'bold' }}>+1 650 759 4331</span>
+</div>
+
+{/* Website */}
+<div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
+    <i className="fa-solid fa-globe" style={{ color: '#0038a8', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+    <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Web:</span>
+    <a href="http://www.TravDek.com" style={{ color: '#001d6a', fontWeight: 'bold', textDecoration: 'none' }}>www.TravDek.com</a>
+</div>
+
+{/* Address */}
+<div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+    <i className="fa-solid fa-location-dot" style={{ color: '#df0000', width: '16px', textAlign: 'center', fontSize: '13px', marginTop: '2px' }}></i>
+    <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Add:</span>
+    <span style={{ color: '#001d6a', fontWeight: 'bold', lineHeight: '1.5' }}>
+        750 Alma lane #4459 Foster City, CA 94404 USA
+    </span>
+</div>
+</div>
+        </div>
+    </div>
        
 
             {/* DETAILS GRID (Preview Page) */}
@@ -937,313 +986,337 @@ return (
             <h3 ref={itineraryLabelRef} style={{ color: '#dc2626', fontWeight: 'bold', textTransform: 'uppercase', textDecoration: 'underline', marginBottom: '16px', fontSize: '14px', letterSpacing: '0em' }}>Itinerary Details</h3>
             
             {/* 👇 TABLE SECTION (Ref & Colgroup added!) */}
-            <table ref={tableRef} style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #636363ff', fontSize: '14px', tableLayout: 'fixed' }}>
-                
-                <colgroup>
-                    <col style={{ width: '96px' }} />
-                    <col style={{ width: '128px' }} />
-                    <col style={{ width: '120px' }} />
-                    <col style={{ width: 'auto' }} />
-                </colgroup>
 
-                <thead ref={tableHeadRef}>
-                    <tr style={{ backgroundColor: '#ffedd5', color: '#2c3441ff', textTransform: 'uppercase', fontSize: '12px' }}>
-                        <th style={{ border: '1px solid #636363ff', padding: '12px', width: '96px', textAlign: 'center' }}>Day</th>
-                        <th style={{ border: '1px solid #636363ff', padding: '12px', width: '128px', textAlign: 'left' }}>City</th>
-                        <th style={{ border: '1px solid #636363ff', padding: '12px', width: '120px', textAlign: 'left' }}>Category</th>
-                        <th style={{ border: '1px solid #636363ff', padding: '12px', textAlign: 'left' }}>Description</th>
+            <table 
+    ref={tableRef}
+    style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #6b6b6b', fontSize: '14px', tableLayout: 'fixed' }}
+>
+    {/* 3 Columns: Category, Details, Inclusion */}
+    <colgroup>
+        <col style={{ width: '200px' }} />
+        <col style={{ width: 'auto' }} />
+        <col style={{ width: '140px' }} />
+    </colgroup>
+
+    {rawDayPlans.map((day, idx) => {
+        const items = getRenderableItemsForDay(idx, day);
+
+        const prevCity = idx > 0 ? rawDayPlans[idx - 1].city : null;
+        const isCityChange = prevCity && prevCity !== day.city;
+        const displayCityName = isCityChange ? `${prevCity} - ${day.city}` : day.city;
+
+        let nightCount = 0;
+        if (!prevCity || isCityChange) {
+            const currentRoute = routes.find((r: any) => r.cities.some((c: any) => c.name === day.city));
+            if (currentRoute) nightCount = currentRoute.nights;
+        }
+        const displayNights = nightCount > 0 ? ` (${nightCount}N)` : '';
+        const finalDayHeader = `${displayCityName}${displayNights}`.toUpperCase();
+
+        return (
+            <tbody
+                key={day.dayNumber}
+                ref={(el) => { if (el) dayRefsMap.current.set(day.dayNumber, el); }}
+                style={{ 
+                    breakInside: 'avoid', 
+                    pageBreakInside: 'avoid',
+                    outline: '1px solid #6b6b6b',
+                }}
+            >
+                {/* DAY HEADER ROW */}
+                <tr style={{ backgroundColor: '#fefce8' }}>
+                    <td colSpan={3} style={{ 
+                        padding: '12px 16px', 
+                        border: '1px solid #6b6b6b',
+                        borderTop: idx > 0 ? '2px solid #6b6b6b' : '1px solid #6b6b6b'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                            <span style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '16px' }}>DAY {String(day.dayNumber).padStart(2, '0')}</span>
+                            <span style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '16px' }}>{finalDayHeader}</span>
+                        </div>
+                    </td>
+                </tr>
+
+                {/* Leisure Day */}
+                {items.length === 0 && (
+                    <tr>
+                        <td colSpan={3} style={{ border: '1px solid #6b6b6b', padding: '16px', color: '#9ca3af', fontStyle: 'italic', textAlign: 'center' }}>
+                            Leisure day. No activities scheduled.
+                        </td>
                     </tr>
-                </thead>
+                )}
 
-{rawDayPlans.map((day, idx) => {
-                        const items = getRenderableItemsForDay(idx, day);
-                        
-                        // 👇 NEW: Dynamic Date Calculation!
-                        // This takes the Ref Date from Costing (simulationDate) or Routing and calculates the exact date for this specific day.
-                        let displayDate = 'TBA';
-                        const baseStartDate = (itineraryData as any).simulationDate || itineraryData.routingData?.startDate;
-                        
-                        if (day.date) {
-                            displayDate = formatDate(day.date);
-                        } else if (baseStartDate) {
-                            const d = new Date(baseStartDate);
-                            d.setDate(d.getDate() + (day.dayNumber - 1)); // Add the day number offset
-                            displayDate = formatDate(d.toISOString());
-                        }
+                {/* Items Loop */}
+                {items.map((item, itemIdx) => {
+                    const inclusionStatus = item.inclusionType || 'included'; 
+                    const isExcluded = inclusionStatus === 'excluded';
+                    const isOptional = inclusionStatus === 'optional';
+                    const badgeBg = isExcluded ? '#ffffff' : isOptional ? '#ffffff' : '#ffffff';
+                    const badgeColor = isExcluded ? '#454545' : isOptional ? '#454545' : '#454545';
+                    const badgeText = isExcluded ? 'Excluded' : isOptional ? 'Optional' : 'Included';
 
-                        return (
-                            <tbody 
-                                key={day.dayNumber} 
-                                ref={(el) => { if (el) dayRefsMap.current.set(day.dayNumber, el); }}
-                                style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
-                            >
-                                
-                                {/* 👇 FIX: Render the newly calculated displayDate instead of day.date */}
-                                <tr style={{ backgroundColor: '#fefce8', borderTop: '2px solid #636363ff' }}>
-                                    <td colSpan={4} style={{ backgroundColor: '#f3f4f6', color: '#303030', padding: '8px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold' }}>
-                                        DAY {day.dayNumber} | {displayDate} 
-                                    </td>
-                                </tr>
+                 
 
-                                {/* Leisure Day Check */}
-                                {items.length === 0 && (
-                                    <tr>
-                                        <td style={{ border: '1px solid #636363ff', padding: '12px', fontWeight: 'bold', textAlign: 'center' }}>DAY {day.dayNumber}</td>
-                                        <td style={{ border: '1px solid #636363ff', padding: '12px', fontWeight: 'bold', color: '#dc2626' }}>{day.city}</td>
-                                        <td colSpan={2} style={{ border: '1px solid #636363ff', padding: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Leisure day. No activities scheduled.</td>
-                                    </tr>
-                                )}
-                                
-                  
-                                {/* Items Rendering Loop */}
-                                {items.map((item, itemIdx) => {
-                                    
-                                    // 👇 FIX: Restored the Color Logic for the Badges
-                                    const inclusionStatus = item.inclusionType || 'included'; 
-                                    const isExcluded = inclusionStatus === 'excluded';
-                                    const isOptional = inclusionStatus === 'optional';
-                                    
-                                    // Visual Styles for Badge
-                                    const badgeBg = isExcluded ? '#fef2f2' : isOptional ? '#eff6ff' : '#f0fdf4';
-                                    const badgeColor = isExcluded ? '#dc2626' : isOptional ? '#1d4ed8' : '#15803d';
-                                    const badgeBorder = isExcluded ? '#fca5a5' : isOptional ? '#93c5fd' : '#86efac';
-                                    const badgeText = inclusionStatus.toUpperCase();
+                    // 🌟 SMART ICON LOGIC (FontAwesome)
+                                            let iconClass = 'fa-solid fa-camera'; // Default for Activity
+                                            let iconColor = '#0284c7'; // Default blue
+                                            
+                                            if (item.category === 'Stay') { 
+                                                iconClass = 'fa-solid fa-hotel'; 
+                                                iconColor = '#059669'; 
+                                            } 
+                                            else if (item.category === 'Meal') { 
+                                                iconClass = 'fa-solid fa-utensils'; 
+                                                iconColor = '#d97706'; 
+                                            } 
+                                            else if (item.category === 'Transport') {
+                                                iconColor = '#6366f1'; // Indigo
+                                                if (item.mode === 'flight') iconClass = 'fa-solid fa-plane';
+                                                else if (item.mode === 'rail') iconClass = 'fa-solid fa-train';
+                                                else if (item.mode === 'ferry') iconClass = 'fa-solid fa-ship';
+                                                else if (item.mode === 'bus') iconClass = 'fa-solid fa-bus';
+                                                else iconClass = 'fa-solid fa-car';
+                                            }
 
-                                    return (
-                                        <tr key={`${day.dayNumber}-${itemIdx}`} className="pdf-row" >
-                                            {/* Col 1 & 2: Day & City (Merged for first item) */}
-                                            {itemIdx === 0 ? (
-                                                <>
-                                                    <td rowSpan={items.length} style={{ border: '1px solid #636363ff', padding: '12px', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#ffffff', verticalAlign: 'top' }}>DAY {day.dayNumber}</td>
-                                                    <td rowSpan={items.length} style={{ border: '1px solid #636363ff', padding: '12px', fontWeight: 'bold', backgroundColor: '#ffffff', verticalAlign: 'top', color: '#dc2626' }}>{day.city}</td>
-                                                </>
-                                            ) : null}
-
-                                            {/* Col 3: Category & INCLUSION STATUS */}
-                                            <td style={{ border: '1px solid #636363ff', padding: '12px', verticalAlign: 'top', color: '#292d33ff' }}>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-                                                    {item.category === 'Stay' ? (
-                                                        <span style={{ color: item.status === 'Check-in' ? '#1f2937' : '#757575ff' }}>Stay</span>
-                                                    ) : item.category}
-                                                </div>
-
-                                                {/* 👇 RESTORED: Colored Pill Design */}
-                                                <div style={{ 
-                                                        fontSize: '10px', 
-                                                        fontWeight: 'bold', 
-                                                        textTransform: 'uppercase', 
-                                                        padding: '3px 8px', 
-                                                        borderRadius: '4px', 
-                                                        backgroundColor: badgeBg, 
-                                                        color: badgeColor, 
-                                                        border: `1px solid ${badgeBorder}`,
-                                                        width: 'fit-content', 
-                                                        display: 'block', 
-                                                        marginTop: '10px'
-                                                    }}>
-                                                        {badgeText}
-                                                    </div>
-
+                    return (
+                                                <tr key={`${day.dayNumber}-${itemIdx}`} className="pdf-row" >
                                                     
-                                            </td>
+                                          
 
-                                            {/* Col 4: Description (Leave your existing Col 4 code here!) */}
-                   
 
-                                            {/* Col 4: Description */}
-                                            <td style={{ border: '1px solid #636363ff', padding: '12px', verticalAlign: 'top' }}>
-                                                
-                                                {/* --- ACTIVITY PDF BLOCK --- */}
-                                                {item.category === 'Activity' && (
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold', color: '#1f2937', fontSize: '16px' }}>{item.heading}</div>
-                                                        <div style={{ color: '#292d33ff', fontSize: '12px', marginTop: '4px', marginBottom: '8px' }}>{item.description}</div>
-                                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', padding: '8px' }}>
-                                                            <span style={{ color: '#292d33ff', display: 'flex', alignItems: 'center', gap: '4px', }}>Slot: {item.slot}</span>
-                                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Duration: {item.duration}</span>
-                                                            {item.startTime && <span style={{ color: '#292d33ff' }}>Start: {item.startTime}</span>}
-                                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Pickup: {item.pickupLocation || "TBA"}</span>
-                                                             {(item as any).dropoffLocation && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Drop: {(item as any).dropoffLocation}</span>}
-                                                                </div>
-                                                       
-                                                    </div>
-
-                                                 
-                                                )}
-
-                                                {/* --- STAY PDF BLOCK --- */}
-                                                {item.category === 'Stay' && (
-                                                    <div style={{ opacity: item.status === 'Residence' ? 0.8 : 1 }}>
-                                                        <div style={{ fontWeight: 'bold', color: '#22252bff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            {item.hotelName}
-                                                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', backgroundColor: '#fff' }}>⭐ {item.rating}</span>
-                                                        </div>
-                                                        <div style={{ marginTop: '2px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
-                                                            {item.status === 'Check-in' ? (
-                                                                <>
-                                                                    <div style={{  color: '#292d33ff', padding: '2px', fontWeight: 'bold' }}>Type: {item.stayType} (Stay)</div>
-                                                                    <div style={{  color: '#292d33ff', padding: '2px', fontWeight: 'bold' }}>Room: {item.roomCategory}</div>
-                                                                    <div style={{  color: '#292d33ff', padding: '2px' }}>{item.nights} Nights Stay</div>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <div style={{ gridColumn: 'span 2', fontSize: '12px', color: '#292d33ff', fontStyle: 'italic', marginTop: '2px' }}>Continuing stay at {item.hotelName}. </div>
-                                                                      <div style={{  color: '#292d33ff', padding: '2px', borderRadius: '4px', fontWeight: 'bold' }}>Type: {item.stayType} (Stay)</div>
-                                                                    <div style={{  color: '#292d33ff', padding: '2px', borderRadius: '4px', fontWeight: 'bold' }}>Room: {item.roomCategory}</div>
-                                                                </>
-                                                           )}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* --- TRANSPORT PDF BLOCK --- */}
-                                                {item.category === 'Transport' && (
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px' }}>
-                                                            {item.vehicleType}
-                                                            {['flight', 'rail', 'ferry'].includes(item.mode) && item.flightNumber && (
-                                                                <span style={{ color: '#2563eb' }}> • {item.flightNumber}</span>
-                                                            )}
-                                                            <span style={{ 
-                                                                backgroundColor: ['flight', 'rail', 'ferry'].includes(item.mode) ? '#eff6ff' : '#f0fdf4', 
-                                                                color: ['flight', 'rail', 'ferry'].includes(item.mode) ? '#1d4ed8' : '#15803d', 
-                                                                fontSize: '10px', textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', fontWeight: '600', 
-                                                                border: `1px solid ${['flight', 'rail', 'ferry'].includes(item.mode) ? '#bfdbfe' : '#dcfce7'}` 
-                                                            }}>
-                                                                {['flight', 'rail', 'ferry'].includes(item.mode) ? 'Transit Ticket' : item.subType}
+                                                    {/* 🌟 COL 1: CATEGORY WITH ICON (FontAwesome + PDF Fixed) */}
+                                                    <td style={{ border: '1px solid #6b6b6b', padding: '16px 24px', verticalAlign: 'middle', width: '200px' }}>
+                                                        <div style={{ 
+                                                            display: 'flex', 
+                                                            alignItems: 'center', 
+                                                            justifyContent: 'flex-start', 
+                                                            gap: '16px', 
+                                                            fontWeight: 'bold', 
+                                                            color: '#454545', 
+                                                            fontSize: '14px', 
+                                                            textTransform: 'uppercase', 
+                                                            letterSpacing: '0.05em',
+                                                            height: '20px' // Lock container height
+                                                        }}>
+                                                            {/* Strict Icon Wrapper for FontAwesome */}
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px' }}>
+                                                                <i className={iconClass} style={{ color: iconColor, fontSize: '18px', display: 'block', textAlign: 'center', lineHeight: '20px' }}></i>
+                                                            </div>
+                                                            {/* Strict Text Wrapper with Locked Line-Height */}
+                                                            <span style={{ lineHeight: '20px', display: 'inline-block' }}>
+                                                                {item.category === 'Stay' ? 'Hotel' : item.category}
                                                             </span>
                                                         </div>
+                                                    </td>
 
-                                                        {/* Flight Layout */}
-                                                        {item.mode === 'flight' ? (
-                                                            <div style={{ marginTop: '12px', padding: '12px'}}>
-                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', alignItems: 'center', gap: '16px' }}>
-                                                                    <div>
-                                                                        <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>{item.pickupTime || '--:--'}</div>
-                                                                        <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555555', textTransform: 'uppercase' }}>{item.pickupLocation || 'Not Set'}</div>
-                                                                    </div>
-                                                                    <div style={{ textAlign: 'center' }}>
-                                                                        <div style={{ fontSize: '10px', color: '#555555', fontWeight: 'bold', marginBottom: '4px' }}>DURATION: {item.duration || '--'}</div>
-                                                                        <div style={{ position: 'relative', width: '100%', height: '2px', backgroundColor: '#d1d5db', margin: '8px 0' }}>
-                                                                            {item.flightStops && item.flightStops !== 'Direct' ? (
-                                                                                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '8px', height: '8px', backgroundColor: '#2563eb', borderRadius: '50%', border: '2px solid #f9fafb' }}></div>
-                                                                            ) : (
-                                                                                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '14px' }}>✈️</div>
-                                                                            )}
-                                                                        </div>
-                                                                        <div style={{ fontSize: '10px', fontWeight: 'bold', color: item.flightStops && item.flightStops !== 'Direct' ? '#2563eb' : '#16a34a' }}>
-                                                                            {item.flightStops && item.flightStops !== 'Direct' ? `${item.flightStops} ${item.layoverInfo ? `• ${item.layoverInfo}` : ''}` : 'Direct Flight'}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div style={{ textAlign: 'right' }}>
-                                                                        <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>{item.dropoffTime || '--:--'}
-                                                                        {(item as any).arrivalDayOffset === '+1' && <sup style={{ fontSize: '10px', color: '#ef4444', marginLeft: '2px' }}>+1</sup>}
-                                                                        </div>
-                                                                        <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555555', textTransform: 'uppercase' }}>{item.dropoffLocation || 'Not Set'}</div>
-                                                                    </div>
-                                                                </div>
-                                                                {item.serviceDescription && (
-                                                                    <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #e5e7eb', fontSize: '11px', fontWeight:"bold", color: '#555555' }}>
-                                                                        <strong>Cabin:</strong> {item.serviceDescription}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ) : ['rail', 'ferry'].includes(item.mode) ? (
-                                                            <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px',  padding: '12px' }}>
-                                                                <div>
-                                                                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Schedule</div>
-                                                                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>
-                                                                        {item.pickupTime || '--:--'} <span style={{color: '555555', fontWeight: 'normal'}}>to</span> {item.dropoffTime || '--:--'}
-                                                                        {(item as any).arrivalDayOffset === '+1' && <sup style={{ fontSize: '9px', color: '#ef4444', marginLeft: '2px' }}>+1</sup>}
-                                                                    </div>
-                                                                </div>
-                                                                <div>
-                                                                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>{item.mode === 'ferry' ? 'Ports' : 'Route'}</div>
-                                                                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupLocation || 'Not Set'} → {item.dropoffLocation || 'Not Set'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Duration</div>
-                                                                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555', display: 'inline-block', padding: '2px 6px', borderRadius: '4px' }}>{item.duration || '--'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>{item.mode === 'ferry' ? 'Deck Info' : 'Travel Info'}</div>
-                                                                    <div style={{ fontSize: '12px', color: '#555555' }}>{item.serviceDescription || '--'}</div>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            /* Vehicle Mode */
-                                                            <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: item.subType === 'transfer' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: '12px', padding: '12px',  }}>
-                                                                
-                                                                {/* Col 1: Pickup */}
-                                                                <div>
-                                                                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Pickup</div>
-                                                                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupLocation || 'Not Set'}</div>
-                                                                    <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555555', marginTop: '2px' }}>{item.pickupTime || '--:--'}</div>
-                                                                </div>
 
-                                                                {/* Col 2: Drop-off (Only for Transfers) */}
-                                                                {item.subType === 'transfer' && (
-                                                                    <div>
-                                                                        <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Drop-off</div>
-                                                                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.dropoffLocation || 'Not Set'}</div>
-                                                                        <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555555', marginTop: '2px' }}>{item.dropoffTime || '--:--'}</div>
-                                                                    </div>
-                                                                )}
 
-                                                                {/* Col 3: Duration (Always Visible) */}
-                                                                <div>
-                                                                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Duration</div>
-                                                                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555', display: 'inline-block', padding: '2px 6px', borderRadius: '4px' }}>{item.duration || '--'}</div>
-                                                                </div>
-
-                                                                {/* Col 4: Journey Info */}
-                                                                <div>
-                                                                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: '##656565', textTransform: 'uppercase', marginBottom: '4px' }}>Journey Info</div>
-                                                                    <div style={{ fontSize: '11px', color: '#555555'  }}>{item.serviceDescription || '--'}</div>
-                                                                </div>
-                                                                
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* --- MEAL PDF BLOCK --- */}
-                                                {/* {item.category === 'Meal' && (
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                             {item.mealType}: {item.restaurantName}
-                                                        </div>
-                                                        <div style={{ fontSize: '12px', color: '#292d33ff', marginTop: '4px' }}>
-                                                            {item.cuisine}  {item.menuType}
-                                                        </div>
-                                                    </div>
-                                                )} */}
-                                                
-
-                                                {/* --- MEAL PDF BLOCK --- */}
-                                                {item.category === 'Meal' && (
-                                                    <div style={{ paddingTop: '4px' }}>
-                                                        {/* Big Bold Title (e.g. "Breakfast" or "Dinner") */}
-                                                        <div style={{ fontWeight: 'bold', color: '#1f2937', fontSize: '16px' }}>
-                                                             {item.mealType}
-                                                        </div>
+                                                 
+                                                    {/* 🌟 COL 2: DESCRIPTION (Middle Content) */}
+<td style={{ border: '1px solid #6b6b6b', padding: '16px', verticalAlign: 'top' }}>
                                                         
-                                                        {/* Only show extra details IF the agent actually typed them */}
-                                                        {(item.restaurantName || item.cuisine) && (
-                                                            <div style={{ fontSize: '12px', color: '#4b5563', marginTop: '4px' }}>
-                                                                {item.restaurantName ? `at ${item.restaurantName}` : ''} {item.cuisine ? `(${item.cuisine})` : ''}
+                                             
+
+                                                             {/* --- ACTIVITY PDF BLOCK --- */}
+                                                        {item.category === 'Activity' && (
+                                                            <div>
+                                                                <div style={{ fontWeight: 'bold', color: '#1f2937', fontSize: '16px' }}>{item.heading}</div>
+                                                                <div style={{ color: '#292d33ff', fontSize: '12px', marginTop: '4px', marginBottom: '8px' }}>{item.description}</div>
+                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', padding: '8px' }}>
+                                                                    <span style={{ color: '#292d33ff', display: 'flex', alignItems: 'center', gap: '4px', }}>Slot: {item.slot}</span>
+                                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Duration: {item.duration}</span>
+                                                                    {item.startTime && <span style={{ color: '#292d33ff' }}>Start: {item.startTime}</span>}
+                                                                    {(item as any).endTime && <span style={{ color: '#292d33ff' }}>End: {(item as any).endTime}</span>}
+                                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Pickup: {item.pickupLocation || "TBA"}</span>
+                                                                    {(item as any).dropoffLocation && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Drop: {(item as any).dropoffLocation}</span>}
+                                                                </div>
                                                             </div>
                                                         )}
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        );
-                    })}
-            </table>
+
+                                         
+                                                         {/* --- STAY PDF BLOCK --- */}
+                                                         {item.category === 'Stay' && (
+                                                            <div style={{ opacity: item.status === 'Residence' ? 0.8 : 1 }}>
+                                                                <div style={{ fontWeight: 'bold', color: '#22252bff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    {item.hotelName}
+                                                                    <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', backgroundColor: '#fff' }}>⭐ {item.rating}</span>
+                                                                </div>
+                                                                <div style={{ marginTop: '2px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                                                                    {item.status === 'Check-in' ? (
+                                                                        <>
+                                                                            <div style={{  color: '#555555', padding: '2px', fontWeight: 'bold' }}>Type: {item.stayType} (Stay)</div>
+                                                                            <div style={{  color: '#555555', padding: '2px', fontWeight: 'bold' }}>Room: {item.roomCategory}</div>
+                                                                            <div style={{  color: '#555555', padding: '2px' }}>{item.nights} Nights Stay</div>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <div style={{ gridColumn: 'span 2', fontSize: '12px', color: '#292d33ff', fontStyle: 'italic', marginTop: '2px' }}>Continuing stay at {item.hotelName}. </div>
+                                                                              <div style={{  color: '#555555', padding: '2px', borderRadius: '4px', fontWeight: 'bold' }}>Type: {item.stayType} (Stay)</div>
+                                                                            <div style={{  color: '#555555', padding: '2px', borderRadius: '4px', fontWeight: 'bold' }}>Room: {item.roomCategory}</div>
+                                                                        </>
+                                                                   )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                          {/* --- TRANSPORT PDF BLOCK --- */}
+                                                         {item.category === 'Transport' && (
+                                                            <div>
+                                                                {/* Title & Badge */}
+                                                                <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px' }}>
+                                                                    {item.vehicleType}
+                                                                    {['flight', 'rail', 'ferry'].includes(item.mode) && item.flightNumber && (
+                                                                        <span style={{ color: '#2563eb' }}> • {item.flightNumber}</span>
+                                                                    )}
+                                                                    <span style={{ 
+                                                                        backgroundColor: ['flight', 'rail', 'ferry'].includes(item.mode) ? '#eff6ff' : '#f0fdf4', 
+                                                                        color: ['flight', 'rail', 'ferry'].includes(item.mode) ? '#1d4ed8' : '#15803d', 
+                                                                        fontSize: '10px', textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', fontWeight: '600', 
+                                                                        border: `1px solid ${['flight', 'rail', 'ferry'].includes(item.mode) ? '#bfdbfe' : '#dcfce7'}` 
+                                                                    }}>
+                                                                        {['flight', 'rail', 'ferry'].includes(item.mode) ? 'Transit Ticket' : item.subType}
+                                                                    </span>
+                                                                </div>
+
+                                                                {/* Flight Layout */}
+                                                                {item.mode === 'flight' ? (
+                                                                    <div style={{ marginTop: '12px', padding: '12px'}}>
+                                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', alignItems: 'center', gap: '16px' }}>
+                                                                            {/* Dep */}
+                                                                            <div>
+                                                                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>{item.pickupTime || '--:--'}</div>
+                                                                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555555', textTransform: 'uppercase' }}>{item.pickupLocation || 'Not Set'}</div>
+                                                                            </div>
+                                                                            {/* Middle */}
+                                                                            <div style={{ textAlign: 'center' }}>
+                                                                                <div style={{ fontSize: '10px', color: '#555555', fontWeight: 'bold', marginBottom: '4px' }}>DURATION: {item.duration || '--'}</div>
+                                                                                <div style={{ position: 'relative', width: '100%', height: '2px', backgroundColor: '#6b6b6b', margin: '8px 0' }}>
+                                                                                    {item.flightStops && item.flightStops !== 'Direct' ? (
+                                                                                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '8px', height: '8px', backgroundColor: '#2563eb', borderRadius: '50%', border: '#6b6b6b' }}></div>
+                                                                                    ) : (
+                                                                                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '14px' }}>✈️</div>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: item.flightStops && item.flightStops !== 'Direct' ? '#2563eb' : '#16a34a' }}>
+                                                                                    {item.flightStops && item.flightStops !== 'Direct' ? `${item.flightStops} ${item.layoverInfo ? `• ${item.layoverInfo}` : ''}` : 'Direct Flight'}
+                                                                                </div>
+                                                                            </div>
+                                                                            {/* Arr */}
+                                                                            <div style={{ textAlign: 'right' }}>
+                                                                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>
+                                                                                    {item.dropoffTime || '--:--'}
+                                                                                    {(item as any).arrivalDayOffset === '+1' && <sup style={{ fontSize: '10px', color: '#ef4444', marginLeft: '2px' }}>+1</sup>}
+                                                                                </div>
+                                                                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555555', textTransform: 'uppercase' }}>{item.dropoffLocation || 'Not Set'}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        {item.serviceDescription && (
+                                                                            <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #e5e7eb', fontSize: '11px', fontWeight:"bold", color: '#555555' }}>
+                                                                                <strong>Cabin:</strong> {item.serviceDescription}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ) : ['rail', 'ferry'].includes(item.mode) ? (
+                                                                    <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px',  padding: '12px' }}>
+                                                                        <div>
+                                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Schedule</div>
+                                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>
+                                                                                {item.pickupTime || '--:--'} <span style={{color: '555555', fontWeight: 'normal'}}>to</span> {item.dropoffTime || '--:--'}
+                                                                                {(item as any).arrivalDayOffset === '+1' && <sup style={{ fontSize: '9px', color: '#ef4444', marginLeft: '2px' }}>+1</sup>}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>{item.mode === 'ferry' ? 'Ports' : 'Route'}</div>
+                                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupLocation || 'Not Set'} → {item.dropoffLocation || 'Not Set'}</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Duration</div>
+                                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555', display: 'inline-block', padding: '2px 6px', borderRadius: '4px' }}>{item.duration || '--'}</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>{item.mode === 'ferry' ? 'Deck Info' : 'Travel Info'}</div>
+                                                                            <div style={{ fontSize: '12px', color: '#555555' }}>{item.serviceDescription || '--'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    /* Vehicle Mode */
+<div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: item.subType === 'transfer' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: '12px', padding: '12px',  }}>
+                                                                        
+                                                                        {/* Col 1: Pickup */}
+                                                                        <div>
+                                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Pickup</div>
+                                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupLocation || 'Not Set'}</div>
+                                                                            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555555', marginTop: '2px' }}>{item.pickupTime || '--:--'}</div>
+                                                                        </div>
+
+                                                                        {/* Col 2: Drop-off (Only for Transfers) */}
+                                                                        {item.subType === 'transfer' && (
+                                                                            <div>
+                                                                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Drop-off</div>
+                                                                                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.dropoffLocation || 'Not Set'}</div>
+                                                                                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555555', marginTop: '2px' }}>{item.dropoffTime || '--:--'}</div>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Col 3: Duration (Always Visible) */}
+                                                                        <div>
+                                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Duration</div>
+                                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555', display: 'inline-block', padding: '2px 6px', borderRadius: '4px' }}>{item.duration || '--'}</div>
+                                                                        </div>
+
+                                                                        {/* Col 4: Journey Info */}
+                                                                        <div>
+                                                                            <div style={{ fontSize: '10px',  fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Journey Info</div>
+                                                                            <div style={{ fontSize: '11px', color: '#555555'  }}>{item.serviceDescription || '--'}</div>
+                                                                        </div>
+                                                                        
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+
+                                                        {/* --- MEAL PDF BLOCK --- */}
+                                                        {item.category === 'Meal' && (
+                                                            <div>
+                                                                <div style={{ color: '#1f2937', fontSize: '15px', fontWeight: 'bold' }}>
+                                                                     {item.mealType}
+                                                                </div>
+                                                                {(item.restaurantName || item.cuisine) && (
+                                                                    <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '4px' }}>
+                                                                        {item.restaurantName ? `at ${item.restaurantName}` : ''} {item.cuisine ? `(${item.cuisine})` : ''}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        
+                                                    </td>
+
+                                                    {/* 🌟 COL 3: INCLUSION BADGE (Far Right) */}
+                                                 
+{/* 🌟 COL 3: INCLUSION BADGE (Far Right) */}
+<td style={{ border: '1px solid #6b6b6b', padding: '16px', verticalAlign: 'middle', textAlign: 'center', width: '140px' }}>
+                                                        
+                                                        <span style={{ 
+                                                            fontSize: '12px', 
+                                                            fontWeight: 'bold', 
+                                                            color: badgeColor, 
+                                                            backgroundColor: badgeBg,
+                                                            textTransform:"uppercase"
+                                                        }}>
+                                                            {badgeText}
+                                                        </span>
+                                                    </td>
+
+                                                </tr>
+                    
+                    );
+                })}
+            </tbody>
+        );
+    })}
+</table>
+    
         </div>
 
         {/* 👇 INCLUSIONS, EXCLUSIONS, NOTES & POLICIES (Ref added!) */}

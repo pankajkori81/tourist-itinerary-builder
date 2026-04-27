@@ -617,44 +617,6 @@ export default function CreateItineraryPage() {
 
     updateItineraryData({ selectedCountries: newList, tripId: newTripId });
   };
-  // const toggleCountry = async (country: string) => {
-  //   const currentList = itineraryData.selectedCountries || [];
-  //   let newList;
-    
-  //   if (currentList.includes(country)) {
-  //     newList = currentList.filter(c => c !== country);
-  //   } else {
-  //     newList = [...currentList, country];
-  //   }
-    
-  //   let newTripId = itineraryData.tripId;
-
-  //   // Logic: Only generate a new ID if we select our VERY FIRST country, 
-  //   // or if the primary (first) country changes because we unselected the original one.
-  //   if (newList.length > 0) {
-  //       const primaryCountry = newList[0];
-        
-  //       if (currentList[0] !== primaryCountry || !newTripId) {
-  //           const year = new Date().getFullYear();
-  //           const code = COUNTRY_CODES[primaryCountry] || "XX";
-            
-  //           // Peek into the database to see how many trips match this country and year
-  //           const library = await getLibrary(); 
-  //           const existingCount = library.filter((t: any) =>
-  //               t.selectedCountries?.[0] === primaryCountry && // Match Primary Country
-  //               t.tripId?.includes(year.toString()) &&         // Match Current Year
-  //               t.id !== itineraryData.id                      // Don't count this exact draft if already saved
-  //           ).length;
-
-  //           // Generate the final intelligent ID!
-  //           newTripId = `${existingCount + 1}-${code}50-${year}`;
-  //       }
-  //   } else {
-  //       newTripId = ''; // Clear it out if no countries are selected
-  //   }
-
-  //   updateItineraryData({ selectedCountries: newList, tripId: newTripId });
-  // };   
 
   const handleMasterItineraryChange = (isMaster: boolean) => {
     if (isMaster) {
@@ -871,15 +833,6 @@ export default function CreateItineraryPage() {
               </div>
             </div>
           </div>
-
-          {/* 6. NEXT STEP BUTTON */}
-          {/* <div className="mt-10 pt-6 border-t border-white/10 flex justify-end">
-            <button onClick={handleNextStep} className="group flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-full font-semibold shadow-lg shadow-blue-900/20 transition-all transform hover:scale-[1.02]">
-              Next Step: Routing
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div> */}
-
 
           {/* 6. NEXT STEP BUTTON */}
           <div className="mt-10 pt-6 border-t border-white/10 flex justify-end">

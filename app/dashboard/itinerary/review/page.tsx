@@ -689,8 +689,9 @@ import React, { useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { Download, FileText, Send, ArrowRight, Clock, AlertTriangle, Printer, GripVertical, User, ArrowLeft } from "lucide-react";
+// import { Download, FileText, Send, ArrowRight, Clock, AlertTriangle, Printer, GripVertical, User, ArrowLeft, Mail, Phone, Globe, MapPin } from "lucide-react";
 
+import { Download, FileText, Send, ArrowRight, Clock, AlertTriangle, Printer, GripVertical, User, ArrowLeft, Mail, Phone, Globe, MapPin, Camera, BedDouble, Utensils, Plane, Train, Ship, Car, Bus } from "lucide-react";
 // 🌟 Import Drag and Drop components
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
@@ -749,9 +750,7 @@ export default function ReviewPage() {
       })
       .join(' | ');
 
-//   const uniqueCities = Array.from(new Set(routes.flatMap(r => r.cities.map(c => c.name)))).join(' | ');
 
-// 🌟 FIX: We use .slice(0, totalDays) to strictly chop off any "ghost days" left in memory!
   // This forces the Review Page to perfectly match the length of the Routing Page.
   const rawDayPlans = ((itineraryData.dayWiseActivities || []) as DayPlan[]).slice(0, totalDays);
   const currentStatus = itineraryData.status || 'draft';
@@ -941,11 +940,33 @@ export default function ReviewPage() {
   };
 
   
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 🌟 SMART PDF GENERATOR (Fixes column alignment, page breaks, and adds Footer)
-  // ─────────────────────────────────────────────────────────────────────────────
-  const handleDownloadPdf = async () => {
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // 🌟 SMART PDF GENERATOR (Fixes column alignment, page breaks, and adds Footer)
+//   // ─────────────────────────────────────────────────────────────────────────────
+
+
+const handleDownloadPdf = async () => {
     setIsDownloading(true);
+
+    // 👇 INJECT FIX: Force SVG icons to align correctly during html2canvas capture
+    const fixStyle = document.createElement('style');
+    fixStyle.id = 'html2canvas-svg-fix';
+    fixStyle.innerHTML = `
+      svg {
+        display: inline-block !important;
+        vertical-align: middle !important;
+        position: relative !important;
+        top: 0px !important;
+        overflow: visible !important;
+      }
+      [class*="lucide"] {
+        display: inline-block !important;
+        vertical-align: middle !important;
+        position: relative !important;
+        top: 0px !important;
+      }
+    `;
+    document.head.appendChild(fixStyle);
 
     try {
       const PDF_W_MM  = 210;  
@@ -962,6 +983,30 @@ export default function ReviewPage() {
         logging: false,
         backgroundColor: '#ffffff',
         ignoreElements: (el: Element) => el.hasAttribute('data-html2canvas-ignore'),
+        // 👇 ADD THIS: give browser time to apply the injected styles
+        onclone: (clonedDoc: Document) => {
+          const clonedStyle = clonedDoc.createElement('style');
+          clonedStyle.innerHTML = `
+            svg {
+              display: inline-block !important;
+              vertical-align: middle !important;
+              position: relative !important;
+              top: 0px !important;
+              overflow: visible !important;
+            }
+            [class*="lucide"] {
+              display: inline-block !important;
+              vertical-align: middle !important;
+              position: relative !important;
+              top: 0px !important;
+            }
+            /* Fix flex containers that hold icons */
+            td > div {
+              align-items: center !important;
+            }
+          `;
+          clonedDoc.head.appendChild(clonedStyle);
+        }
       };
 
       const toMm = (canvas: HTMLCanvasElement): number => (canvas.height * CONTENT_W_MM) / canvas.width;
@@ -1019,6 +1064,23 @@ export default function ReviewPage() {
         hiddenWrapper.appendChild(clonedTable);
         document.body.appendChild(hiddenWrapper);
 
+        // 👇 Force all SVGs inside the cloned table to align correctly
+        const svgsInClone = clonedTable.querySelectorAll('svg');
+        svgsInClone.forEach((svg) => {
+          (svg as unknown as HTMLElement).style.display = 'inline-block';
+          (svg as unknown as HTMLElement).style.verticalAlign = 'middle';
+          (svg as unknown as HTMLElement).style.position = 'relative';
+          (svg as unknown as HTMLElement).style.top = '0px';
+          (svg as unknown as HTMLElement).style.overflow = 'visible';
+        });
+
+        // 👇 Force all icon wrapper divs to align correctly
+        const iconWrappers = clonedTable.querySelectorAll('td > div');
+        iconWrappers.forEach((div) => {
+          (div as HTMLElement).style.alignItems = 'center';
+          (div as HTMLElement).style.display = 'flex';
+        });
+
         const clonedTbodies = Array.from(clonedTable.querySelectorAll('tbody'));
         const clonedThead = clonedTable.querySelector('thead');
 
@@ -1031,6 +1093,15 @@ export default function ReviewPage() {
           currentTbody.style.display = '';
           currentTbody.style.boxShadow = 'none';
 
+          // 👇 Re-apply SVG fix inside each tbody before capture
+          const tbodySvgs = currentTbody.querySelectorAll('svg');
+          tbodySvgs.forEach((svg) => {
+            (svg as unknown as HTMLElement).style.display = 'inline-block';
+            (svg as unknown as HTMLElement).style.verticalAlign = 'middle';
+            (svg as unknown as HTMLElement).style.position = 'relative';
+            (svg as unknown as HTMLElement).style.top = '0px';
+          });
+
           const dayCanvas = await html2canvas(clonedTable, H2C_OPTS);
           const dayH = toMm(dayCanvas);
 
@@ -1038,20 +1109,17 @@ export default function ReviewPage() {
           currentY += placeCanvas(dayCanvas, currentY); 
 
           currentTbody.style.display = 'none';
-
           if (clonedThead) clonedThead.style.display = 'none';
         }
 
         document.body.removeChild(hiddenWrapper);
-        currentY += 8; // Add a little space after the table
+        currentY += 8;
       }
 
-      // 👇 4. NEW: CAPTURE THE FOOTER (Inclusions, Exclusions, Policies)
+      // 4. CAPTURE THE FOOTER
       if (footerRef.current) {
           const footerCanvas = await html2canvas(footerRef.current, H2C_OPTS);
           const footerH = toMm(footerCanvas);
-          
-          // Check if footer fits on the current page, otherwise start a new page
           ensureFits(footerH);
           placeCanvas(footerCanvas, currentY);
       }
@@ -1063,6 +1131,10 @@ export default function ReviewPage() {
       console.error('PDF Error:', error);
       alert('Failed to generate PDF. Please try again.');
     } finally {
+      // 👇 ALWAYS remove the injected style after capture, success or failure
+      const injected = document.getElementById('html2canvas-svg-fix');
+      if (injected) injected.remove();
+      
       setIsDownloading(false);
     }
   };
@@ -1110,55 +1182,45 @@ export default function ReviewPage() {
 //         currentY += placeCanvas(headerCanvas, currentY) + 8;
 //       }
 
-
-//     // 2. Native Text for "ITINERARY DETAILS"
+//       // 2. Native Text for "ITINERARY DETAILS"
 //       ensureFits(15);
-//       pdf.setFontSize(10); // Your new font size
+//       pdf.setFontSize(10); 
 //       pdf.setFont("helvetica", "bold");
 //       pdf.setTextColor(0, 29, 106); 
       
 //       const headingText = "ITINERARY DETAILS";
 //       pdf.text(headingText, MARGIN_MM, currentY + 5);
       
-//       // Calculate exact width of the text so the underline perfectly matches
 //       const textWidth = pdf.getTextWidth(headingText);
 
 //       pdf.setDrawColor(0, 29, 106);
 //       pdf.setLineWidth(0.5);
-//       // Draw line from the start margin to exactly the end of the text
 //       pdf.line(MARGIN_MM, currentY + 6, MARGIN_MM + textWidth, currentY + 6); 
       
 //       currentY += 12;
 
-      
-//       // 3. THE MAGIC TRICK: OFF-SCREEN CLONING!
-//       // This prevents the screen from "jumping" or "scanning" while downloading.
+//       // 3. THE MAGIC TRICK: OFF-SCREEN CLONING FOR TABLE!
 //       if (tableRef.current) {
 //         const originalTable = tableRef.current;
 //         const tableWidth = originalTable.offsetWidth;
 
-//         // A: Create an invisible wrapper off-screen
 //         const hiddenWrapper = document.createElement('div');
 //         hiddenWrapper.style.position = 'absolute';
-//         hiddenWrapper.style.left = '-9999px'; // Move off screen
+//         hiddenWrapper.style.left = '-9999px'; 
 //         hiddenWrapper.style.top = '0px';
 //         hiddenWrapper.style.width = `${tableWidth}px`;
 //         hiddenWrapper.style.backgroundColor = '#ffffff';
 
-//         // B: Clone the entire table into the invisible wrapper
 //         const clonedTable = originalTable.cloneNode(true) as HTMLTableElement;
 //         hiddenWrapper.appendChild(clonedTable);
 //         document.body.appendChild(hiddenWrapper);
 
-//         // C: Select the rows INSIDE the invisible clone
 //         const clonedTbodies = Array.from(clonedTable.querySelectorAll('tbody'));
 //         const clonedThead = clonedTable.querySelector('thead');
 
-//         // Hide all day bodies initially
 //         clonedTbodies.forEach(el => el.style.display = 'none');
 //         if (clonedThead) clonedThead.style.display = '';
 
-//         // D: Loop through the hidden clone to generate the PDF
 //         for (let i = 0; i < clonedTbodies.length; i++) {
 //           const currentTbody = clonedTbodies[i];
           
@@ -1173,14 +1235,24 @@ export default function ReviewPage() {
 
 //           currentTbody.style.display = 'none';
 
-//           // Hide header after the first day so it doesn't repeat
 //           if (clonedThead) clonedThead.style.display = 'none';
 //         }
 
-//         // E: Destroy the invisible clone (Cleanup)
 //         document.body.removeChild(hiddenWrapper);
+//         currentY += 8; // Add a little space after the table
 //       }
 
+//       // 👇 4. NEW: CAPTURE THE FOOTER (Inclusions, Exclusions, Policies)
+//       if (footerRef.current) {
+//           const footerCanvas = await html2canvas(footerRef.current, H2C_OPTS);
+//           const footerH = toMm(footerCanvas);
+          
+//           // Check if footer fits on the current page, otherwise start a new page
+//           ensureFits(footerH);
+//           placeCanvas(footerCanvas, currentY);
+//       }
+
+//       // 5. Save the PDF
 //       pdf.save(`${itineraryData.tripName || 'Itinerary_Review'}.pdf`);
 
 //     } catch (error) {
@@ -1189,22 +1261,6 @@ export default function ReviewPage() {
 //     } finally {
 //       setIsDownloading(false);
 //     }
-//   };
-
-//   // --- SUBMIT LOGIC ---
-//   const handleSubmitCosting = () => {
-//       completeStep('review');
-//       submitForCosting(); 
-      
-//       const allLibs = JSON.parse(localStorage.getItem('itinerary_library') || '[]');
-//       const idx = allLibs.findIndex((i:any) => i.id === itineraryData.id);
-//       if (idx !== -1) {
-//           allLibs[idx].status = 'pending_costing';
-//           localStorage.setItem('itinerary_library', JSON.stringify(allLibs));
-//       }
-      
-//       alert("Itinerary submitted for Costing! Admin has been notified.");
-//       window.location.reload(); 
 //   };
 
 
@@ -1257,23 +1313,88 @@ export default function ReviewPage() {
         }} 
       >
         
-        {/* HEADER */}
-        <div ref={headerSectionRef} style={{ borderBottom: '2px solid #001d5a' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch' }}>
-                <div style={{ flex: 1, padding: '24px' }}>
-                    <div style={{ height: '48px', marginBottom: '16px' }}>
-                        <img src="/logo.png" alt="Company Logo" style={{ height: '100%', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    </div>
-                    <h1 style={{ color: '#001d6a',  fontSize: '28px', fontWeight: 'bold', textTransform: 'uppercase', marginLeft: 8, lineHeight: '1.1' }}>{itineraryData.tripName || "Draft Itinerary"}</h1>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px', marginLeft:'4px', fontSize: '14px', fontWeight: 'bold', color: '#202020ff' }}>
-                        <span style={{  color:'#001d6a' ,  padding: '4px 8px', borderRadius: '4px' }}>{totalDays} Days | {totalNights} Nights</span>
-                        <span style={{  color:'#001d6a',  padding: '4px 8px', borderRadius: '4px' , textTransform: 'uppercase' }}>{itineraryData.packageType || "Custom Package"}</span>
+
+
+            {/* HEADER */}
+        <div ref={headerSectionRef} style={{ borderBottom: '2px solid #e5e7eb', padding: '32px 24px', backgroundColor: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' , marginBottom:"5px" }}>
+                
+                {/* 🌟 LEFT SIDE: Tour Name & Duration */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: '16px' , textTransform:"uppercase" }}>
+                    <h1 style={{ color:'#001d6a', fontSize: '32px', fontWeight: 'bold', margin: '0 0 4px 0', lineHeight: '1.2' }}>
+                        {itineraryData.tripName || "Draft Itinerary"}
+                    </h1>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold', color:'#001d6a' }}>
+                        {totalDays} Days | {totalNights} Nights
                     </div>
                 </div>
-            </div>
-            
-            {/* DETAILS GRID */}
 
+
+            {/* 🌟 RIGHT SIDE: Logo & Company Details */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                    
+              
+                    <div style={{ height: '50px', marginBottom: '14px' }}>
+                        <img 
+                            src="/logo.png" 
+                            alt="Company Logo" 
+                            // 👇 FIX: Added objectPosition: 'left center' to force it flush to the green line!
+                            style={{ height: '100%', objectFit: 'contain', objectPosition: 'left center' }} 
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }} 
+                        />
+                    </div>
+
+
+
+                    <div style={{ 
+    display: 'flex', 
+    flexDirection: 'column', 
+    gap: '6px', 
+    fontSize: '13px', 
+    fontFamily: 'inherit',
+    minWidth: '240px' 
+}}>
+    
+             {/* Email */}
+<div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
+    <i className="fa-solid fa-envelope" style={{ color: '#712400', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+    <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Email:</span>
+    <span style={{ color: '#001d6a', fontWeight: 'bold' }}>Sandeep@TravDek.com</span>
+</div>
+
+{/* Phone */}
+<div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
+    <i className="fa-solid fa-phone" style={{ color: '#000000', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+    <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Tel:</span>
+    <span style={{ color: '#001d6a', fontWeight: 'bold' }}>+1 650 759 4331</span>
+</div>
+
+{/* Website */}
+<div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
+    <i className="fa-solid fa-globe" style={{ color: '#0038a8', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+    <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Web:</span>
+    <a href="http://www.TravDek.com" style={{ color: '#001d6a', fontWeight: 'bold', textDecoration: 'none' }}>www.TravDek.com</a>
+</div>
+
+{/* Address */}
+<div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+    <i className="fa-solid fa-location-dot" style={{ color: '#df0000', width: '16px', textAlign: 'center', fontSize: '13px', marginTop: '2px' }}></i>
+    <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Add:</span>
+    <span style={{ color: '#001d6a', fontWeight: 'bold', lineHeight: '1.5' }}>
+        750 Alma lane #4459 Foster City, CA 94404 USA
+    </span>
+</div>
+
+</div>
+
+
+    
+                </div>
+
+                </div>
+          
+       
+         
 
             {/* DETAILS GRID */}
             <div style={{ borderTop: '1px solid #989898', borderBottom: '1px solid #989898' }}>
@@ -1334,34 +1455,38 @@ export default function ReviewPage() {
             <DragDropContext onDragEnd={handleDayDragEnd}>
               <Droppable droppableId="itinerary-days-board" type="DAY">
                 {(provided) => (
-                  <table 
+                <table 
                     ref={(el) => {
                       provided.innerRef(el);
                       tableRef.current = el as HTMLTableElement;
                     }}
                     {...provided.droppableProps}
-                    style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #636363ff', fontSize: '14px', tableLayout: 'fixed' }}
+                    style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #6b6b6b', fontSize: '14px', tableLayout: 'fixed' }}
                   >
-                      {/* Fixed Colgroup helps browser enforce widths precisely on screen */}
+                      {/* NEW: 3 Columns -> Category(Left), Details(Middle), Inclusion(Right) */}
                       <colgroup>
-                          <col style={{ width: '96px' }} />
-                          <col style={{ width: '128px' }} />
-                          <col style={{ width: '120px' }} />
+                          <col style={{ width: '200px' }} />
                           <col style={{ width: 'auto' }} />
+                          <col style={{ width: '140px' }} />
                       </colgroup>
-
-                      <thead ref={tableHeadRef}>
-                          <tr style={{ backgroundColor: '#e2dffd', color: 'rgb(35, 41, 52)', textTransform: 'uppercase', fontSize: '12px' }}>
-                              <th style={{ border: '1px solid #636363ff', padding: '12px', textAlign: 'center', width: '96px' }}>Day</th>
-                              <th style={{ border: '1px solid #636363ff', padding: '12px', textAlign: 'left', width: '128px' }}>City</th>
-                              <th style={{ border: '1px solid #636363ff', padding: '12px', textAlign: 'left', width: '120px' }}>Category</th>
-                              <th style={{ border: '1px solid #636363ff', padding: '12px', textAlign: 'left' }}>Description</th>
-                          </tr>
-                      </thead>
 
                       {rawDayPlans.map((day, idx) => {
                               const items = getRenderableItemsForDay(idx, day);
                               
+                              // 🌟 DYNAMIC ROUTING LOGIC (e.g., DELHI - AGRA)
+                              const prevCity = idx > 0 ? rawDayPlans[idx - 1].city : null;
+                              const isCityChange = prevCity && prevCity !== day.city;
+                              const displayCityName = isCityChange ? `${prevCity} - ${day.city}` : day.city;
+                              
+                              // Calculate Nights for the new city
+                              let nightCount = 0;
+                              if (!prevCity || isCityChange) {
+                                  const currentRoute = routes.find((r: any) => r.cities.some((c: any) => c.name === day.city));
+                                  if (currentRoute) nightCount = currentRoute.nights;
+                              }
+                              const displayNights = nightCount > 0 ? ` (${nightCount}N)` : '';
+                              const finalDayHeader = `${displayCityName}${displayNights}`.toUpperCase();
+
                               return (
                                 <Draggable key={day.dayNumber.toString()} draggableId={`day-${day.dayNumber}`} index={idx}>
                                   {(provided, snapshot) => (
@@ -1378,82 +1503,111 @@ export default function ReviewPage() {
                                         backgroundColor: snapshot.isDragging ? '#f3f4f6' : 'transparent',
                                         boxShadow: snapshot.isDragging ? '0px 10px 15px -3px rgba(0,0,0,0.1)' : 'none',
                                         display: snapshot.isDragging ? 'table' : '', 
+                                        outline: '1px solid #6b6b6b',
                                       }}
                                     >
                                         
-                                        <tr style={{ backgroundColor: '#fefce8', borderTop: '2px solid #636363ff' }}></tr>
+                              
 
-                                        {/* Leisure Day Check (No Items) */}
+                                        {/* 🌟 THE FULL-WIDTH DAY HEADER ROW */}
+<tr style={{ backgroundColor: '#fefce8', borderTop: idx > 0 ? '1px solid #6b6b6b' : 'none' }}>
+    <td colSpan={3} style={{ 
+        padding: '12px 16px', 
+        border: '1px solid #6b6b6b',
+        borderTop: idx > 0 ? '2px solid #6b6b6b' : '1px solid #6b6b6b'
+    }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <span style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '16px' }}>DAY {String(day.dayNumber).padStart(2, '0')}</span>
+            <span style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '16px' }}>{finalDayHeader}</span>
+            
+            {/* Drag Handle */}
+            <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing hide-on-print ml-auto" style={{ color: '#9ca3af' }} data-html2canvas-ignore="true">
+                <GripVertical size={18} />
+            </div>
+        </div>
+    </td>
+</tr>
+
+
+
+                                        {/* Leisure Day Check */}
                                         {items.length === 0 && (
                                             <tr>
-                                                <td style={{ border: '1px solid #636363ff', padding: '12px', fontWeight: 'bold', textAlign: 'center' }}>
-                                                    DAY {day.dayNumber}
-                                                    <div 
-                                                      {...provided.dragHandleProps} 
-                                                      className="cursor-grab active:cursor-grabbing hide-on-print flex justify-center mt-2" 
-                                                      style={{ color: '#9ca3af' }}
-                                                      data-html2canvas-ignore="true"
-                                                    >
-                                                        <GripVertical size={20} />
-                                                    </div>
+                                                <td colSpan={3} style={{ border: '1px solid #6b6b6b', padding: '16px', color: '#9ca3af', fontStyle: 'italic', textAlign: 'center' }}>
+                                                    Leisure day. No activities scheduled.
                                                 </td>
-                                                <td style={{ border: '1px solid #636363ff', padding: '12px', fontWeight: 'bold' }}>{day.city}</td>
-                                                <td colSpan={2} style={{ border: '1px solid #636363ff', padding: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Leisure day. No activities scheduled.</td>
                                             </tr>
                                         )}
 
                                         {/* Items Rendering Loop */}
                                         {items.map((item, itemIdx) => {
                                             
+                                            // INCLUSION LOGIC
                                             const inclusionStatus = item.inclusionType || 'included'; 
                                             const isExcluded = inclusionStatus === 'excluded';
                                             const isOptional = inclusionStatus === 'optional';
-                                            
-                                            const badgeBg = isExcluded ? '#fef2f2' : isOptional ? '#eff6ff' : '#f0fdf4';
-                                            const badgeColor = isExcluded ? '#dc2626' : isOptional ? '#1d4ed8' : '#15803d';
-                                            const badgeBorder = isExcluded ? '#fca5a5' : isOptional ? '#93c5fd' : '#86efac';
+                                            const badgeBg = isExcluded ? '#ffffff' : isOptional ? '#ffffff' : '#ffffff';
+                                            const badgeColor = isExcluded ? '#1f2937' : isOptional ? '#1f2937' : '#1f2937';
                                             const badgeText = isExcluded ? 'Excluded' : isOptional ? 'Optional' : 'Included';
+
+                                            // 🌟 SMART ICON LOGIC
+                                            let IconComponent = Camera;
+                                            let iconColor = '#0284c7'; // Default blue
+                                            
+                                            if (item.category === 'Stay') { IconComponent = BedDouble; iconColor = '#059669'; } // Green
+                                            else if (item.category === 'Meal') { IconComponent = Utensils; iconColor = '#d97706'; } // Orange
+                                            else if (item.category === 'Transport') {
+                                                iconColor = '#6366f1'; // Indigo
+                                                if (item.mode === 'flight') IconComponent = Plane;
+                                                else if (item.mode === 'rail') IconComponent = Train;
+                                                else if (item.mode === 'ferry') IconComponent = Ship;
+                                                else if (item.mode === 'bus') IconComponent = Bus;
+                                                else IconComponent = Car;
+                                            }
 
                                             return (
                                                 <tr key={`${day.dayNumber}-${itemIdx}`} className="pdf-row" >
-                                                    {/* Col 1 & 2: Day & City (Merged for first item) */}
-                                                    {itemIdx === 0 ? (
-                                                        <>
-                                                            <td rowSpan={items.length} style={{ border: '1px solid #636363ff', padding: '12px', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#ffffff', verticalAlign: 'top' }}>
-                                                             DAY {day.dayNumber}
-                                                                <div 
-                                                                  {...provided.dragHandleProps} 
-                                                                  className="cursor-grab active:cursor-grabbing hide-on-print flex justify-center mt-3" 
-                                                                  title="Drag to reorder this entire day"
-                                                                  style={{ color: '#9ca3af' }}
-                                                                  data-html2canvas-ignore="true"
-                                                                >
-                                                                    <GripVertical size={20} />
-                                                                </div>
-                                                            </td>
-                                                            <td rowSpan={items.length} style={{ border: '1px solid #636363ff', padding: '12px', fontWeight: 'bold', backgroundColor: '#ffffff', verticalAlign: 'top', color: '#dc2626' }}>{day.city}</td>
-                                                        </>
-                                                    ) : null}
+                                                    
+                                               
 
-                                                    {/* Col 3: Category & INCLUSION STATUS */}
-                                                    <td style={{ border: '1px solid #636363ff', padding: '12px', verticalAlign: 'top', color: '#292d33ff' }}>
-                                                        <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-                                                            {item.category === 'Stay' ? (
-                                                                <span style={{ color: item.status === 'Check-in' ? '#1f2937' : '#757575ff' }}>Stay</span>
-                                                            ) : item.category}
-                                                        </div>
 
-                                                        <div style={{ 
-                                                                fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '4px', backgroundColor: badgeBg, color: badgeColor, border: `1px solid ${badgeBorder}`, width: 'fit-content', display: 'block', marginTop: '10px'
-                                                            }}>
-                                                                {badgeText}
-                                                            </div>
-                                                    </td>
+                                                    {/* 🌟 COL 1: CATEGORY WITH ICON */}
+<td style={{ border: '1px solid #6b6b6b', padding: '16px 24px', verticalAlign: 'middle', width: '200px' }}>
+    <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'flex-start', 
+        gap: '12px', 
+        fontWeight: 'bold', 
+        color: '#374151', 
+        fontSize: '14px', 
+        textTransform: 'uppercase', 
+        letterSpacing: '0.05em',
+        lineHeight: '20px'
+    }}>
+        <IconComponent 
+            size={20} 
+            style={{ 
+                color: iconColor, 
+                flexShrink: 0,
+                display: 'inline-block',
+                verticalAlign: 'middle',
+                position: 'relative',
+                top: '-1px'
+            }} 
+        />
+        <span style={{ lineHeight: '20px', display: 'inline-block', verticalAlign: 'middle' }}>
+            {item.category === 'Stay' ? 'Hotel' : item.category}
+        </span>
+    </div>
+</td>
 
-                                                    {/* Col 4: Description */}
-                                       <td style={{ border: '1px solid #636363ff', padding: '12px', verticalAlign: 'top' }}>
+                                                    {/* 🌟 COL 2: DESCRIPTION (Middle Content) */}
+<td style={{ border: '1px solid #6b6b6b', padding: '16px', verticalAlign: 'top' }}>
                                                         
-                                                         {/* --- ACTIVITY PDF BLOCK --- */}
+                                             
+
+                                                             {/* --- ACTIVITY PDF BLOCK --- */}
                                                         {item.category === 'Activity' && (
                                                             <div>
                                                                 <div style={{ fontWeight: 'bold', color: '#1f2937', fontSize: '16px' }}>{item.heading}</div>
@@ -1469,8 +1623,9 @@ export default function ReviewPage() {
                                                             </div>
                                                         )}
 
-                                                        {/* --- STAY PDF BLOCK --- */}
-                                                        {item.category === 'Stay' && (
+                                         
+                                                         {/* --- STAY PDF BLOCK --- */}
+                                                         {item.category === 'Stay' && (
                                                             <div style={{ opacity: item.status === 'Residence' ? 0.8 : 1 }}>
                                                                 <div style={{ fontWeight: 'bold', color: '#22252bff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                     {item.hotelName}
@@ -1494,8 +1649,8 @@ export default function ReviewPage() {
                                                             </div>
                                                         )}
 
-                                                        {/* --- TRANSPORT PDF BLOCK --- */}
-                                                        {item.category === 'Transport' && (
+                                                          {/* --- TRANSPORT PDF BLOCK --- */}
+                                                         {item.category === 'Transport' && (
                                                             <div>
                                                                 {/* Title & Badge */}
                                                                 <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px' }}>
@@ -1525,9 +1680,9 @@ export default function ReviewPage() {
                                                                             {/* Middle */}
                                                                             <div style={{ textAlign: 'center' }}>
                                                                                 <div style={{ fontSize: '10px', color: '#555555', fontWeight: 'bold', marginBottom: '4px' }}>DURATION: {item.duration || '--'}</div>
-                                                                                <div style={{ position: 'relative', width: '100%', height: '2px', backgroundColor: '#d1d5db', margin: '8px 0' }}>
+                                                                                <div style={{ position: 'relative', width: '100%', height: '2px', backgroundColor: '#6b6b6b', margin: '8px 0' }}>
                                                                                     {item.flightStops && item.flightStops !== 'Direct' ? (
-                                                                                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '8px', height: '8px', backgroundColor: '#2563eb', borderRadius: '50%', border: '2px solid #f9fafb' }}></div>
+                                                                                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '8px', height: '8px', backgroundColor: '#2563eb', borderRadius: '50%', border: '#6b6b6b' }}></div>
                                                                                     ) : (
                                                                                         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '14px' }}>✈️</div>
                                                                                     )}
@@ -1610,36 +1765,39 @@ export default function ReviewPage() {
                                                             </div>
                                                         )}
 
-                                                        {/* --- MEAL PDF BLOCK --- */}
-                                                        {/* {item.category === 'Meal' && (
-                                                            <div>
-                                                                <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                     {item.mealType}: {item.restaurantName}
-                                                                </div>
-                                                                <div style={{ fontSize: '12px', color: '#292d33ff', marginTop: '4px' }}>
-                                                                    {item.cuisine}  {item.menuType}
-                                                                </div>
-                                                            </div>
-                                                        )} */}
 
                                                         {/* --- MEAL PDF BLOCK --- */}
-                                                {item.category === 'Meal' && (
-                                                    <div style={{ paddingTop: '4px' }}>
-                                                        {/* Big Bold Title (e.g. "Breakfast" or "Dinner") */}
-                                                        <div style={{ color: '#1f2937', fontSize: '14px' }}>
-                                                             {item.mealType}
-                                                        </div>
-                                                        
-                                                        {/* Only show extra details IF the agent actually typed them */}
-                                                        {(item.restaurantName || item.cuisine) && (
-                                                            <div style={{ fontSize: '12px', color: '#4b5563', marginTop: '4px' }}>
-                                                                {item.restaurantName ? `at ${item.restaurantName}` : ''} {item.cuisine ? `(${item.cuisine})` : ''}
+                                                        {item.category === 'Meal' && (
+                                                            <div>
+                                                                <div style={{ color: '#1f2937', fontSize: '15px', fontWeight: 'bold' }}>
+                                                                     {item.mealType}
+                                                                </div>
+                                                                {(item.restaurantName || item.cuisine) && (
+                                                                    <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '4px' }}>
+                                                                        {item.restaurantName ? `at ${item.restaurantName}` : ''} {item.cuisine ? `(${item.cuisine})` : ''}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
-                                                    </div>
-                                                )}
                                                         
                                                     </td>
+
+                                                    {/* 🌟 COL 3: INCLUSION BADGE (Far Right) */}
+                                                 
+{/* 🌟 COL 3: INCLUSION BADGE (Far Right) */}
+<td style={{ border: '1px solid #6b6b6b', padding: '16px', verticalAlign: 'middle', textAlign: 'center', width: '140px' }}>
+                                                        
+                                                        <span style={{ 
+                                                            fontSize: '12px', 
+                                                            fontWeight: 'bold', 
+                                                            color: badgeColor, 
+                                                            backgroundColor: badgeBg,
+                                                            textTransform:"uppercase"
+                                                        }}>
+                                                            {badgeText}
+                                                        </span>
+                                                    </td>
+
                                                 </tr>
                                             );
                                         })}
@@ -1921,75 +2079,7 @@ export default function ReviewPage() {
             </div>
 
 
-            {/* <div className="flex justify-between items-center w-full mt-4">
-                
-            
-                <button 
-                    onClick={() => router.push('/dashboard/itinerary/create-day')} 
-                    className="flex items-center gap-2 text-gray-500 hover:text-gray-800 px-6 py-3 rounded-lg font-bold hover:bg-gray-200 transition-all"
-                >
-                    <ArrowLeft size={18} /> Back to Edit
-                </button>
-
-               
-                <div className="flex gap-4">
-                    {user?.role === 'admin' && (
-                        <>
-                            {isReEdit && (
-                                <div className="flex items-center text-orange-600 font-bold mr-4">
-                                    <AlertTriangle size={18} className="mr-2"/> Waiting for Agent/Employee to edit
-                                </div>
-                            )}
-                            <button 
-                                onClick={() => router.push('/dashboard/itinerary/costing')}
-                                className="flex items-center gap-2 bg-green-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-green-700 transition-transform hover:scale-105"
-                            >
-                                Proceed to Costing <ArrowRight size={18}/>
-                            </button>
-                        </>
-                    )}
-
-                    {(user?.role === 'agent' || user?.role === 'employee') && (
-                        <>
-                            {isPending && (
-                                <div className="flex items-center gap-3 text-orange-700 bg-orange-50 px-6 py-3 rounded-lg border border-orange-200 font-bold shadow-sm">
-                                    <Clock size={20} className="animate-pulse"/> 
-                                    <div>
-                                        <span className="block text-sm">Pricing Request Sent</span>
-                                        <span className="block text-[10px] opacity-80 uppercase">Waiting for Admin</span>
-                                    </div>
-                                </div>
-                            )}
-                            {isReEdit && (
-                                <button 
-                                    onClick={handleSubmitCosting}
-                                    className="flex items-center gap-2 bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all hover:scale-105"
-                                >
-                                    Resubmit for Costing <Send size={18}/>
-                                </button>
-                            )}
-                            
-                            {isApproved && (
-                                <button 
-                                    onClick={() => router.push('/dashboard/itinerary/preview')}
-                                    className="flex items-center gap-2 bg-green-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-green-700 transition-all hover:scale-105"
-                                >
-                                    Proceed to Preview <ArrowRight size={18}/>
-                                </button>
-                            )}
-                            
-                            {!isPending && !isApproved && !isReEdit && (
-                                <button 
-                                    onClick={handleSubmitCosting}
-                                    className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-105"
-                                >
-                                    Submit for Costing <Send size={18}/>
-                                </button>
-                            )}
-                        </>
-                    )}
-                </div> 
-            </div>  */}
+     
         </div> {/* <-- Closes the FOOTER ACTION BAR */}
       </div> 
     );
