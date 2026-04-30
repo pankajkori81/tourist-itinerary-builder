@@ -500,7 +500,215 @@ export default function PreviewPage() {
   // Chop off ghost days
   const rawDayPlans = ((itineraryData.dayWiseActivities || []) as DayPlan[]).slice(0, totalDays);
 
-  // --- 2. NEW PRICING MATH (100% Synced with Costing & Review Pages) ---
+//   // --- 2. NEW PRICING MATH (100% Synced with Costing & Review Pages) ---
+//   const { currency, setCurrency, convert, loading } = useCurrency('USD');
+
+//   useEffect(() => {
+//     if (itineraryData.selectedCurrency) {
+//         setCurrency(itineraryData.selectedCurrency);
+//     } else {
+//         const savedCurrency = localStorage.getItem('travdek_preferred_currency');
+//         if (savedCurrency) setCurrency(savedCurrency);
+//     }
+//   }, [itineraryData.selectedCurrency]);
+
+//   const travelerCount = parseInt(String(itineraryData.numberOfTravelers)) || 1;
+//   const isAgent = user?.role === 'agent';
+
+//   const pricingMatrix = itineraryData.pricingMatrix || {};
+//   const markupPercent = itineraryData.markupPercentage !== undefined ? itineraryData.markupPercentage : 20;
+//   const agentMargin = (itineraryData as any).agentMargin || 0;
+//   const roundingMode = itineraryData.roundingMode || 'none';
+//   const fixedDepartures = itineraryData.fixedDepartures || [];
+//   const selectedDepartureId = itineraryData.selectedDepartureId || null;
+//   const includedOptionals: string[] = itineraryData.includedOptionals || [];
+//   const simulationDate = (itineraryData as any).simulationDate;
+
+//   const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+//   const selectedMonth = useMemo(() => {
+//       if (simulationDate) {
+//           const d = new Date(simulationDate);
+//           if (!isNaN(d.getTime())) return MONTHS[d.getMonth()];
+//       }
+//       return 'JAN';
+//   }, [simulationDate]);
+
+//   // Calculate Totals (includes optional toggles)
+//   const totals = useMemo(() => {
+//       let totalNet = 0;
+//       const currentMonthCosts = pricingMatrix[selectedMonth] || {};
+      
+//       const addCost = (item: any) => {
+//           const cost = currentMonthCosts[item.id.toString()] || 0;
+//           const itemIdStr = item.id.toString();
+
+//           if (!item.inclusionType || item.inclusionType.toLowerCase() === 'included') {
+//               totalNet += cost;
+//           } else if (item.inclusionType.toLowerCase() === 'optional') {
+//               if (includedOptionals.includes(itemIdStr)) {
+//                   totalNet += cost; 
+//               }
+//           }
+//       };
+
+//       rawDayPlans.forEach(day => {
+//           day.stays?.forEach(addCost);
+//           day.transports?.forEach(addCost);
+//           day.activities?.forEach(addCost);
+//           day.meals?.forEach(addCost);
+//       });
+//       return { totalNet };
+//   }, [rawDayPlans, pricingMatrix, selectedMonth, includedOptionals]);
+
+// // --- 1. CALCULATE TOTALS (EXACT PER-PAX SPLIT & OPTIONALS) ---
+//   const totals = useMemo(() => {
+//     let totalNet = 0;
+//     let paxNetCosts = Array(travelerCount).fill(0); 
+//     let optionalList: any[] = []; 
+
+//     const currentMonthCosts = pricingMatrix[selectedMonth] || {};
+
+//     const addCost = (item: any, divisor: number, itemName: string) => {
+//       const cost = currentMonthCosts[item.id.toString()] || 0;
+//       if (cost === 0) return;
+
+//       const itemIdStr = item.id.toString();
+//       const isIncluded = !item.inclusionType || item.inclusionType.toLowerCase() === "included";
+//       const isOptional = item.inclusionType?.toLowerCase() === "optional";
+
+//       const safeDivisor = Math.min(Math.max(1, divisor), travelerCount);
+
+//       if (isIncluded) {
+//         totalNet += cost;
+//         const costPerParticipatingPax = cost / safeDivisor;
+//         for (let i = 0; i < safeDivisor; i++) {
+//             paxNetCosts[i] += costPerParticipatingPax;
+//         }
+//       } else if (isOptional) {
+//         if (includedOptionals.includes(itemIdStr)) {
+//           optionalList.push({
+//               id: itemIdStr,
+//               name: itemName,
+//               pax: safeDivisor,
+//               netTotal: cost,
+//               netPP: cost / safeDivisor
+//           });
+//         }
+//       }
+//     };
+
+//     rawDayPlans.forEach((day) => {
+//       day.stays?.forEach((s: any) => addCost(s, travelerCount, s.hotelName));
+//       day.transports?.forEach((t: any) => addCost(t, t.paxCount || travelerCount, t.vehicleType));
+//       day.activities?.forEach((a: any) => addCost(a, a.paxCount || travelerCount, a.heading));
+//       day.meals?.forEach((m: any) => addCost(m, travelerCount, m.restaurantName));
+//     });
+
+//     return { totalNet, paxNetCosts, optionalList };
+//   }, [rawDayPlans, pricingMatrix, selectedMonth, includedOptionals, travelerCount]);
+
+//   // --- DETERMINE FIXED DEPARTURE ---
+//   let activeFixedDeparture: any = null;
+//   let activePriceDBL = 0;
+
+//   for (const month of fixedDepartures) {
+//     if (month.id === selectedDepartureId) {
+//       activeFixedDeparture = month;
+//       activePriceDBL = month.priceDBL || 0;
+//       break;
+//     }
+//     const specificDate = month.departures?.find((d: any) => d.id === selectedDepartureId);
+//     if (specificDate) {
+//       activeFixedDeparture = specificDate;
+//       activePriceDBL = specificDate.overridePriceDBL ? Number(specificDate.overridePriceDBL) : month.priceDBL || 0;
+//       break;
+//     }
+//   }
+
+//   // --- 2. B2B WHOLESALE & RETAIL CALCULATION (EXACT PER-PAX SPLIT) ---
+//   const adminMarkupMult = 1 + (markupPercent / 100);
+//   const agentMarginMult = isAgent ? 1 + (agentMargin / 100) : 1;
+
+//   let finalPaxCosts = totals.paxNetCosts.map((netCost: number) => {
+//     let retail = convert(netCost * adminMarkupMult * agentMarginMult, currency);
+//     if (roundingMode === "5") retail = Math.ceil(retail / 5) * 5;
+//     else if (roundingMode === "10") retail = Math.ceil(retail / 10) * 10;
+//     else if (roundingMode === "100") retail = Math.ceil(retail / 100) * 100;
+//     return retail;
+//   });
+
+//   let finalGrandTotal = finalPaxCosts.reduce((sum: number, cost: number) => sum + cost, 0);
+
+//   if (activeFixedDeparture) {
+//     let fixedRetail = convert(activePriceDBL, currency);
+//     if (isAgent) fixedRetail = convert(activePriceDBL * (1 + (agentMargin / 100)), currency);
+//     if (roundingMode === "5") fixedRetail = Math.ceil(fixedRetail / 5) * 5;
+//     else if (roundingMode === "10") fixedRetail = Math.ceil(fixedRetail / 10) * 10;
+//     else if (roundingMode === "100") fixedRetail = Math.ceil(fixedRetail / 100) * 100;
+
+//     finalPaxCosts = Array(travelerCount).fill(fixedRetail);
+//     finalGrandTotal = fixedRetail * travelerCount;
+//   }
+
+//   // --- 4. OPTIONAL ADD-ONS RETAIL CALCULATION (INDIVIDUAL) ---
+//   const processedOptionals = totals.optionalList.map((opt: any) => {
+//     let retailPP = convert(opt.netPP * adminMarkupMult * agentMarginMult, currency);
+//     if (roundingMode === "5") retailPP = Math.ceil(retailPP / 5) * 5;
+//     else if (roundingMode === "10") retailPP = Math.ceil(retailPP / 10) * 10;
+//     else if (roundingMode === "100") retailPP = Math.ceil(retailPP / 100) * 100;
+//     return { ...opt, retailPP: retailPP, retailTotal: retailPP * opt.pax };
+//   });
+
+//   const finalOptionalGrandTotal = processedOptionals.reduce((sum: number, opt: any) => sum + opt.retailTotal, 0);
+
+//   const costLabel = rawDayPlans.some(day => day.transports?.some(t => t.mode === 'flight' && isItemIncluded(t.inclusionType))) ? "(FLIGHTS INCL.)" : "(LAND ONLY)";
+
+//   const netInSelected = convert(totals.totalNet, currency);
+
+//   let activeFixedDeparture: any = null;
+//   let activePriceDBL = 0;
+
+//   for (const month of fixedDepartures) {
+//       if (month.id === selectedDepartureId) {
+//           activeFixedDeparture = month;
+//           activePriceDBL = month.priceDBL || 0; 
+//           break;
+//       }
+//       const specificDate = month.departures?.find((d: any) => d.id === selectedDepartureId);
+//       if (specificDate) {
+//           activeFixedDeparture = specificDate;
+//           activePriceDBL = specificDate.overridePriceDBL ? Number(specificDate.overridePriceDBL) : (month.priceDBL || 0);
+//           break;
+//       }
+//   }
+
+//   let wholesaleGrandTotal = 0;
+//   if (activeFixedDeparture) {
+//       wholesaleGrandTotal = convert(activePriceDBL * travelerCount, currency);
+//   } else {
+//       const adminMarkupAmount = netInSelected * (markupPercent / 100);
+//       wholesaleGrandTotal = netInSelected + adminMarkupAmount;
+//   }
+
+//   let finalPerPerson = 0;
+//   if (isAgent) {
+//       const agencyMarkupAmount = wholesaleGrandTotal * (agentMargin / 100);
+//       const exactPerPerson = travelerCount > 0 ? (wholesaleGrandTotal + agencyMarkupAmount) / travelerCount : 0;
+//       finalPerPerson = exactPerPerson;
+//   } else {
+//       finalPerPerson = travelerCount > 0 ? wholesaleGrandTotal / travelerCount : 0;
+//   }
+
+//   if (roundingMode === '5') finalPerPerson = Math.ceil(finalPerPerson / 5) * 5;
+//   else if (roundingMode === '10') finalPerPerson = Math.ceil(finalPerPerson / 10) * 10;
+//   else if (roundingMode === '100') finalPerPerson = Math.ceil(finalPerPerson / 100) * 100;
+
+//   const costLabel = rawDayPlans.some(day => day.transports?.some(t => t.mode === 'flight' && isItemIncluded(t.inclusionType))) ? "(FLIGHTS INCL.)" : "(LAND ONLY)";
+
+//   // --- 3. LOGIC: HANDLE CONTINUED STAYS & FLATTENING ---
+
+
+// --- 2. NEW PRICING MATH (100% Synced with Costing & Review Pages) ---
   const { currency, setCurrency, convert, loading } = useCurrency('USD');
 
   useEffect(() => {
@@ -533,72 +741,106 @@ export default function PreviewPage() {
       return 'JAN';
   }, [simulationDate]);
 
-  // Calculate Totals (includes optional toggles)
+  // --- 1. CALCULATE TOTALS (EXACT PER-PAX SPLIT & OPTIONALS) ---
   const totals = useMemo(() => {
-      let totalNet = 0;
-      const currentMonthCosts = pricingMatrix[selectedMonth] || {};
-      
-      const addCost = (item: any) => {
-          const cost = currentMonthCosts[item.id.toString()] || 0;
-          const itemIdStr = item.id.toString();
+    let totalNet = 0;
+    let paxNetCosts = Array(travelerCount).fill(0); 
+    let optionalList: any[] = []; 
 
-          if (!item.inclusionType || item.inclusionType.toLowerCase() === 'included') {
-              totalNet += cost;
-          } else if (item.inclusionType.toLowerCase() === 'optional') {
-              if (includedOptionals.includes(itemIdStr)) {
-                  totalNet += cost; 
-              }
-          }
-      };
+    const currentMonthCosts = pricingMatrix[selectedMonth] || {};
 
-      rawDayPlans.forEach(day => {
-          day.stays?.forEach(addCost);
-          day.transports?.forEach(addCost);
-          day.activities?.forEach(addCost);
-          day.meals?.forEach(addCost);
-      });
-      return { totalNet };
-  }, [rawDayPlans, pricingMatrix, selectedMonth, includedOptionals]);
+    const addCost = (item: any, divisor: number, itemName: string) => {
+      const cost = currentMonthCosts[item.id.toString()] || 0;
+      if (cost === 0) return;
 
-  const netInSelected = convert(totals.totalNet, currency);
+      const itemIdStr = item.id.toString();
+      const isIncluded = !item.inclusionType || item.inclusionType.toLowerCase() === "included";
+      const isOptional = item.inclusionType?.toLowerCase() === "optional";
 
+      const safeDivisor = Math.min(Math.max(1, divisor), travelerCount);
+
+      if (isIncluded) {
+        totalNet += cost;
+        const costPerParticipatingPax = cost / safeDivisor;
+        for (let i = 0; i < safeDivisor; i++) {
+            paxNetCosts[i] += costPerParticipatingPax;
+        }
+      } else if (isOptional) {
+        if (includedOptionals.includes(itemIdStr)) {
+          optionalList.push({
+              id: itemIdStr,
+              name: itemName,
+              pax: safeDivisor,
+              netTotal: cost,
+              netPP: cost / safeDivisor
+          });
+        }
+      }
+    };
+
+    rawDayPlans.forEach((day) => {
+      day.stays?.forEach((s: any) => addCost(s, travelerCount, s.hotelName));
+      day.transports?.forEach((t: any) => addCost(t, t.paxCount || travelerCount, t.vehicleType));
+      day.activities?.forEach((a: any) => addCost(a, a.paxCount || travelerCount, a.heading));
+      day.meals?.forEach((m: any) => addCost(m, travelerCount, m.restaurantName));
+    });
+
+    return { totalNet, paxNetCosts, optionalList };
+  }, [rawDayPlans, pricingMatrix, selectedMonth, includedOptionals, travelerCount]);
+
+  // --- DETERMINE FIXED DEPARTURE ---
   let activeFixedDeparture: any = null;
   let activePriceDBL = 0;
 
   for (const month of fixedDepartures) {
-      if (month.id === selectedDepartureId) {
-          activeFixedDeparture = month;
-          activePriceDBL = month.priceDBL || 0; 
-          break;
-      }
-      const specificDate = month.departures?.find((d: any) => d.id === selectedDepartureId);
-      if (specificDate) {
-          activeFixedDeparture = specificDate;
-          activePriceDBL = specificDate.overridePriceDBL ? Number(specificDate.overridePriceDBL) : (month.priceDBL || 0);
-          break;
-      }
+    if (month.id === selectedDepartureId) {
+      activeFixedDeparture = month;
+      activePriceDBL = month.priceDBL || 0;
+      break;
+    }
+    const specificDate = month.departures?.find((d: any) => d.id === selectedDepartureId);
+    if (specificDate) {
+      activeFixedDeparture = specificDate;
+      activePriceDBL = specificDate.overridePriceDBL ? Number(specificDate.overridePriceDBL) : month.priceDBL || 0;
+      break;
+    }
   }
 
-  let wholesaleGrandTotal = 0;
+  // --- 2. B2B WHOLESALE & RETAIL CALCULATION (EXACT PER-PAX SPLIT) ---
+  const adminMarkupMult = 1 + (markupPercent / 100);
+  const agentMarginMult = isAgent ? 1 + (agentMargin / 100) : 1;
+
+  let finalPaxCosts = totals.paxNetCosts.map((netCost: number) => {
+    let retail = convert(netCost * adminMarkupMult * agentMarginMult, currency);
+    if (roundingMode === "5") retail = Math.ceil(retail / 5) * 5;
+    else if (roundingMode === "10") retail = Math.ceil(retail / 10) * 10;
+    else if (roundingMode === "100") retail = Math.ceil(retail / 100) * 100;
+    return retail;
+  });
+
+  let finalGrandTotal = finalPaxCosts.reduce((sum: number, cost: number) => sum + cost, 0);
+
   if (activeFixedDeparture) {
-      wholesaleGrandTotal = convert(activePriceDBL * travelerCount, currency);
-  } else {
-      const adminMarkupAmount = netInSelected * (markupPercent / 100);
-      wholesaleGrandTotal = netInSelected + adminMarkupAmount;
+    let fixedRetail = convert(activePriceDBL, currency);
+    if (isAgent) fixedRetail = convert(activePriceDBL * (1 + (agentMargin / 100)), currency);
+    if (roundingMode === "5") fixedRetail = Math.ceil(fixedRetail / 5) * 5;
+    else if (roundingMode === "10") fixedRetail = Math.ceil(fixedRetail / 10) * 10;
+    else if (roundingMode === "100") fixedRetail = Math.ceil(fixedRetail / 100) * 100;
+
+    finalPaxCosts = Array(travelerCount).fill(fixedRetail);
+    finalGrandTotal = fixedRetail * travelerCount;
   }
 
-  let finalPerPerson = 0;
-  if (isAgent) {
-      const agencyMarkupAmount = wholesaleGrandTotal * (agentMargin / 100);
-      const exactPerPerson = travelerCount > 0 ? (wholesaleGrandTotal + agencyMarkupAmount) / travelerCount : 0;
-      finalPerPerson = exactPerPerson;
-  } else {
-      finalPerPerson = travelerCount > 0 ? wholesaleGrandTotal / travelerCount : 0;
-  }
+  // --- 4. OPTIONAL ADD-ONS RETAIL CALCULATION (INDIVIDUAL) ---
+  const processedOptionals = totals.optionalList.map((opt: any) => {
+    let retailPP = convert(opt.netPP * adminMarkupMult * agentMarginMult, currency);
+    if (roundingMode === "5") retailPP = Math.ceil(retailPP / 5) * 5;
+    else if (roundingMode === "10") retailPP = Math.ceil(retailPP / 10) * 10;
+    else if (roundingMode === "100") retailPP = Math.ceil(retailPP / 100) * 100;
+    return { ...opt, retailPP: retailPP, retailTotal: retailPP * opt.pax };
+  });
 
-  if (roundingMode === '5') finalPerPerson = Math.ceil(finalPerPerson / 5) * 5;
-  else if (roundingMode === '10') finalPerPerson = Math.ceil(finalPerPerson / 10) * 10;
-  else if (roundingMode === '100') finalPerPerson = Math.ceil(finalPerPerson / 100) * 100;
+  const finalOptionalGrandTotal = processedOptionals.reduce((sum: number, opt: any) => sum + opt.retailTotal, 0);
 
   const costLabel = rawDayPlans.some(day => day.transports?.some(t => t.mode === 'flight' && isItemIncluded(t.inclusionType))) ? "(FLIGHTS INCL.)" : "(LAND ONLY)";
 
@@ -634,11 +876,169 @@ export default function PreviewPage() {
   const tableRef          = useRef<HTMLTableElement | null>(null);
   const tableHeadRef      = useRef<HTMLTableSectionElement>(null);
   const dayRefsMap        = useRef<Map<number, HTMLElement>>(new Map());
+  const pricingRef        = useRef<HTMLDivElement>(null);
   const footerRef         = useRef<HTMLDivElement>(null);
 
 
 
-// 👇 1. THE NEW OFF-SCREEN PDF ENGINE (Handles Header, Table, and Footer!)
+// // 👇 1. THE NEW OFF-SCREEN PDF ENGINE (Handles Header, Table, and Footer!)
+//   const createPdfObject = async () => {
+//       const PDF_W_MM  = 210;  
+//       const PDF_H_MM  = 297;  
+//       const MARGIN_MM = 10;   
+//       const CONTENT_W_MM = PDF_W_MM - (MARGIN_MM * 2);
+
+//       const pdf = new jsPDF('p', 'mm', 'a4');
+//       let currentY = MARGIN_MM; 
+
+//       // High-res options, ignoring elements we don't want to print twice
+//       const H2C_OPTS = {
+//         scale: 2, 
+//         useCORS: true,
+//         logging: false,
+//         backgroundColor: '#ffffff',
+//         ignoreElements: (el: Element) => el.hasAttribute('data-html2canvas-ignore'),
+//       };
+
+//       const toMm = (canvas: HTMLCanvasElement): number => (canvas.height * CONTENT_W_MM) / canvas.width;
+      
+//       const placeCanvas = (canvas: HTMLCanvasElement, y: number): number => {
+//         const h = toMm(canvas);
+//         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', MARGIN_MM, y, CONTENT_W_MM, h);
+//         return h;
+//       };
+      
+//       const ensureFits = (neededMm: number): void => {
+//         if (currentY + neededMm > PDF_H_MM - MARGIN_MM) { 
+//             pdf.addPage(); 
+//             currentY = MARGIN_MM; 
+//         }
+//       };
+
+//       // ─────────────────────────────────────────────────────────
+//       // A. CAPTURE HEADER (Red/Blue Banner & Details Grid)
+//       // ─────────────────────────────────────────────────────────
+//       if (headerSectionRef.current) {
+//         const headerCanvas = await html2canvas(headerSectionRef.current, H2C_OPTS);
+//         const headerH = toMm(headerCanvas);
+//         ensureFits(headerH);
+//         currentY += placeCanvas(headerCanvas, currentY) + 4;
+//       }
+
+//       // ─────────────────────────────────────────────────────────
+//       // B. NATIVE TEXT FOR "ITINERARY DETAILS" (Crisp 10px Font)
+//       // ─────────────────────────────────────────────────────────
+//       ensureFits(8);
+//       pdf.setFontSize(10); // As requested!
+//       pdf.setFont("helvetica", "bold");
+//       pdf.setTextColor(220, 38, 38); // Red color to match Preview Page (#dc2626)
+      
+//       const headingText = "ITINERARY DETAILS";
+//       pdf.text(headingText, MARGIN_MM, currentY + 5);
+      
+//       // Exact underline width math
+//       const textWidth = pdf.getTextWidth(headingText);
+//       pdf.setDrawColor(220, 38, 38);
+//       pdf.setLineWidth(0.5);
+//       pdf.line(MARGIN_MM, currentY + 6, MARGIN_MM + textWidth, currentY + 6); 
+      
+//       currentY += 9; // Spacing before table
+
+//       // ─────────────────────────────────────────────────────────
+//       // C. THE MAGIC TRICK: OFF-SCREEN TABLE CLONING
+//       // ─────────────────────────────────────────────────────────
+//       if (tableRef.current) {
+//         const originalTable = tableRef.current;
+//         const tableWidth = originalTable.offsetWidth;
+
+//         // Create invisible wrapper
+//         const hiddenWrapper = document.createElement('div');
+//         hiddenWrapper.style.position = 'absolute';
+//         hiddenWrapper.style.left = '-9999px';
+//         hiddenWrapper.style.top = '0px';
+//         // hiddenWrapper.style.width = `${tableWidth}px`;
+
+//         // 👇 FIX 1: Add + 2px to the width to prevent right-border clipping
+//         hiddenWrapper.style.width = `${tableWidth + 2}px`;
+//         // 👇 FIX 2: Add 1px padding to ensure the border doesn't touch the absolute edge of the canvas
+//         hiddenWrapper.style.paddingRight = '1px';
+//         hiddenWrapper.style.backgroundColor = '#ffffff';
+
+//         // Clone table
+//         const clonedTable = originalTable.cloneNode(true) as HTMLTableElement;
+//         hiddenWrapper.appendChild(clonedTable);
+//         document.body.appendChild(hiddenWrapper);
+
+//         const clonedTbodies = Array.from(clonedTable.querySelectorAll('tbody'));
+//         const clonedThead = clonedTable.querySelector('thead');
+
+//         // Hide all days initially
+//         clonedTbodies.forEach(el => el.style.display = 'none');
+//         if (clonedThead) clonedThead.style.display = '';
+
+//         // Loop through days one by one
+//         for (let i = 0; i < clonedTbodies.length; i++) {
+//           const currentTbody = clonedTbodies[i];
+//           currentTbody.style.display = '';
+//           currentTbody.style.boxShadow = 'none';
+
+//           const dayCanvas = await html2canvas(clonedTable, H2C_OPTS);
+//           const dayH = toMm(dayCanvas);
+
+//           ensureFits(dayH);
+//           currentY += placeCanvas(dayCanvas, currentY); 
+
+//           currentTbody.style.display = 'none';
+          
+//           // Hide header after first day so it stitches seamlessly
+//           if (clonedThead) clonedThead.style.display = 'none';
+//         }
+        
+//         // Cleanup clone
+//         document.body.removeChild(hiddenWrapper);
+//         currentY += 8; // Spacing after the table finishes
+//       }
+
+//       // ─────────────────────────────────────────────────────────
+//       // 👇 D. CAPTURE PRICING SEPARATELY (Fills the blank space!)
+//       // ─────────────────────────────────────────────────────────
+//       if (pricingRef.current) {
+//           const pricingCanvas = await html2canvas(pricingRef.current, H2C_OPTS);
+//           const pricingH = toMm(pricingCanvas);
+          
+//           // Check if just the pricing box fits
+//           ensureFits(pricingH + 5);
+//           currentY += placeCanvas(pricingCanvas, currentY) + 12; // Add some padding below it
+//       }
+
+//       // ─────────────────────────────────────────────────────────
+//       // D. CAPTURE FOOTER (Inclusions, Exclusions, T&C)
+//       // ─────────────────────────────────────────────────────────
+//     //   if (footerRef.current) {
+//     //       const footerCanvas = await html2canvas(footerRef.current, H2C_OPTS);
+//     //       const footerH = toMm(footerCanvas);
+          
+//     //       // Check if footer fits, otherwise push to brand new page
+//     //       ensureFits(footerH);
+//     //       placeCanvas(footerCanvas, currentY);
+//     //   }
+
+//     // ─────────────────────────────────────────────────────────
+//       // E. CAPTURE FOOTER (Important Notes, T&C, etc.)
+//       // ─────────────────────────────────────────────────────────
+//       if (footerRef.current) {
+//           const footerCanvas = await html2canvas(footerRef.current, H2C_OPTS);
+//           const footerH = toMm(footerCanvas);
+          
+//           // Check if footer fits, otherwise push to brand new page
+//           ensureFits(footerH);
+//           placeCanvas(footerCanvas, currentY);
+//       }
+
+//       return pdf;
+//   };
+
+// 👇 1. THE NEW OFF-SCREEN PDF ENGINE (Zero Blank Spaces!)
   const createPdfObject = async () => {
       const PDF_W_MM  = 210;  
       const PDF_H_MM  = 297;  
@@ -648,7 +1048,6 @@ export default function PreviewPage() {
       const pdf = new jsPDF('p', 'mm', 'a4');
       let currentY = MARGIN_MM; 
 
-      // High-res options, ignoring elements we don't want to print twice
       const H2C_OPTS = {
         scale: 2, 
         useCORS: true,
@@ -673,55 +1072,45 @@ export default function PreviewPage() {
       };
 
       // ─────────────────────────────────────────────────────────
-      // A. CAPTURE HEADER (Red/Blue Banner & Details Grid)
+      // A. CAPTURE HEADER
       // ─────────────────────────────────────────────────────────
       if (headerSectionRef.current) {
         const headerCanvas = await html2canvas(headerSectionRef.current, H2C_OPTS);
-        const headerH = toMm(headerCanvas);
-        ensureFits(headerH);
+        ensureFits(toMm(headerCanvas));
         currentY += placeCanvas(headerCanvas, currentY) + 4;
       }
 
       // ─────────────────────────────────────────────────────────
-      // B. NATIVE TEXT FOR "ITINERARY DETAILS" (Crisp 10px Font)
+      // B. NATIVE TEXT FOR "ITINERARY DETAILS"
       // ─────────────────────────────────────────────────────────
       ensureFits(8);
-      pdf.setFontSize(10); // As requested!
+      pdf.setFontSize(10); 
       pdf.setFont("helvetica", "bold");
-      pdf.setTextColor(220, 38, 38); // Red color to match Preview Page (#dc2626)
+      pdf.setTextColor(220, 38, 38); 
       
       const headingText = "ITINERARY DETAILS";
       pdf.text(headingText, MARGIN_MM, currentY + 5);
       
-      // Exact underline width math
       const textWidth = pdf.getTextWidth(headingText);
       pdf.setDrawColor(220, 38, 38);
       pdf.setLineWidth(0.5);
       pdf.line(MARGIN_MM, currentY + 6, MARGIN_MM + textWidth, currentY + 6); 
       
-      currentY += 9; // Spacing before table
+      currentY += 9; 
 
       // ─────────────────────────────────────────────────────────
-      // C. THE MAGIC TRICK: OFF-SCREEN TABLE CLONING
+      // C. OFF-SCREEN TABLE CLONING
       // ─────────────────────────────────────────────────────────
       if (tableRef.current) {
         const originalTable = tableRef.current;
-        const tableWidth = originalTable.offsetWidth;
-
-        // Create invisible wrapper
         const hiddenWrapper = document.createElement('div');
         hiddenWrapper.style.position = 'absolute';
         hiddenWrapper.style.left = '-9999px';
         hiddenWrapper.style.top = '0px';
-        // hiddenWrapper.style.width = `${tableWidth}px`;
-
-        // 👇 FIX 1: Add + 2px to the width to prevent right-border clipping
-        hiddenWrapper.style.width = `${tableWidth + 2}px`;
-        // 👇 FIX 2: Add 1px padding to ensure the border doesn't touch the absolute edge of the canvas
+        hiddenWrapper.style.width = `${originalTable.offsetWidth + 2}px`;
         hiddenWrapper.style.paddingRight = '1px';
         hiddenWrapper.style.backgroundColor = '#ffffff';
 
-        // Clone table
         const clonedTable = originalTable.cloneNode(true) as HTMLTableElement;
         hiddenWrapper.appendChild(clonedTable);
         document.body.appendChild(hiddenWrapper);
@@ -729,11 +1118,9 @@ export default function PreviewPage() {
         const clonedTbodies = Array.from(clonedTable.querySelectorAll('tbody'));
         const clonedThead = clonedTable.querySelector('thead');
 
-        // Hide all days initially
         clonedTbodies.forEach(el => el.style.display = 'none');
         if (clonedThead) clonedThead.style.display = '';
 
-        // Loop through days one by one
         for (let i = 0; i < clonedTbodies.length; i++) {
           const currentTbody = clonedTbodies[i];
           currentTbody.style.display = '';
@@ -746,24 +1133,57 @@ export default function PreviewPage() {
           currentY += placeCanvas(dayCanvas, currentY); 
 
           currentTbody.style.display = 'none';
-          
-          // Hide header after first day so it stitches seamlessly
           if (clonedThead) clonedThead.style.display = 'none';
         }
         
-        // Cleanup clone
         document.body.removeChild(hiddenWrapper);
-        currentY += 8; // Spacing after the table finishes
+        currentY += 8; 
       }
 
       // ─────────────────────────────────────────────────────────
-      // D. CAPTURE FOOTER (Inclusions, Exclusions, T&C)
+      // D. CAPTURE PRICING SEPARATELY (Off-Screen Clone Fix!)
+      // ─────────────────────────────────────────────────────────
+      if (pricingRef.current) {
+          const hiddenWrapper = document.createElement('div');
+          hiddenWrapper.style.position = 'absolute';
+          hiddenWrapper.style.left = '-9999px';
+          hiddenWrapper.style.top = '0px';
+          hiddenWrapper.style.width = `${pricingRef.current.offsetWidth}px`;
+          hiddenWrapper.style.backgroundColor = '#ffffff';
+
+          const clone = pricingRef.current.cloneNode(true) as HTMLElement;
+          hiddenWrapper.appendChild(clone);
+          document.body.appendChild(hiddenWrapper);
+
+          const pricingCanvas = await html2canvas(clone, H2C_OPTS);
+          const pricingH = toMm(pricingCanvas);
+          
+          document.body.removeChild(hiddenWrapper);
+
+          ensureFits(pricingH + 5);
+          currentY += placeCanvas(pricingCanvas, currentY) + 12; 
+      }
+
+      // ─────────────────────────────────────────────────────────
+      // E. CAPTURE FOOTER (Off-Screen Clone Fix!)
       // ─────────────────────────────────────────────────────────
       if (footerRef.current) {
-          const footerCanvas = await html2canvas(footerRef.current, H2C_OPTS);
+          const hiddenWrapper = document.createElement('div');
+          hiddenWrapper.style.position = 'absolute';
+          hiddenWrapper.style.left = '-9999px';
+          hiddenWrapper.style.top = '0px';
+          hiddenWrapper.style.width = `${footerRef.current.offsetWidth}px`;
+          hiddenWrapper.style.backgroundColor = '#ffffff';
+
+          const clone = footerRef.current.cloneNode(true) as HTMLElement;
+          hiddenWrapper.appendChild(clone);
+          document.body.appendChild(hiddenWrapper);
+
+          const footerCanvas = await html2canvas(clone, H2C_OPTS);
           const footerH = toMm(footerCanvas);
           
-          // Check if footer fits, otherwise push to brand new page
+          document.body.removeChild(hiddenWrapper);
+
           ensureFits(footerH);
           placeCanvas(footerCanvas, currentY);
       }
@@ -931,8 +1351,6 @@ return (
         </div>
     </div>
        
-
-            {/* DETAILS GRID (Preview Page) */}
             {/* DETAILS GRID */}
             <div style={{ borderTop: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '12px' }}>
@@ -983,7 +1401,7 @@ return (
 
         {/* 👇 ITINERARY Details Label (Ref added, font size fixed to 10px in PDF) */}
         <div style={{ marginTop: '32px', paddingLeft: '24px', paddingRight: '24px', paddingBottom: '48px' }}>
-            <h3 ref={itineraryLabelRef} style={{ color: '#dc2626', fontWeight: 'bold', textTransform: 'uppercase', textDecoration: 'underline', marginBottom: '16px', fontSize: '14px', letterSpacing: '0em' }}>Itinerary Details</h3>
+            <h3 ref={itineraryLabelRef} style={{ color: '#dc2626', fontWeight: 'bold', textTransform: 'uppercase', textDecoration: 'underline', marginBottom: '16px', fontSize: '16px', letterSpacing: '0em' }}>Itinerary Details</h3>
             
             {/* 👇 TABLE SECTION (Ref & Colgroup added!) */}
 
@@ -1089,7 +1507,7 @@ return (
                                                         <div style={{ 
                                                             display: 'flex', 
                                                             alignItems: 'center', 
-                                                            justifyContent: 'flex-start', 
+                                                            justifyContent: 'center', 
                                                             gap: '16px', 
                                                             fontWeight: 'bold', 
                                                             color: '#454545', 
@@ -1133,29 +1551,44 @@ return (
                                                             </div>
                                                         )}
 
-                                         
-                                                         {/* --- STAY PDF BLOCK --- */}
-                                                         {item.category === 'Stay' && (
-                                                            <div style={{ opacity: item.status === 'Residence' ? 0.8 : 1 }}>
-                                                                <div style={{ fontWeight: 'bold', color: '#22252bff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                    {item.hotelName}
-                                                                    <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', backgroundColor: '#fff' }}>⭐ {item.rating}</span>
-                                                                </div>
-                                                                <div style={{ marginTop: '2px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
-                                                                    {item.status === 'Check-in' ? (
-                                                                        <>
-                                                                            <div style={{  color: '#555555', padding: '2px', fontWeight: 'bold' }}>Type: {item.stayType} (Stay)</div>
-                                                                            <div style={{  color: '#555555', padding: '2px', fontWeight: 'bold' }}>Room: {item.roomCategory}</div>
-                                                                            <div style={{  color: '#555555', padding: '2px' }}>{item.nights} Nights Stay</div>
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <div style={{ gridColumn: 'span 2', fontSize: '12px', color: '#292d33ff', fontStyle: 'italic', marginTop: '2px' }}>Continuing stay at {item.hotelName}. </div>
-                                                                              <div style={{  color: '#555555', padding: '2px', borderRadius: '4px', fontWeight: 'bold' }}>Type: {item.stayType} (Stay)</div>
-                                                                            <div style={{  color: '#555555', padding: '2px', borderRadius: '4px', fontWeight: 'bold' }}>Room: {item.roomCategory}</div>
-                                                                        </>
-                                                                   )}
-                                                                </div>
+                                        
+
+                                                        {/* --- STAY PDF BLOCK --- */}
+                                                        {item.category === 'Stay' && (
+                                                            <div style={{ 
+                                                                opacity: item.status === 'Residence' ? 0.8 : 1, 
+                                                                display: 'grid', 
+                                                                gridTemplateColumns: '1fr 1fr', 
+                                                                alignItems: 'center', 
+                                                                width: '100%' 
+                                                            }}>
+                                                                
+                                                                {item.status === 'Check-in' ? (
+                                                                    <>
+                                                                        {/* Left Side: Hotel Name & Rating */}
+                                                                        <div style={{ fontWeight: 'bold', color: '#22252bff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                            {item.hotelName}
+                                                                            <span style={{ fontSize: '12px', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', backgroundColor: '#fff' }}>⭐ {item.rating}</span>
+                                                                        </div>
+                                                                        
+                                                                        {/* Right Side: Room Category */}
+                                                                        <div style={{ color: '#555555', fontSize: '12px', fontWeight: 'bold' }}>
+                                                                            Room: {item.roomCategory}
+                                                                        </div>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        {/* Left Side: Continuing Text */}
+                                                                        <div style={{ fontSize: '13px', color: '#292d33ff', fontStyle: 'italic', fontWeight: 'bold' }}>
+                                                                            Continuing stay at {item.hotelName}. 
+                                                                        </div>
+                                                                        
+                                                                        {/* Right Side: Room Category */}
+                                                                        <div style={{ color: '#555555', fontSize: '12px', fontWeight: 'bold' }}>
+                                                                            Room: {item.roomCategory}
+                                                                        </div>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         )}
 
@@ -1319,11 +1752,85 @@ return (
     
         </div>
 
-        {/* 👇 INCLUSIONS, EXCLUSIONS, NOTES & POLICIES (Ref added!) */}
-        <div ref={footerRef} style={{ paddingLeft: '24px', paddingRight: '24px', paddingBottom: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+          {/* 👇 INCLUSIONS, EXCLUSIONS, NOTES, POLICIES & PRICING (Ref added!) */}
+       
+       {/* 👇 NEW: PRICING BLOCK (Separated into its own ref so it fits under the table!) */}
+        <div ref={pricingRef} style={{ paddingLeft: '24px', paddingRight: '24px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '100%', boxSizing: 'border-box' }}>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px', breakInside: 'avoid', width: '100%', maxWidth: '400px' }}>
+                
+                {/* BLUE BOX: Selling Price */}
+                <div style={{ backgroundColor: '#1d4ed8', borderRadius: '12px', padding: '20px', color: '#ffffff', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#bfdbfe' }}>Price Per Person</span>
+                        <i className="fa-solid fa-user" style={{ color: '#60a5fa', fontSize: '18px' }}></i>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                      {Object.entries(
+                        finalPaxCosts.reduce((acc: any, cost: number) => {
+                          acc[cost] = (acc[cost] || 0) + 1;
+                          return acc;
+                        }, {})
+                      ).map(([cost, count], idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#dbeafe' }}>{Number(count)} Adult Cost</span>
+                            <span style={{ fontSize: '24px', fontWeight: '900', fontFamily: 'monospace' }}>
+                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(Number(cost))}
+                            </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#bfdbfe' }}>Total Group Value ({travelerCount} Adult)</span>
+                        <span style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(finalGrandTotal)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* ORANGE BOX: Optionals (Only shows if there are checked optionals) */}
+                {processedOptionals.length > 0 && (
+                    <div style={{ backgroundColor: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '12px', padding: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid #fed7aa', paddingBottom: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#9a3412' }}>Optional Add-ons</span>
+                            <span style={{ fontSize: '10px', backgroundColor: '#fed7aa', color: '#9a3412', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>EXTRA</span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px', borderBottom: '1px solid #fed7aa', paddingBottom: '12px' }}>
+                            {processedOptionals.map((opt: any, idx: number) => (
+                                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#7c2d12' }}>{opt.name}</div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                        <span style={{ fontSize: '11px', color: '#ea580c', fontWeight: '500' }}>
+                                            {opt.pax} Pax @ {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(opt.retailPP)}/pp
+                                        </span>
+                                        <span style={{ fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace', color: '#9a3412' }}>
+                                            +{new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(opt.retailTotal)}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#9a3412' }}>Group Total Optionals</span>
+                            <span style={{ fontSize: '16px', fontWeight: '900', fontFamily: 'monospace', color: '#7c2d12' }}>
+                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(finalOptionalGrandTotal)}
+                            </span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+
+        {/* 👇 EXISTING FOOTER REF NOW STARTS HERE (Strictly sized for cloning) */}
+        <div ref={footerRef} style={{ paddingLeft: '24px', paddingRight: '24px', paddingBottom: '32px', display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '24px', width: '100%', boxSizing: 'border-box' }}>
             
             {/* 1. IMPORTANT NOTES */}
-            <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', marginTop: '16px', borderRadius: '6px', padding: '16px', breakInside: 'avoid', display: 'inline-block', width: '100%' }}>
+            <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '16px', breakInside: 'avoid', display: 'inline-block', width: '100%' }}>
                 <h4 style={{ color: '#374151', fontWeight: 'bold', fontSize: '14px', marginBottom: '12px', textTransform: 'uppercase' }}>Important Notes</h4>
                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '6px', lineHeight: '1.4' }}>
                     <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Entrances, Tours once booked are non-refundable and non-transferable.</span></li>
@@ -1402,6 +1909,13 @@ return (
             </div>
 
         </div>
+     
+      {/* Footer */}
+        {/* <div style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', marginTop: '32px', padding: '24px', textAlign: 'center', fontSize: '12px', color: '#505050ff' }}>
+            <p>Generated by Travdek. Prices and availability are subject to change.</p>
+        </div>
+
+      </div> */}
      
     
       {/* Footer */}

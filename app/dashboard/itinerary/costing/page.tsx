@@ -959,33 +959,24 @@ export default function CostingPage() {
     return "JAN";
   });
 
-  // const toggleOptional = (itemId: string) => {
-  //   setIncludedOptionals((prev) =>
-  //     prev.includes(itemId)
-  //       ? prev.filter((id) => id !== itemId)
-  //       : [...prev, itemId],
-  //   );
-  // };
-
+  
 
   const toggleOptional = (itemId: string) => {
-      setIncludedOptionals(prev => {
-          // Calculate what the new list of checked items should be
-          const newState = prev.includes(itemId) 
-              ? prev.filter(id => id !== itemId) 
-              : [...prev, itemId];
-          
-          // Save it to the global context
-          updateItineraryData({ includedOptionals: newState } as any);
-          
-          // Force save to local storage so it survives the refresh!
-          const currentData = { ...itineraryData, includedOptionals: newState };
-          saveItineraryToStorage(currentData as any);
-          
-          return newState;
-      });
+      // 1. Calculate the new state first (Without using the 'prev =>' callback)
+      const newState = includedOptionals.includes(itemId) 
+          ? includedOptionals.filter(id => id !== itemId) 
+          : [...includedOptionals, itemId];
+      
+      // 2. Update the local state
+      setIncludedOptionals(newState);
+      
+      // 3. Save it to the global context safely OUTSIDE the setter
+      updateItineraryData({ includedOptionals: newState } as any);
+      
+      // 4. Force save to local storage so it survives the refresh
+      const currentData = { ...itineraryData, includedOptionals: newState };
+      saveItineraryToStorage(currentData as any);
   };
-
   // DATE STATE
   const [seasonStart, setSeasonStart] = useState<string>("");
   const [seasonEnd, setSeasonEnd] = useState<string>("");
@@ -1909,6 +1900,7 @@ export default function CostingPage() {
   if (loading || !user)
     return <div className="p-10 text-center">Loading...</div>;
 
+  
   
   return (
     <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
