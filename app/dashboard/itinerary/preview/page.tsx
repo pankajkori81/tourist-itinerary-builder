@@ -1507,7 +1507,7 @@ return (
                                                         <div style={{ 
                                                             display: 'flex', 
                                                             alignItems: 'center', 
-                                                            justifyContent: 'center', 
+                                                            justifyContent: 'flex-start', 
                                                             gap: '16px', 
                                                             fontWeight: 'bold', 
                                                             color: '#454545', 
@@ -1601,15 +1601,10 @@ return (
                                                                     {['flight', 'rail', 'ferry'].includes(item.mode) && item.flightNumber && (
                                                                         <span style={{ color: '#2563eb' }}> • {item.flightNumber}</span>
                                                                     )}
-                                                                    <span style={{ 
-                                                                        backgroundColor: ['flight', 'rail', 'ferry'].includes(item.mode) ? '#eff6ff' : '#f0fdf4', 
-                                                                        color: ['flight', 'rail', 'ferry'].includes(item.mode) ? '#1d4ed8' : '#15803d', 
-                                                                        fontSize: '10px', textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', fontWeight: '600', 
-                                                                        border: `1px solid ${['flight', 'rail', 'ferry'].includes(item.mode) ? '#bfdbfe' : '#dcfce7'}` 
-                                                                    }}>
-                                                                        {['flight', 'rail', 'ferry'].includes(item.mode) ? 'Transit Ticket' : item.subType}
-                                                                    </span>
+                                                                    
                                                                 </div>
+
+                            
 
                                                                 {/* Flight Layout */}
                                                                 {item.mode === 'flight' ? (
