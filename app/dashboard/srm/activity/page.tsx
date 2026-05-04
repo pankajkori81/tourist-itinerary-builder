@@ -1315,8 +1315,10 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { 
   Plus, MapPin, Star, Trash2, X, Save, Image as ImageIcon, 
   ChevronDown, ChevronRight, Globe, Clock, Ticket, Edit,
-  Briefcase, Phone, Mail, CreditCard, DollarSign, Loader2
+  Briefcase, Phone, Mail, CreditCard, DollarSign, Loader2 , Download, Upload
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSRM } from '@/app/context/SRMContext';
 import { AttractionData, saveAttraction, deleteAttraction } from '@/utils/srmStorage';
 import { TIME_SLOTS } from '@/app/dashboard/itinerary/create-day/constants/daywiseConstants'; 
@@ -1326,6 +1328,10 @@ export default function ActivitySRMPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // NEW STATE
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 👈 NEW STATES FOR IMPORT/EXPORT
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
   
   const [expandedCountries, setExpandedCountries] = useState<Record<string, boolean>>({});
   const [expandedCities, setExpandedCities] = useState<Record<string, boolean>>({});
@@ -1409,19 +1415,155 @@ export default function ActivitySRMPage() {
   };
   
   // CHANGED: Async
-  const handleSave = async () => {
+//   const handleSave = async () => {
+//     if (!formData.name || !formData.city) return alert("Name and City required");
+//     setIsSaving(true);
+//     const cleanData = { ...formData, country: formData.country.trim().charAt(0).toUpperCase() + formData.country.trim().slice(1) };
+//     const success = await saveAttraction(cleanData);
+//     if(success) {
+//       await refreshAll();
+//       setIsModalOpen(false);
+//       setFormData(initialForm);
+//     } else {
+//       alert("Failed to save.");
+//     }
+//     setIsSaving(false);
+//   };
+
+
+// --- EXPORT LOGIC ---
+  const handleExport = () => {
+    if (attractions.length === 0) return alert("No activities to export.");
+
+    // Map data to user-friendly column names, EXCLUDING image URLs and IDs
+    const exportData = attractions.map(item => ({
+      'Activity Name': item.name,
+      'Type': item.type || 'None',
+      'City': item.city,
+      'Country': item.country,
+      'Time Slot': item.suggestedSlot || 'Morning',
+      'Start Time': item.startTime || '09:00',
+      'Duration': item.duration || '2 Hours',
+      'Pickup Location': item.pickupLocation || '',
+      'Rating': item.rating || 5,
+      'Reviews Count': item.reviewsCount || 0,
+      'Description': item.description || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Activities");
+    XLSX.writeFile(workbook, "Activity_Inventory.xlsx");
+  };
+
+  // --- IMPORT LOGIC ---
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+      try {
+        const binaryStr = event.target?.result;
+        const workbook = XLSX.read(binaryStr, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as any[];
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        // Loop through each row in the Excel/CSV file
+        for (const row of parsedData) {
+          const rowCity = row['City']?.toString().trim();
+          const rowCountry = row['Country']?.toString().trim();
+
+          // REQUIREMENT: City and Country must exist
+          if (!rowCity || !rowCountry) {
+            errorCount++;
+            continue; 
+          }
+
+          // Format country properly (Capitalize first letter)
+          const formattedCountry = rowCountry.charAt(0).toUpperCase() + rowCountry.slice(1);
+
+          // Build the payload with defaults for optional fields
+          const newActivity: any = {
+            city: rowCity,
+            country: formattedCountry,
+            // If name is missing, generate a default one so the DB doesn't crash
+            name: row['Activity Name'] || `Unnamed Activity in ${rowCity}`,
+            type: row['Type'] || 'None',
+            suggestedSlot: row['Time Slot'] || 'Morning',
+            startTime: row['Start Time'] || '09:00',
+            duration: row['Duration'] || '2 Hours',
+            pickupLocation: row['Pickup Location'] || '',
+            rating: parseFloat(row['Rating']) || 5,
+            reviewsCount: parseInt(row['Reviews Count']) || 0,
+            description: row['Description'] || '',
+            status: 'Active',
+            imageUrl: '', // Explicitly blank per requirements
+            isGuideRequired: false,
+          };
+
+          // Save to database
+          const success = await saveAttraction(newActivity);
+          if (success) successCount++;
+          else errorCount++;
+        }
+
+        alert(`Import Complete!\nSuccessfully added: ${successCount}\nSkipped/Failed (Missing City/Country): ${errorCount}`);
+        
+        // Refresh the UI to show the new folders instantly
+        await refreshAll();
+
+      } catch (error) {
+        console.error("Import parsing error:", error);
+        alert("Failed to read the file. Please ensure it is a valid Excel or CSV file.");
+      } finally {
+        setIsImporting(false);
+        if (importInputRef.current) importInputRef.current.value = ''; // Reset input
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+
+
+const handleSave = async () => {
     if (!formData.name || !formData.city) return alert("Name and City required");
     setIsSaving(true);
-    const cleanData = { ...formData, country: formData.country.trim().charAt(0).toUpperCase() + formData.country.trim().slice(1) };
-    const success = await saveAttraction(cleanData);
-    if(success) {
-      await refreshAll();
-      setIsModalOpen(false);
-      setFormData(initialForm);
-    } else {
-      alert("Failed to save.");
+    
+    try {
+      // Safely capitalize country without crashing if it's empty
+      const safeCountry = formData.country 
+          ? formData.country.trim().charAt(0).toUpperCase() + formData.country.trim().slice(1) 
+          : 'Unknown';
+          
+      const cleanData = { ...formData, country: safeCountry };
+      
+      // 👇 THE FIX: Strip out the empty string so Mongoose doesn't crash
+      if (!cleanData.linkedSupplierId || cleanData.linkedSupplierId === "") {
+          delete cleanData.linkedSupplierId;
+      }
+      
+      const success = await saveAttraction(cleanData);
+      
+      if(success) {
+        await refreshAll();
+        setIsModalOpen(false);
+        setFormData(initialForm);
+      } else {
+        alert("Failed to save. Please check your database connection.");
+      }
+    } catch (error) {
+      console.error("Save Error:", error);
+      alert("Failed to save due to an unexpected error.");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1441,14 +1583,46 @@ export default function ActivitySRMPage() {
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-sm" />
 
      <div className="flex-1 flex flex-col relative z-10 h-full">
-          <div className="bg-white/95 border-b border-white/50 px-6 py-4 flex justify-between items-center backdrop-blur-md shadow-sm z-10">
+        {/* HEADER SECTION */}
+          <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm z-10 shrink-0">
              <div>
                 <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Ticket className="text-blue-600" /> Activity Inventory</h1>
-                <p className="text-xs text-gray-600 font-medium">Manage tours, monuments, and experiences.</p>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">Manage tours, monuments, and experiences.</p>
              </div>
-             <button onClick={() => { setFormData(initialForm); setIsModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg hover:scale-105 transition-all">
-               <Plus size={18} /> Add Activity
-             </button>
+             
+             <div className="flex items-center gap-3">
+               {/* Hidden File Input for Import */}
+               <input 
+                 type="file" 
+                 ref={importInputRef} 
+                 onChange={handleImport} 
+                 accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+                 className="hidden" 
+               />
+
+               {/* Import Button */}
+               <button 
+                 onClick={() => importInputRef.current?.click()} 
+                 disabled={isImporting}
+                 className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+               >
+                 {isImporting ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <Upload size={16} className="text-gray-500" />}
+                 {isImporting ? 'Importing...' : 'Import'}
+               </button>
+
+               {/* Export Button */}
+               <button 
+                 onClick={handleExport} 
+                 className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all"
+               >
+                 <Download size={16} className="text-gray-500" /> Export
+               </button>
+
+               {/* Add Activity Button */}
+               <button onClick={() => { setFormData(initialForm); setIsModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                 <Plus size={18} /> Add Activity
+               </button>
+             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-4 pb-24">
@@ -1463,64 +1637,120 @@ export default function ActivitySRMPage() {
                     <p className="font-bold">No activities found.</p>
                  </div>
              ) : (
-                 Object.entries(groupedData).map(([country, cities]) => (
-                    <div key={country} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <div onClick={() => setExpandedCountries(prev => ({...prev, [country]: !prev[country]}))} className="flex items-center bg-white/95 p-4 rounded-xl gap-3 cursor-pointer group shadow-sm hover:bg-white transition-all select-none border border-white/50 backdrop-blur-sm mb-2">
-                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600 group-hover:text-blue-800 transition-colors">
-                                {expandedCountries[country] ? <ChevronDown size={20}/> : <ChevronRight size={20}/>}
-                            </div>
+                Object.entries(groupedData).map(([country, cities]) => (
+                    <motion.div layout key={country} className="mb-2">
+                        {/* COUNTRY ACCORDION HEADER */}
+                        <motion.div 
+                            layout
+                            onClick={() => setExpandedCountries(prev => ({...prev, [country]: !prev[country]}))} 
+                            className="flex items-center bg-white/95 p-4 rounded-xl gap-3 cursor-pointer group shadow-sm hover:bg-white transition-all select-none border border-white/50 backdrop-blur-sm relative z-10"
+                        >
+                            <motion.div 
+                                animate={{ rotate: expandedCountries[country] ? 90 : 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="p-2 bg-blue-100 rounded-lg text-blue-600 group-hover:text-blue-800 transition-colors"
+                            >
+                                <ChevronRight size={20}/>
+                            </motion.div>
                             <div className="flex-1"><h3 className="font-bold text-gray-800 text-lg flex items-center gap-2"><Globe size={18} className="text-blue-600" />{country}</h3></div>
                             <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">{Object.values(cities).reduce((acc, list) => acc + list.length, 0)} Activities</span>
-                        </div>
-                        {expandedCountries[country] && (
-                            <div className="ml-4 pl-4 border-l-2 border-white/40 space-y-3">
-                                {Object.entries(cities).map(([city, items]) => {
-                                    const cityKey = `${country}-${city}`;
-                                    return (
-                                        <div key={city}>
-                                            <div onClick={() => setExpandedCities(prev => ({...prev, [cityKey]: !prev[cityKey]}))} className="flex items-center bg-white/95 p-3 rounded-lg gap-2 cursor-pointer hover:bg-white/80 transition-all select-none border border-white/30 backdrop-blur-sm mb-2">
-                                                {expandedCities[cityKey] ? <ChevronDown size={16} className="text-gray-500"/> : <ChevronRight size={16} className="text-gray-500"/>}
-                                                <MapPin size={16} className="text-red-800" /><span className="font-bold text-gray-900">{city}</span>
-                                                <span className="text-xs text-gray-900 bg-blue-200 px-2 py-0.5 rounded-full">{items.length}</span>
-                                            </div>
-                                            {expandedCities[cityKey] && (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ml-6 mb-4">
-                                                    {items.map((item) => {
-                                                        const sup = suppliers.find(s => s.id === item.linkedSupplierId);
-                                                        return (
-                                                            <div key={item.id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col overflow-hidden">
-                                                                <div className="h-32 bg-gray-100 relative shrink-0 overflow-hidden">
-                                                                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" /> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-indigo-500"><ImageIcon size={48} className="text-white opacity-50"/></div>}
-                                                                    <span className="absolute top-3 left-3 text-[10px] bg-white/90 backdrop-blur-md px-2 py-1 rounded shadow uppercase font-bold tracking-wide border border-white/50">{item.type}</span>
-                                                                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded shadow text-xs font-bold flex items-center gap-1"><Star size={10} className="fill-yellow-700 text-yellow-700"/> {item.rating}</div>
+                        </motion.div>
+                        
+                        {/* COUNTRY CONTENT (CITIES) */}
+                        <AnimatePresence initial={false}>
+                            {expandedCountries[country] && (
+                                <motion.div 
+                                    key={`content-${country}`}
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                                    className="overflow-hidden" 
+                                >
+                                    <div className="ml-4 pl-4 border-l-2 border-white/40 space-y-3 pt-3 pb-2">
+                                        {Object.entries(cities).map(([city, items]) => {
+                                            const cityKey = `${country}-${city}`;
+                                            return (
+                                                <motion.div layout key={city} className="mb-2">
+                                                    {/* CITY ACCORDION HEADER */}
+                                                    <motion.div 
+                                                        layout
+                                                        onClick={() => setExpandedCities(prev => ({...prev, [cityKey]: !prev[cityKey]}))} 
+                                                        className="flex items-center bg-white/95 p-3 rounded-lg gap-2 cursor-pointer hover:bg-white/80 transition-all select-none border border-white/30 backdrop-blur-sm relative z-10"
+                                                    >
+                                                        <motion.div
+                                                            animate={{ rotate: expandedCities[cityKey] ? 90 : 0 }}
+                                                            transition={{ duration: 0.2 }}
+                                                        >
+                                                            <ChevronRight size={16} className="text-gray-500"/>
+                                                        </motion.div>
+                                                        <MapPin size={16} className="text-red-800" /><span className="font-bold text-gray-900">{city}</span>
+                                                        <span className="text-xs text-gray-900 bg-blue-200 px-2 py-0.5 rounded-full">{items.length}</span>
+                                                    </motion.div>
+
+                                                    {/* CITY CONTENT (CARDS) */}
+                                                    <AnimatePresence initial={false}>
+                                                        {expandedCities[cityKey] && (
+                                                            <motion.div 
+                                                                key={`content-${cityKey}`}
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                                className="overflow-hidden" 
+                                                            >
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ml-6 mb-4 pt-3 pb-2">
+                                                                    {items.map((item) => {
+                                                                        const sup = suppliers.find(s => s.id === item.linkedSupplierId);
+                                                                        return (
+                                                                            <motion.div 
+                                                                                key={item.id} 
+                                                                                layout
+                                                                                initial={{ opacity: 0, y: 20 }}
+                                                                                animate={{ opacity: 1, y: 0 }}
+                                                                                exit={{ opacity: 0, scale: 0.95 }}
+                                                                                whileHover={{ y: -4, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
+                                                                                transition={{ duration: 0.2 }}
+                                                                                className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden"
+                                                                            >
+                                                                                <div className="h-32 bg-gray-100 relative shrink-0 overflow-hidden group">
+                                                                                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" /> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-indigo-500"><ImageIcon size={48} className="text-white opacity-50"/></div>}
+                                                                                    <span className="absolute top-3 left-3 text-[10px] bg-white/90 backdrop-blur-md px-2 py-1 rounded shadow uppercase font-bold tracking-wide border border-white/50">{item.type}</span>
+                                                                                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded shadow text-xs font-bold flex items-center gap-1"><Star size={10} className="fill-yellow-700 text-yellow-700"/> {item.rating}</div>
+                                                                                </div>
+                                                                                <div className="p-5 flex-1 flex flex-col">
+                                                                                    <h3 className="font-bold text-gray-900 text-[16px] leading-tight truncate " title={item.name}>{item.name}</h3>
+                                                                                    <div className="flex items-center text-xs text-gray-700 font-medium mb-1 mt-1"><MapPin size={14} className="mr-1 text-blue-500 shrink-0" /><span className="truncate">{item.city}, {item.country}</span></div>
+                                                                                    {sup && <div className="flex items-center gap-1 mb-2 text-[10px] bg-blue-50 text-blue-800 px-2 py-1 rounded w-fit"><Briefcase size={10} /> <span className="truncate max-w-[150px]">By: {sup.name}</span></div>}
+                                                                                    <div className="grid grid-cols-2 gap-2 mb-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                                                                       <div><div className="text-[10px] text-gray-600 uppercase font-bold tracking-wide">Time Slot</div><div className="text-sm font-bold text-gray-700">{item.suggestedSlot}</div></div>
+                                                                                       <div><div className="text-[10px] text-gray-600 uppercase font-bold tracking-wide">Duration</div><div className="text-sm font-bold text-gray-700 flex items-center gap-1"><Clock size={12}/> {item.duration}</div></div>
+                                                                                    </div>
+                                                                                    <div className="mt-auto border-t border-gray-100 flex items-center gap-3 pt-2">
+                                                                                        <button onClick={() => handleEdit(item)} className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-colors"><Edit size={14} /> Edit</button>
+                                                                                        <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id as string); }} className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-colors"><Trash2 size={14} /> Delete</button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </motion.div>
+                                                                        );
+                                                                    })}
                                                                 </div>
-                                                                <div className="p-5 flex-1 flex flex-col">
-                                                                    <h3 className="font-bold text-gray-900 text-[16px] leading-tight truncate " title={item.name}>{item.name}</h3>
-                                                                    <div className="flex items-center text-xs text-gray-700 font-medium mb-1 mt-1"><MapPin size={14} className="mr-1 text-blue-500 shrink-0" /><span className="truncate">{item.city}, {item.country}</span></div>
-                                                                    {sup && <div className="flex items-center gap-1 mb-2 text-[10px] bg-blue-50 text-blue-800 px-2 py-1 rounded w-fit"><Briefcase size={10} /> <span className="truncate max-w-[150px]">By: {sup.name}</span></div>}
-                                                                    <div className="grid grid-cols-2 gap-2 mb-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                                                                       <div><div className="text-[10px] text-gray-600 uppercase font-bold tracking-wide">Time Slot</div><div className="text-sm font-bold text-gray-700">{item.suggestedSlot}</div></div>
-                                                                       <div><div className="text-[10px] text-gray-600 uppercase font-bold tracking-wide">Duration</div><div className="text-sm font-bold text-gray-700 flex items-center gap-1"><Clock size={12}/> {item.duration}</div></div>
-                                                                    </div>
-                                                                    <div className="mt-auto border-t border-gray-100 flex items-center gap-3 pt-2">
-                                                                        <button onClick={() => handleEdit(item)} className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-colors"><Edit size={14} /> Edit</button>
-                                                                        <button onClick={() => handleDelete(item.id as string)} className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-colors"><Trash2 size={14} /> Delete</button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                 ))
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                ))
              )}
           </div>
+
+          
       </div>
 
       {/* MODAL FORM */}
@@ -1548,44 +1778,7 @@ export default function ActivitySRMPage() {
                     </div>
 
                     <div className="col-span-8 space-y-5">
-                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex gap-4 items-start">
-                            <div className="flex-1">
-                                <label className="block text-xs font-bold text-blue-900 mb-2 flex items-center gap-1"><Briefcase size={14} /> Fulfillment Partner (DMC)</label>
-                                <select 
-                                    className="w-full p-2.5 border border-blue-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={formData.linkedSupplierId || ""}
-                                    onChange={(e) => setFormData({...formData, linkedSupplierId: e.target.value})}
-                                >
-                                    <option value="">-- Direct / Unknown --</option>
-                                    {availableSuppliers.map(s => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.name} ({s.city}) {s.isPreferred ? '★ Preferred' : ''}
-                                        </option>
-                                    ))}
-                                    {formData.linkedSupplierId && !availableSuppliers.find(s => s.id === formData.linkedSupplierId) && selectedSupplierData && (
-                                         <option value={selectedSupplierData.id}>{selectedSupplierData.name} (Current) - *Warning: Different City*</option>
-                                    )}
-                                </select>
-                                {availableSuppliers.length === 0 && formData.city && (
-                                    <p className="text-[10px] text-red-500 mt-1">No Activity suppliers found in {formData.city}.</p>
-                                )}
-                            </div>
-                            
-                            {selectedSupplierData && (
-                                <div className="flex-1 bg-white p-3 rounded-lg border border-blue-100 shadow-sm text-xs">
-                                    <div className="font-bold text-gray-800 mb-2 flex justify-between items-center border-b border-gray-100 pb-1">
-                                        <span>{selectedSupplierData.contactPerson}</span>
-                                        {selectedSupplierData.isPreferred && <span className="bg-orange-100 text-orange-700 px-1.5 rounded text-[10px]">Preferred</span>}
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-gray-600">
-                                        <div className="flex items-center gap-1"><Phone size={10}/> {selectedSupplierData.phone}</div>
-                                        <div className="flex items-center gap-1"><CreditCard size={10}/> {selectedSupplierData.paymentTerms}</div>
-                                        <div className="col-span-2 flex items-center gap-1 truncate" title={selectedSupplierData.email}><Mail size={10}/> {selectedSupplierData.email}</div>
-                                        <div className="col-span-2 flex items-center gap-1 font-bold text-blue-800 bg-blue-50 px-1 rounded"><DollarSign size={10}/> Currency: {selectedSupplierData.currency || 'USD'}</div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                     
 
                         <div className="grid grid-cols-2 gap-4">
                             <div><label className="block text-xs font-bold text-gray-500 mb-1">Activity Name *</label><input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Colosseum Tour" /></div>

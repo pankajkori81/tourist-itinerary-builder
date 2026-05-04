@@ -1214,6 +1214,7 @@ import {
   ChevronDown, ChevronRight, BedDouble, PlusCircle, Globe, 
   Edit, Briefcase, Phone, Mail, CreditCard, DollarSign, Loader2
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSRM } from '@/app/context/SRMContext';
 import { StayData, RoomCategory, saveStay, deleteStay } from '@/utils/srmStorage';
 
@@ -1227,14 +1228,21 @@ export default function StaySRMPage() {
   const [expandedCountries, setExpandedCountries] = useState<Record<string, boolean>>({});
   const [expandedCities, setExpandedCities] = useState<Record<string, boolean>>({});
 
+
+// 👇 UPDATE initialForm to include category and the new type options
   const initialForm: StayData = {
-    id: '', name: '', type: 'Hotel', city: '', country: '', address: '',
+    id: '', name: '', 
+    category: 'Hotel', // 👈 NEW FIELD
+    type: 'Premium',   // 👈 UPDATED MEANING
+    city: '', country: '', address: '',
     rating: 4.5, description: '', images: [],
     roomCategories: [], 
     status: 'Active', createdAt: '', updatedAt: '',
     linkedSupplierId: '' 
   };
   const [formData, setFormData] = useState<StayData>(initialForm);
+
+
 
   const availableSuppliers = useMemo(() => {
     return suppliers.filter(s => {
@@ -1314,23 +1322,38 @@ export default function StaySRMPage() {
     } 
   };
 
-  // CHANGED: Async
+
+// CHANGED: Async
   const handleSave = async () => {
     if (!formData.name || !formData.city) return alert("Hotel Name and City are required");
     setIsSaving(true);
-    const cleanData = {
-        ...formData,
-        city: formData.city.trim(),
-        country: formData.country.trim()
-    };
-    const success = await saveStay(cleanData);
-    if(success) {
-      await refreshAll();
-      setIsModalOpen(false);
-    } else {
-      alert("Failed to save.");
+    
+    try {
+      const cleanData = {
+          ...formData,
+          city: formData.city.trim(),
+          country: formData.country.trim()
+      };
+
+      // 👇 THE CRITICAL FIX: Prevent empty string from crashing Mongoose
+      if (!cleanData.linkedSupplierId || cleanData.linkedSupplierId === "") {
+          delete cleanData.linkedSupplierId;
+      }
+
+      const success = await saveStay(cleanData);
+      
+      if(success) {
+        await refreshAll();
+        setIsModalOpen(false);
+      } else {
+        alert("Failed to save.");
+      }
+    } catch (error) {
+      console.error("Error during save:", error);
+      alert("Failed to save. Check the console for details.");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1397,29 +1420,36 @@ export default function StaySRMPage() {
         </div>
 
         {/* LIST VIEW */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 pb-24">
+
+        {/* LIST VIEW */}
+       <div className="flex-1 overflow-y-auto p-6 space-y-4 pb-24">{/* 👈 Clean Gray Background */}
             {isLoading ? (
-                <div className="flex flex-col items-center justify-center h-64 text-white">
-                    <Loader2 size={40} className="animate-spin mb-4 text-purple-300" />
+                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                    <Loader2 size={40} className="animate-spin mb-4 text-purple-500" />
                     <p className="font-medium text-lg drop-shadow-md">Loading Properties...</p>
                 </div>
             ) : Object.keys(groupedData).length === 0 ? (
-                 <div className="flex flex-col items-center justify-center h-64 text-gray-600 bg-white/40 rounded-xl border border-white/50 backdrop-blur-sm">
-                    <Building2 size={48} className="opacity-50 mb-2"/>
+                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
+                    <Building2 size={48} className="opacity-20 mb-2"/>
                     <p className="font-bold">No properties found.</p>
                     <p className="text-sm">Click "Add Hotel" to start.</p>
                  </div>
              ) : (
                 Object.entries(groupedData).map(([country, cities]) => (
-                    <div key={country} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <motion.div layout key={country} className="mb-2">
                         {/* COUNTRY HEADER */}
-                        <div 
+                        <motion.div 
+                            layout
                             onClick={() => setExpandedCountries(prev => ({...prev, [country]: !prev[country]}))}
-                            className="flex items-center bg-white/95 p-4 rounded-xl gap-3 cursor-pointer group shadow-sm hover:bg-white transition-all select-none border border-white/50 backdrop-blur-sm mb-2"
+                            className="flex items-center bg-white p-4 rounded-xl gap-3 cursor-pointer group shadow-sm hover:bg-gray-50 transition-all select-none border border-gray-200 relative z-10"
                         >
-                            <div className="p-2 bg-purple-100 rounded-lg text-purple-600 group-hover:text-purple-800 transition-colors">
-                                {expandedCountries[country] ? <ChevronDown size={20}/> : <ChevronRight size={20}/>}
-                            </div>
+                            <motion.div 
+                                animate={{ rotate: expandedCountries[country] ? 90 : 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="p-2 bg-purple-100 rounded-lg text-purple-600 group-hover:text-purple-800 transition-colors"
+                            >
+                                <ChevronRight size={20}/>
+                            </motion.div>
                             <div className="flex-1">
                                 <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
                                     <Globe size={18} className="text-purple-600" />
@@ -1429,94 +1459,138 @@ export default function StaySRMPage() {
                             <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold">
                                 {Object.values(cities).reduce((acc, list) => acc + list.length, 0)} Hotels
                             </span>
-                        </div>
-                        
+                        </motion.div>                        
+
                         {/* CITIES LIST */}
-                        {expandedCountries[country] && (
-                            <div className="ml-4 pl-4 border-l-2 border-white/40 space-y-3">
-                                {Object.entries(cities).map(([city, hotels]) => {
-                                    const cityKey = `${country}-${city}`;
-                                    return (
-                                        <div key={city}>
-                                            <div 
-                                                onClick={() => setExpandedCities(prev => ({...prev, [cityKey]: !prev[cityKey]}))}
-                                                className="flex items-center bg-white/95 p-3 rounded-lg gap-2 cursor-pointer hover:bg-white/80 transition-all select-none border border-white/30 backdrop-blur-sm mb-2"
-                                            >
-                                                {expandedCities[cityKey] ? <ChevronDown size={16} className="text-gray-500"/> : <ChevronRight size={16} className="text-gray-500"/>}
-                                                <MapPin size={16} className="text-red-900" />
-                                                <span className="font-bold text-gray-900">{city}</span>
-                                                <span className="text-xs text-gray-900 bg-blue-200 px-2 py-0.5 rounded-full">
-                                                    {hotels.length}
-                                                </span>
-                                            </div>
+                        <AnimatePresence initial={false}>
+                            {expandedCountries[country] && (
+                                <motion.div 
+                                    key={`content-${country}`}
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="ml-4 pl-4 border-l-2 border-gray-200 space-y-3 pt-3 pb-2">
+                                        {Object.entries(cities).map(([city, hotels]) => {
+                                            const cityKey = `${country}-${city}`;
+                                            return (
+                                                <motion.div layout key={city} className="mb-2">
+                                                    <motion.div 
+                                                        layout
+                                                        onClick={() => setExpandedCities(prev => ({...prev, [cityKey]: !prev[cityKey]}))}
+                                                        className="flex items-center bg-white p-3 rounded-lg gap-2 cursor-pointer hover:bg-gray-50 transition-all select-none border border-gray-200 relative z-10"
+                                                    >
+                                                        <motion.div animate={{ rotate: expandedCities[cityKey] ? 90 : 0 }} transition={{ duration: 0.2 }}>
+                                                            <ChevronRight size={16} className="text-gray-500"/>
+                                                        </motion.div>
+                                                        <MapPin size={16} className="text-red-700" />
+                                                        <span className="font-bold text-gray-900">{city}</span>
+                                                        <span className="text-xs text-gray-900 bg-purple-100 px-2 py-0.5 rounded-full">
+                                                            {hotels.length}
+                                                        </span>
+                                                    </motion.div>
 
-                                            {/* HOTELS GRID */}
-                                            {expandedCities[cityKey] && (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ml-6 mb-4">
-                                                    {hotels.map(hotel => {
-                                                        const sup = suppliers.find(s => s.id === hotel.linkedSupplierId);
-                                                        return (
-                                                            <div key={hotel.id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col overflow-hidden">
-                                                                <div className="h-35 bg-gray-100 relative shrink-0 overflow-hidden">
-                                                                    {hotel.images?.[0] ? (
-                                                                        <img src={hotel.images[0]} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={hotel.name}/>
-                                                                    ) : (
-                                                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 shadow-inner group"><ImageIcon size={48} className="text-white drop-shadow-lg"/></div>
-                                                                    )}
-                                                                    <div className="absolute bottom-3 left-3 flex">
-                                                                        <span className="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider shadow-sm border border-white/10">{hotel.type}</span>
-                                                                        <div className="ml-82 bg-white/85 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold shadow-sm flex items-center gap-1.5 border border-white/50"><Star size={12} className="fill-yellow-700 text-yellow-700"/> <span className="text-gray-800">{hotel.rating}</span></div>
-                                                                    </div>
-                                                                </div>
-                                                                
-                                                                <div className="p-5 flex-1 flex flex-col">
-                                                                    <div className="mb-3">
-                                                                        <h4 className="font-bold text-gray-900 text-lg leading-tight truncate mb-1" title={hotel.name}>{hotel.name}</h4>
-                                                                        <div className="flex items-center text-xs text-gray-700 font-medium">
-                                                                            <MapPin size={14} className="mr-1 text-purple-600 shrink-0" />
-                                                                            <span className="truncate">{hotel.city}, {hotel.country}</span>
-                                                                        </div>
-                                                                        {sup && (
-                                                                            <div className="mt-2 inline-flex items-center gap-1 bg-purple-50 text-purple-800 px-2 py-1 rounded text-[10px] border border-purple-100">
-                                                                                <Briefcase size={10} /> 
-                                                                                <span className="font-bold truncate max-w-[150px]">By: {sup.name}</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-
-                                                                    <div className="mb-4 flex-1">
-                                                                        <div className="flex items-center gap-1.5 mb-2.5">
-                                                                            <BedDouble size={14} className="text-gray-600"/>
-                                                                            <span className="text-[10px] font-bold text-gray-700 uppercase tracking-widest">Room Types</span>
-                                                                        </div>
-                                                                        <div className="flex flex-wrap gap-2">
-                                                                            {(hotel.roomCategories || []).length > 0 ? (
-                                                                                hotel.roomCategories.map((rc, idx) => (
-                                                                                    <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-50 text-slate-600 text-xs font-medium border border-slate-200">{rc.name}</span>
-                                                                                ))
-                                                                            ) : <span className="text-xs text-gray-400 italic pl-1">No rooms</span>}
-                                                                        </div>
-                                                                    </div>
-                                                                    
-                                                                    <div className="mt-auto border-t border-gray-100 flex items-center gap-3 pt-3">
-                                                                        <button onClick={() => handleEdit(hotel)} className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 shadow-sm"><Edit size={14} /> Edit</button>
-                                                                        <button onClick={() => handleDelete(hotel.id as string)} className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 shadow-sm"><Trash2 size={14} /> Delete</button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                                    {/* HOTELS GRID */}
+                                                    <AnimatePresence initial={false}>
+                                                        {expandedCities[cityKey] && (
+                                                            <motion.div 
+                                                                key={`content-${cityKey}`}
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                                className="overflow-hidden"
+                                                            >
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ml-6 mb-4 pt-3 pb-2">
+    {hotels.map(hotel => {
+        const sup = suppliers.find(s => s.id === hotel.linkedSupplierId);
+        return (
+            <motion.div 
+                key={hotel.id} 
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                whileHover={{ y: -4, boxShadow: "0 12px 24px -8px rgba(0, 0, 0, 0.15)" }}
+                transition={{ duration: 0.2 }}
+                className="bg-white rounded-2xl shadow-md flex flex-col overflow-hidden group cursor-pointer border border-gray-100"
+            >
+                {/* 1. IMAGE & BADGES SECTION */}
+                <div className="h-40 relative shrink-0 overflow-hidden">
+                    {hotel.images?.[0] ? (
+                        <img src={hotel.images[0]} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={hotel.name}/>
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500">
+                            <ImageIcon size={44} className="text-white opacity-90"/>
+                        </div>
+                    )}
+                    
+                    {/* Dark Category Badge (Bottom Left) */}
+                    <div className="absolute bottom-3 left-3 flex gap-1">
+                        <span className="px-2.5 py-1 rounded-md bg-[#3b2b5c] text-white text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                            {hotel.type} {hotel.category || 'Hotel'}
+                        </span>
                     </div>
+                    
+                    {/* White Rating Badge (Bottom Right) */}
+                    <div className="absolute bottom-3 right-3 bg-white px-2 py-1 rounded-md text-[11px] font-bold shadow flex items-center gap-1.5 text-gray-800">
+                        <Star size={12} className="fill-yellow-500 text-yellow-500"/> <span>{hotel.rating}</span>
+                    </div>
+                </div>
+                
+                {/* 2. CARD BODY */}
+                <div className="p-5 flex-1 flex flex-col">
+                    <div className="mb-4">
+                        <h4 className="font-bold text-gray-900 text-[18px] leading-tight truncate mb-1.5" title={hotel.name}>{hotel.name}</h4>
+                        <div className="flex items-center text-[12px] text-gray-600 font-medium mb-2.5">
+                            <MapPin size={14} className="mr-1.5 text-purple-600 shrink-0" />
+                            <span className="truncate">{hotel.city}, {hotel.country}</span>
+                        </div>
+                       
+                    </div>
+
+                    <div className="mb-5 flex-1">
+                        <div className="flex items-center gap-1.5 mb-2">
+                            <BedDouble size={14} className="text-gray-500"/>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Room Types</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {(hotel.roomCategories || []).length > 0 ? (
+                                hotel.roomCategories.map((rc, idx) => (
+                                    <span key={idx} className="inline-flex items-center px-3 py-1 rounded-md bg-white text-gray-700 text-[11px] font-medium border border-gray-200 shadow-sm truncate max-w-[140px]">{rc.name}</span>
+                                ))
+                            ) : <span className="text-[11px] text-gray-400 italic">No rooms configured</span>}
+                        </div>
+                    </div>
+                    
+                    {/* 3. SOLID ACTION BUTTONS */}
+                    <div className="mt-auto flex items-center gap-3">
+                        <button onClick={() => handleEdit(hotel)} className="flex-1 py-2.5 bg-[#9333ea] hover:bg-[#7e22ce] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"><Edit size={14} /> Edit</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(hotel.id as string); }} className="flex-1 py-2.5 bg-[#ef4444] hover:bg-[#dc2626] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"><Trash2 size={14} /> Delete</button>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    })}
+</div>
+                                                           
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
                 ))
             )}
         </div>
+      
       </div>
 
       {/* --- ADD/EDIT MODAL --- */}
@@ -1554,50 +1628,36 @@ export default function StaySRMPage() {
                           </div>
                           
                           <div className="col-span-8 space-y-4">
-                              <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex gap-4 items-start">
-                                  <div className="flex-1">
-                                      <label className="block text-xs font-bold text-purple-900 mb-2 flex items-center gap-1">
-                                          <Briefcase size={14} /> Fulfillment Partner (Stay)
-                                      </label>
-                                      <select 
-                                          className="w-full p-2.5 border border-purple-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                          value={formData.linkedSupplierId || ""}
-                                          onChange={(e) => setFormData({...formData, linkedSupplierId: e.target.value})}
-                                      >
-                                          <option value="">-- Direct / Unknown --</option>
-                                          {availableSuppliers.map(s => (
-                                              <option key={s.id} value={s.id}>
-                                                  {s.name} ({s.city}) {s.isPreferred ? '★ Preferred' : ''}
-                                              </option>
-                                          ))}
-                                          {formData.linkedSupplierId && !availableSuppliers.find(s => s.id === formData.linkedSupplierId) && selectedSupplierData && (
-                                               <option value={selectedSupplierData.id}>{selectedSupplierData.name} (Current) - *City Mismatch*</option>
-                                          )}
-                                      </select>
-                                      {availableSuppliers.length === 0 && formData.city && (
-                                          <p className="text-[10px] text-red-500 mt-1">No 'Stay' suppliers found in {formData.city}.</p>
-                                      )}
-                                  </div>
-                                  
-                                  {selectedSupplierData && (
-                                      <div className="flex-1 bg-white p-3 rounded-lg border border-purple-100 shadow-sm text-xs">
-                                          <div className="font-bold text-gray-800 mb-2 flex justify-between items-center border-b border-gray-100 pb-1">
-                                              <span>{selectedSupplierData.contactPerson}</span>
-                                              {selectedSupplierData.isPreferred && <span className="bg-orange-100 text-orange-700 px-1.5 rounded text-[10px]">Preferred</span>}
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-gray-600">
-                                              <div className="flex items-center gap-1"><Phone size={10}/> {selectedSupplierData.phone}</div>
-                                              <div className="flex items-center gap-1"><CreditCard size={10}/> {selectedSupplierData.paymentTerms}</div>
-                                              <div className="col-span-2 flex items-center gap-1 truncate" title={selectedSupplierData.email}><Mail size={10}/> {selectedSupplierData.email}</div>
-                                              <div className="col-span-2 flex items-center gap-1 font-bold text-purple-800 bg-purple-50 px-1 rounded"><DollarSign size={10}/> Currency: {selectedSupplierData.currency || 'USD'}</div>
-                                          </div>
-                                      </div>
-                                  )}
-                              </div>
+                        
 
+                              {/* 1st Row: Hotel Name */}
+                              <div>
+                                  <label className="text-xs font-bold text-gray-700 mb-1 block">Hotel Name *</label>
+                                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg font-bold" placeholder="e.g. Grand Palace Hotel"/>
+                              </div>
+                              
+                              {/* 2nd Row: Category and Type */}
                               <div className="grid grid-cols-2 gap-4">
-                                  <div><label className="text-xs font-bold text-gray-700 mb-1 block">Hotel Name *</label><input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg font-bold" placeholder="e.g. Grand Hotel"/></div>
-                                  <div><label className="text-xs font-bold text-gray-700 mb-1 block">Type</label><select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg bg-white"><option>Hotel</option><option>Resort</option><option>Villa</option><option>Apartment</option></select></div>
+                                  <div>
+                                      <label className="text-xs font-bold text-gray-700 mb-1 block">Category</label>
+                                      <select value={formData.category || 'Hotel'} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg bg-white">
+                                          <option value="Hotel">Hotel</option>
+                                          <option value="Resort">Resort</option>
+                                          <option value="Villa">Villa</option>
+                                          <option value="Apartment">Apartment</option>
+                                          <option value="Boutique">Boutique</option>
+                                      </select>
+                                  </div>
+                                  <div>
+                                      <label className="text-xs font-bold text-gray-700 mb-1 block">Class Type</label>
+                                      <select value={formData.type || 'Premium'} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg bg-white">
+                                          <option value="Luxury">Luxury </option>
+                                          <option value="Premium">Premium </option>
+                                          <option value="Deluxe">Deluxe</option>
+                                          <option value="Standard">Standard</option>
+                                          <option value="Budget">Budget</option>
+                                      </select>
+                                  </div>
                               </div>
                               <div className="grid grid-cols-2 gap-4">
                                   <div><label className="text-xs font-bold text-gray-700 mb-1 block">City *</label><input type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg" placeholder="e.g. Rome"/></div>

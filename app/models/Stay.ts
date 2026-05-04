@@ -10,7 +10,8 @@ const RoomCategorySchema = new mongoose.Schema({
 const StaySchema = new mongoose.Schema({
   stayId: String,
   name: { type: String, required: true },
-  type: String,
+  category: { type: String, default: 'Hotel' },
+  type: { type: String, default: 'Premium' },
   city: { type: String, required: true },
   country: String,
   address: String,

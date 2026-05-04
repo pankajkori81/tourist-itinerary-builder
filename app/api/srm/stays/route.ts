@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const stays = await Stay.find({}).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: stays });
-  } catch (error) { return NextResponse.json({ success: false }, { status: 500 }); }
+  } catch (error) { console.error("GET Stays Error:", error); return NextResponse.json({ success: false }, { status: 500 }); }
 }
 
 export async function POST(req: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const newStay = await Stay.create(body);
     return NextResponse.json({ success: true, data: newStay });
-  } catch (error) { return NextResponse.json({ success: false }, { status: 500 }); }
+  } catch (error) { console.error("POST Stays Error:", error); return NextResponse.json({ success: false }, { status: 500 }); }
 }
 
 export async function PUT(req: NextRequest) {
@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const updated = await Stay.findByIdAndUpdate(body._id, body, { new: true });
     return NextResponse.json({ success: true, data: updated });
-  } catch (error) { return NextResponse.json({ success: false }, { status: 500 }); }
+  } catch (error) { console.error("PUT Stays Error:", error); return NextResponse.json({ success: false }, { status: 500 }); }
 }
 
 export async function DELETE(req: NextRequest) {
@@ -34,5 +34,5 @@ export async function DELETE(req: NextRequest) {
     const id = req.nextUrl.searchParams.get("id");
     await Stay.findByIdAndDelete(id);
     return NextResponse.json({ success: true });
-  } catch (error) { return NextResponse.json({ success: false }, { status: 500 }); }
+  } catch (error) {console.error("DELETE Stays Error:", error); return NextResponse.json({ success: false }, { status: 500 }); }
 }

@@ -664,6 +664,7 @@ export interface StayData {
   _id?: string;
   stayId?: string;
   name: string;
+  category?: string;
   type: string;
   city: string;
   country: string;
