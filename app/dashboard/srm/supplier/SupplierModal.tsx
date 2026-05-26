@@ -525,7 +525,7 @@ interface SupplierModalProps {
 }
 
 export default function SupplierModal({ initialData, onClose, onSave }: SupplierModalProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'documents'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents'>('overview');
   const [docCategory, setDocCategory] = useState<'general' | 'trip'>('general');
   const [tripRefInput, setTripRefInput] = useState(''); 
   const [isSaving, setIsSaving] = useState(false); // NEW STATE
@@ -683,7 +683,7 @@ export default function SupplierModal({ initialData, onClose, onSave }: Supplier
         </div>
 
         <div className="flex border-b border-gray-200 px-6 bg-white">
-            {['overview', 'financials', 'documents'].map(tab => (
+            {['overview', 'documents'].map(tab => (
                 <button key={tab} onClick={() => setActiveTab(tab as any)} 
                     className={`px-4 py-3 text-sm font-medium border-b-2 capitalize transition-colors ${activeTab === tab ? 'border-[#0a1f44] text-[#0a1f44]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                     {tab}
@@ -768,63 +768,7 @@ export default function SupplierModal({ initialData, onClose, onSave }: Supplier
                 </div>
             )}
 
-            {activeTab === 'financials' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="bg-yellow-50 p-5 rounded-xl border border-yellow-100">
-                        <h3 className="font-bold text-yellow-800 text-sm mb-3 flex items-center gap-2"><Wallet size={16}/> Payment Terms</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1">Terms</label>
-                                <select className="w-full p-2.5 border border-gray-300 rounded-lg bg-white" value={formData.paymentTerms} onChange={e=>setFormData({...formData, paymentTerms: e.target.value as any})}>
-                                    <option value="Prepaid">Prepaid (100% Advance)</option>
-                                    <option value="Pay at Hotel">Pay at Hotel</option>
-                                    <option value="Credit-7">Credit (7 Days)</option>
-                                    <option value="Credit-15">Credit (15 Days)</option>
-                                    <option value="Credit-30">Credit (30 Days)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1">Currency</label>
-                                <select className="w-full p-2.5 border border-gray-300 rounded-lg bg-white" value={formData.currency} onChange={e=>setFormData({...formData, currency: e.target.value})}>
-                                    <option>INR</option><option>USD</option><option>EUR</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-5 rounded-xl border border-gray-200">
-                        <h3 className="font-bold text-gray-800 text-sm mb-3 flex items-center gap-2"><Landmark size={16}/> Bank Details</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                             <input className="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Bank Name" value={formData.bankDetails?.bankName} onChange={e => updateBankDetails('bankName', e.target.value)} />
-                             <input className="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Account Number" value={formData.bankDetails?.accountNumber} onChange={e => updateBankDetails('accountNumber', e.target.value)} />
-                             <input className="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="IFSC / Swift Code" value={formData.bankDetails?.ifscCode} onChange={e => updateBankDetails('ifscCode', e.target.value)} />
-                             <input className="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Beneficiary Name" value={formData.bankDetails?.accountName} onChange={e => updateBankDetails('accountName', e.target.value)} />
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <input 
-                                type="checkbox" 
-                                id="taxReg" 
-                                checked={formData.taxRegistered} 
-                                onChange={e => setFormData({...formData, taxRegistered: e.target.checked})} 
-                                className="w-4 h-4 rounded text-blue-600 cursor-pointer"
-                            />
-                            <label htmlFor="taxReg" className="text-sm font-bold text-gray-700 cursor-pointer">Tax Registered (GST/VAT)?</label>
-                        </div>
-                        
-                        {formData.taxRegistered && (
-                            <input 
-                                className="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white animate-in fade-in" 
-                                placeholder="Enter GST/VAT Number" 
-                                value={formData.taxNumber || ''} 
-                                onChange={e => setFormData({...formData, taxNumber: e.target.value})}
-                            />
-                        )}
-                    </div>
-                </div>
-            )}
+    
 
             {activeTab === 'documents' && (
                 <div className="flex flex-col h-full animate-in fade-in">

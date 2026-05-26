@@ -1201,6 +1201,7 @@
 "use client";
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, MapPin, Utensils, Star, 
   Trash2, X, Save, Image as ImageIcon, 
@@ -1312,17 +1313,50 @@ export default function MealSRMPage() {
   };
 
   // CHANGED: Async
+  // const handleSave = async () => {
+  //   if (!formData.restaurantName || !formData.city) return alert("Restaurant Name and City are required");
+  //   setIsSaving(true);
+  //   const success = await saveMeal({...formData, city: formData.city.trim(), country: formData.country.trim()});
+  //   if(success) {
+  //     await refreshAll();
+  //     setIsModalOpen(false);
+  //   } else {
+  //     alert("Failed to save.");
+  //   }
+  //   setIsSaving(false);
+  // };
+
+  // CHANGED: Async with Error Handling and Empty String Fix
   const handleSave = async () => {
     if (!formData.restaurantName || !formData.city) return alert("Restaurant Name and City are required");
     setIsSaving(true);
-    const success = await saveMeal({...formData, city: formData.city.trim(), country: formData.country.trim()});
-    if(success) {
-      await refreshAll();
-      setIsModalOpen(false);
-    } else {
-      alert("Failed to save.");
+    
+    try {
+      const cleanData = {
+          ...formData,
+          city: formData.city.trim(),
+          country: formData.country.trim()
+      };
+
+      // 👇 THE CRITICAL FIX: Prevent empty string from crashing Mongoose
+      if (!cleanData.linkedSupplierId || cleanData.linkedSupplierId === "") {
+          delete cleanData.linkedSupplierId;
+      }
+
+      const success = await saveMeal(cleanData);
+      
+      if(success) {
+        await refreshAll();
+        setIsModalOpen(false);
+      } else {
+        alert("Failed to save. Check your database connection.");
+      }
+    } catch (error) {
+      console.error("Save Error:", error);
+      alert("Failed to save due to an unexpected error.");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1359,6 +1393,9 @@ export default function MealSRMPage() {
             </button>
         </div>
 
+{/* =========================================================================
+            HIERARCHICAL LIST VIEW (Animated & Modernized for Meals)
+            ========================================================================= */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4 pb-24">
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center h-64 text-white">
@@ -1370,62 +1407,151 @@ export default function MealSRMPage() {
                     <Utensils size={48} className="opacity-50 mb-2"/>
                     <p className="font-bold">No restaurants found.</p>
                  </div>
-            ) : Object.entries(groupedData).map(([country, cities]) => (
-                <div key={country} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div onClick={() => setExpandedCountries(prev => ({...prev, [country]: !prev[country]}))} className="flex items-center bg-white/95 p-4 rounded-xl gap-3 cursor-pointer group shadow-sm hover:bg-white border border-white/50 backdrop-blur-sm mb-2">
-                        <div className="p-2 bg-orange-100 rounded-lg text-orange-600 group-hover:text-orange-800"><ChevronDown size={20}/></div>
-                        <div className="flex-1"><h3 className="font-bold text-gray-800 text-lg flex items-center gap-2"><Globe size={18} className="text-orange-600" />{country}</h3></div>
-                        <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">{Object.values(cities).reduce((acc, list) => acc + list.length, 0)} Places</span>
-                    </div>
-                    {expandedCountries[country] && (
-                        <div className="ml-4 pl-4 border-l-2 border-white/40 space-y-3">
-                            {Object.entries(cities).map(([city, items]) => (
-                                <div key={city}>
-                                    <div className="flex items-center bg-white/95 p-3 rounded-lg gap-2 border border-white/30 backdrop-blur-sm mb-2"><MapPin size={16} className="text-red-800" /><span className="font-bold text-gray-900">{city}</span></div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ml-6 mb-4">
-                                        {items.map(item => {
-                                            const sup = suppliers.find(s => s.id === item.linkedSupplierId);
-                                            
-                                            return (
-                                                <div key={item.id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg group flex flex-col overflow-hidden">
-                                                    <div className="h-32 bg-gray-100 relative shrink-0 overflow-hidden">
-                                                        {item.images?.[0] ? <img src={item.images[0]} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"/> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-400 to-red-500"><Utensils size={48} className="text-white"/></div>}
-                                                        <div className="absolute top-2 left-2 bg-purple-600 text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border border-purple-400">MULTI-CUISINE</div>
-                                                        <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded shadow text-xs font-bold flex items-center gap-1"><Star size={10} className="fill-yellow-700 text-yellow-700"/> {item.rating}</div>
-                                                    </div>
-                                                    <div className="p-4 flex-1 flex flex-col">
-                                                        <h4 className="font-bold text-gray-800 text-lg leading-tight mb-1">{item.restaurantName}</h4>
-                                                        <p className="text-xs text-gray-600 flex items-center gap-1 mb-2"><MapPin size={12}/> {item.address || `${item.city}, ${item.country}`}</p>
-                                                        
-                                                        {sup && (
-                                                            <div className="mb-2 inline-flex items-center gap-1 bg-orange-50 text-orange-800 px-2 py-1 rounded text-[10px] border border-orange-100 w-fit">
-                                                                <Briefcase size={10} /> <span className="font-bold truncate max-w-[150px]">By: {sup.name}</span>
-                                                            </div>
-                                                        )}
+            ) : (
+                Object.entries(groupedData).map(([country, cities]) => (
+                    <motion.div layout key={country} className="mb-2">
+                        
+                        {/* 1. COUNTRY HEADER */}
+                        <motion.div 
+                            onClick={() => setExpandedCountries(prev => ({...prev, [country]: !prev[country]}))}
+                            className="flex items-center bg-white/95 p-4 rounded-xl gap-3 cursor-pointer group shadow-sm hover:bg-white transition-all border border-white/50 backdrop-blur-sm"
+                        >
+                            <motion.div animate={{ rotate: expandedCountries[country] ? 90 : 0 }} className="p-2 bg-orange-100 rounded-lg text-orange-600 group-hover:text-orange-800 transition-colors">
+                                <ChevronRight size={20}/>
+                            </motion.div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                                    <Globe size={18} className="text-orange-600" /> {country}
+                                </h3>
+                            </div>
+                            <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">
+                                {Object.values(cities).reduce((acc, list) => acc + list.length, 0)} Places
+                            </span>
+                        </motion.div>
 
-                                                        <div className="flex flex-wrap gap-1 mb-3">
-                                                            <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-100">{item.menuType}</span>
-                                                            {(item.dietaryOptions || []).map(opt => (
-                                                                <span key={opt} className="px-2 py-0.5 rounded bg-green-50 text-green-700 text-[10px] font-bold border border-green-100">{opt}</span>
-                                                            ))}
-                                                        </div>
-                                                        
-                                                        <div className="flex gap-2 mt-auto pt-3 border-t border-gray-100">
-                                                            <button onClick={() => handleEdit(item)} className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1"><Edit size={12}/> Edit Details</button>
-                                                            <button onClick={() => handleDelete(item.id as string)} className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1"><Trash2 size={12}/> Delete</button>
-                                                        </div>
+                        {/* 2. CITIES EXPANSION */}
+                        <AnimatePresence initial={false}>
+                            {expandedCountries[country] && (
+                                <motion.div 
+                                    initial={{ height: 0, opacity: 0 }} 
+                                    animate={{ height: "auto", opacity: 1 }} 
+                                    exit={{ height: 0, opacity: 0 }} 
+                                    className="overflow-hidden"
+                                >
+                                    <div className="ml-4 pl-4 border-l-2 border-white/40 space-y-3 pt-3 pb-2">
+                                        {Object.entries(cities).map(([city, items]) => {
+                                            const cityKey = `${country}-${city}`;
+                                            return (
+                                                <div key={city}>
+                                                    
+                                                    {/* CITY HEADER */}
+                                                    <div 
+                                                        onClick={() => setExpandedCities(prev => ({...prev, [cityKey]: !prev[cityKey]}))}
+                                                        className="flex items-center bg-white/95 p-3 rounded-lg gap-2 cursor-pointer hover:bg-white/80 transition-all border border-white/30 backdrop-blur-sm shadow-sm"
+                                                    >
+                                                        <ChevronRight size={16} className={`text-gray-500 transition-transform ${expandedCities[cityKey] ? 'rotate-90' : ''}`}/>
+                                                        <MapPin size={18} className="text-red-700" />
+                                                        <span className="font-bold text-gray-900">{city}</span>
+                                                        <span className="text-xs text-gray-900 bg-orange-100 px-2 py-0.5 rounded-full">
+                                                            {items.length}
+                                                        </span>
                                                     </div>
+
+                                                    {/* 3. RESTAURANT CARDS GRID (Animated) */}
+                                                    <AnimatePresence initial={false}>
+                                                        {expandedCities[cityKey] && (
+                                                            <motion.div 
+                                                                initial={{ height: 0, opacity: 0 }} 
+                                                                animate={{ height: "auto", opacity: 1 }} 
+                                                                exit={{ height: 0, opacity: 0 }} 
+                                                                className="overflow-hidden"
+                                                            >
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 ml-6 mb-4 mt-3">
+                                                                    {items.map(item => (
+                                                                        <motion.div 
+                                                                            layout 
+                                                                            initial={{ opacity: 0, y: 10 }} 
+                                                                            animate={{ opacity: 1, y: 0 }} 
+                                                                            exit={{ opacity: 0, scale: 0.95 }}
+                                                                            whileHover={{ y: -4, boxShadow: "0 12px 24px -8px rgba(0, 0, 0, 0.15)" }}
+                                                                            key={item.id} 
+                                                                            className="bg-white rounded-2xl border border-gray-200 shadow-md flex flex-col overflow-hidden relative"
+                                                                        >
+                                                                            {/* Card Image / Gradient Header */}
+                                                                            <div className="h-36 w-full relative shrink-0 overflow-hidden flex items-center justify-center bg-gradient-to-br from-orange-500 to-rose-500">
+                                                                                {item.images?.[0] ? (
+                                                                                    <img src={item.images[0]} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" alt={item.restaurantName}/>
+                                                                                ) : (
+                                                                                    <Utensils size={56} className="text-white opacity-90 drop-shadow-md"/>
+                                                                                )}
+                                                                                
+                                                                                {/* Cuisine Badge (Top Left) */}
+                                                                                <div className="absolute top-3 left-3 bg-[#8b5cf6] text-white px-2 py-1 rounded text-[9px] font-extrabold uppercase tracking-wider shadow-sm">
+                                                                                    {item.cuisine || 'MULTI-CUISINE'}
+                                                                                </div>
+                                                                                
+                                                                                {/* Rating Badge (Top Right) */}
+                                                                                <div className="absolute top-3 right-3 bg-white px-2 py-1 rounded shadow-sm text-[11px] font-bold flex items-center gap-1 text-gray-800">
+                                                                                    <Star size={12} className="fill-[#f59e0b] text-[#f59e0b]"/> {item.rating || 'N/A'}
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Card Body */}
+                                                                            <div className="p-5 pt-4 flex-1 flex flex-col bg-white">
+                                                                                <h4 className="font-bold text-gray-900 text-[18px] leading-tight mb-1 truncate" title={item.restaurantName}>
+                                                                                    {item.restaurantName}
+                                                                                </h4>
+                                                                                <div className="flex items-center text-[11px] text-gray-500 font-medium mb-3">
+                                                                                    <MapPin size={12} className="mr-1 shrink-0" />
+                                                                                    <span className="truncate">{item.address || `${item.city}, ${item.country}`}</span>
+                                                                                </div>
+                                                                                
+                                                                                {/* Tags (Menu Type & Dietary) */}
+                                                                                <div className="flex flex-wrap gap-1.5 mb-4">
+                                                                                    {item.menuType && (
+                                                                                        <span className="px-2 py-0.5 rounded bg-[#eff6ff] text-[#2563eb] text-[10px] font-bold border border-[#bfdbfe]">
+                                                                                            {item.menuType}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {(item.dietaryOptions || []).map(opt => (
+                                                                                        <span key={opt} className="px-2 py-0.5 rounded bg-[#f0fdf4] text-[#16a34a] text-[10px] font-bold border border-[#bbf7d0]">
+                                                                                            {opt}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                                
+                                                                                {/* Action Buttons */}
+                                                                                <div className="mt-auto pt-4 border-t border-gray-100 flex items-center gap-3">
+                                                                                    <button onClick={() => handleEdit(item)} className="flex-1 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                                                                                        <Edit size={14}/> Edit Details
+                                                                                    </button>
+                                                                                    <button onClick={() => handleDelete(item.id as string)} className="flex-1 py-2.5 bg-[#ef4444] hover:bg-[#dc2626] text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                                                                                        <Trash2 size={14}/> Delete
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </motion.div>
+                                                                    ))}
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            ))}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                ))
+            )}
         </div>
+        {/* =========================================================================
+            END HIERARCHICAL LIST VIEW
+            ========================================================================= */}
+      
       </div>
 
       {isModalOpen && (
@@ -1450,32 +1576,10 @@ export default function MealSRMPage() {
                       </div>
 
                       <div className="md:col-span-8 space-y-4">
-                          <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 flex gap-4 items-start">
-                              <div className="flex-1">
-                                  <label className="block text-xs font-bold text-orange-900 mb-2 flex items-center gap-1"><Briefcase size={14} /> Fulfillment Partner (Meal)</label>
-                                  <select className="w-full p-2.5 border border-orange-200 rounded-lg text-sm bg-white" value={formData.linkedSupplierId || ""} onChange={(e) => setFormData({...formData, linkedSupplierId: e.target.value})}>
-                                      <option value="">-- Direct / Unknown --</option>
-                                      {availableSuppliers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.city}) {s.isPreferred ? '★' : ''}</option>)}
-                                  </select>
-                              </div>
-                              {selectedSupplierData && (
-                                  <div className="flex-1 bg-white p-3 rounded-lg border border-orange-100 shadow-sm text-xs">
-                                      <div className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-1 flex justify-between">
-                                          <span>{selectedSupplierData.contactPerson}</span>
-                                          <span className="text-orange-600 font-bold">{selectedSupplierData.paymentTerms}</span>
-                                      </div>
-                                      <div className="grid grid-cols-1 gap-1 text-gray-500">
-                                          <div className="flex items-center gap-1"><Phone size={10}/> {selectedSupplierData.phone}</div>
-                                          <div className="flex items-center gap-1 truncate"><Mail size={10}/> {selectedSupplierData.email}</div>
-                                          <div className="font-bold text-orange-700 flex items-center gap-1"><DollarSign size={10}/> {selectedSupplierData.currency || 'USD'}</div>
-                                      </div>
-                                  </div>
-                              )}
-                          </div>
-
+                    
                           <div className="grid grid-cols-2 gap-4">
                               <div><label className="text-xs font-bold text-gray-600 mb-1 block">Restaurant Name *</label><input type="text" value={formData.restaurantName} onChange={e => setFormData({...formData, restaurantName: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg font-bold" placeholder="e.g. Curry House"/></div>
-                              <div><label className="text-xs font-bold text-gray-600 mb-1 block">Cuisine Type</label><select value={formData.cuisine} onChange={e => setFormData({...formData, cuisine: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg bg-white"><option>Multi-Cuisine</option><option>Italian</option><option>Indian</option><option>Chinese</option></select></div>
+                              <div><label className="text-xs font-bold text-gray-600 mb-1 block">Cuisine Type</label><select value={formData.cuisine} onChange={e => setFormData({...formData, cuisine: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg bg-white"><option>Multi-Cuisine</option><option>Italian</option><option>Indian</option><option>Chinese</option><option>None</option></select></div>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                               <div><label className="text-xs font-bold text-gray-600 mb-1 block">City *</label><input type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg"/></div>

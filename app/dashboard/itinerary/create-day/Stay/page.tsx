@@ -610,12 +610,28 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
     type: 'stay',
     hotelName: '',
     description: '',
-    address: city,
+
+    // 🌟 SMART PULL: Fallback to the prop city automatically
+    address: city, 
+    // @ts-ignore
+    city: city, 
+    
+    // 🌟 SMART PULL: Grab the first country from the Create Page context
+    // @ts-ignore
+    country: itineraryData?.selectedCountries?.[0] || '',
+   
     rating: '4.5',
     category: 'Hotel',
     
     // Smart Link: Uses global category from Create Page
     stayType: itineraryData?.tripCategory || 'Luxury', 
+
+
+    // 🌟 NEW OTA DEFAULTS 🌟
+    // @ts-ignore
+    chainCode: '', brand: '', stateProvince: '', zipPostal: '', phone: '',
+    // @ts-ignore
+    propertyOverview: '', gdsLocation: '', totalUnits: 0, nonSmokingRooms: 0, floors: 1, latitude: 0, longitude: 0,
     
     roomCategory: 'Standard Room',
     roomName: 'Standard Room',
@@ -674,18 +690,34 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
   // @ts-ignore
   const selectedSupplier = suppliers.find(s => s.id === formData.linkedSupplierId);
 
-  // Filter SRM Hotels
+
+
+  // Filter SRM Hotels (City AND Mix&Match Logic)
   useEffect(() => {
     const loadHotels = async () => {
       const allStays = await getStays();
-      const filtered = allStays.filter(stay => 
+      
+      // 1. Filter by City
+      let filtered = allStays.filter(stay => 
           stay.city.toLowerCase().includes(city.toLowerCase()) || 
           city.toLowerCase().includes(stay.city.toLowerCase())
       );
+
+      // 2. MIX & MATCH LOGIC: Filter by Category unless Mix&Match is selected
+      const isMixAndMatch = itineraryData?.tripStyle === 'Mix&Match';
+      const targetCategory = itineraryData?.tripCategory; // e.g. "Premium", "Luxury"
+
+      if (!isMixAndMatch && targetCategory) {
+          // Strict Guardrail: Only show hotels matching the trip category
+          filtered = filtered.filter(stay => 
+             stay.type?.toLowerCase() === targetCategory.toLowerCase()
+          );
+      }
+
       setSrmHotels(filtered);
     };
     loadHotels();
-  }, [city]);
+  }, [city, itineraryData?.tripStyle, itineraryData?.tripCategory]);
   
   // Auto-calculate Check-out
   useEffect(() => {
@@ -760,22 +792,49 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
     }
   };
 
+ 
+
   const selectSrmHotel = (hotel: StayData) => {
     const selectedRoom = hotel.roomCategories[0];
-    // We don't set costPerNight here anymore as it's handled in Costing
 
     setFormData(prev => ({
       ...prev,
       hotelName: hotel.name,
       rating: hotel.rating.toString(),
-      category: hotel.type,
-      stayType: 'Luxury', 
+      category: hotel.category || 'Hotel', // Pull category (e.g. Resort, Villa)
+      stayType: hotel.type || 'Luxury',    // Pull Class Type (e.g. Premium, Deluxe)
       description: hotel.description || `Located in ${hotel.city}, ${hotel.country}.`,
       address: hotel.address || `${hotel.city}, ${hotel.country}`,
       customImage: hotel.images?.[0] || '',
       roomCategory: selectedRoom?.name || 'Standard Room',
-      // costPerNight remains 0 or unchanged
+
+      // 🌟 PULL OTA DATA IF PRESENT IN INVENTORY 🌟
+      // @ts-ignore
+      chainCode: hotel.chainCode || '',
+      // @ts-ignore
+      brand: hotel.brand || '',
+      // @ts-ignore
+      stateProvince: hotel.stateProvince || '',
+      // @ts-ignore
+      zipPostal: hotel.zipPostal || '',
+      // @ts-ignore
+      phone: hotel.phone || '',
+      // @ts-ignore
+      propertyOverview: hotel.propertyOverview || '',
+      // @ts-ignore
+      gdsLocation: hotel.gdsLocation || '',
+      // @ts-ignore
+      totalUnits: hotel.totalUnits || 0,
+      // @ts-ignore
+      nonSmokingRooms: hotel.nonSmokingRooms || 0,
+      // @ts-ignore
+      floors: hotel.floors || 1,
+      // @ts-ignore
+      latitude: hotel.latitude || 0,
+      // @ts-ignore
+      longitude: hotel.longitude || 0,
     }));
+
 
     if (window.innerWidth < 768) setShowSidebar(false);
   };
@@ -814,17 +873,22 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
         {/* SCROLLABLE FORM BODY */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
           
-          {/* SECTION A: HOTEL DETAILS */}
+     
+{/* SECTION A: HOTEL DETAILS */}
+
+
+{/* SECTION A: PROPERTY DETAILS (Upgraded to OTA Standards) */}
           <section className="space-y-4">
- 
+              
+              {/* Property Name Input + Sidebar Toggle Buttons */}
               <div className="flex gap-2 items-start">
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Stay Name <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Property Name <span className="text-red-500">*</span></label>
                   <input 
                     type="text" 
                     value={formData.hotelName}
                     onChange={(e) => handleChange('hotelName', e.target.value)}
-                    placeholder="Select from sidebar or type..."
+                    placeholder="Select from sidebar or type property name..."
                     className="w-full p-3 bg-purple-50 border border-purple-100 rounded-lg text-sm font-bold text-gray-800 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                   />
                 </div>
@@ -847,50 +911,192 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
                     </button>
                 )}
               </div>
-
+              
+              {/* Category, Class Type (Mix&Match Logic), and Rating */}
               <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-4">
-                     <label className="block text-xs font-semibold text-gray-500 mb-1">Category</label>
-                     <select value={formData.category} onChange={(e) => handleChange('category', e.target.value)} className="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm outline-none">
-                        {HOTEL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                     </select>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Category</label>
+                      <select 
+                          value={formData.category || 'Hotel'} 
+                          onChange={e => handleChange('category', e.target.value)} 
+                          className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none"
+                      >
+                          <option value="Hotel">Hotel</option>
+                          <option value="Resort">Resort</option>
+                          <option value="Villa">Villa</option>
+                          <option value="Apartment">Apartment</option>
+                          <option value="Boutique">Boutique</option>
+                      </select>
                   </div>
+                  
                   <div className="col-span-4">
-                     <label className="block text-xs font-semibold text-gray-500 mb-1">Type</label>
-                     <select value={formData.stayType} onChange={(e) => handleChange('stayType', e.target.value)} className="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm outline-none">
-                        {HOTEL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                     </select>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Class Type</label>
+                      <select 
+                          value={formData.stayType || 'Premium'} 
+                          onChange={e => handleChange('stayType', e.target.value)} 
+                          disabled={itineraryData?.tripStyle !== 'Mix&Match'}
+                          className={`w-full p-2.5 border rounded-lg text-sm outline-none transition-colors ${itineraryData?.tripStyle !== 'Mix&Match' ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border-gray-300 focus:border-purple-500'}`}
+                      >
+                          <option value="Luxury">Luxury</option>
+                          <option value="Premium">Premium</option>
+                          <option value="Deluxe">Deluxe</option>
+                          <option value="Standard">Standard</option>
+                          <option value="Budget">Budget</option>
+                      </select>
+                      {itineraryData?.tripStyle !== 'Mix&Match' && (
+                          <p className="text-[9px] text-red-400 mt-1 font-medium leading-tight">Locked by Trip Style. Use "Mix&Match" to unlock.</p>
+                      )}
                   </div>
+
                   <div className="col-span-4">
                      <label className="block text-xs font-semibold text-gray-500 mb-1">Rating</label>
                      <div className="flex items-center gap-1 bg-white border border-gray-200 p-2 rounded-lg">
-                        <Star size={14} className="text-yellow-500 fill-yellow-500"/>
+                        <Star size={14} className="text-yellow-500 fill-yellow-500 shrink-0"/>
                         <input type="number" step="0.5" max="5" value={formData.rating} onChange={(e) => handleChange('rating', e.target.value)} className="w-full outline-none text-sm font-bold text-gray-700"/>
                      </div>
                   </div>
               </div>
-              
+
+              {/* Description and Image Upload */}
               <div className="grid grid-cols-12 gap-4">
                  <div className="col-span-8">
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Description</label>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Property Overview / Description</label>
                     <textarea 
                        rows={3} 
                        value={formData.description}
                        onChange={(e) => handleChange('description', e.target.value)}
                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm resize-none outline-none"
-                       placeholder="Short description of the property..."
+                       placeholder="Short overview of the property amenities, vibe, and positioning..."
                     />
                  </div>
                  <div 
                     onClick={() => fileInputRef.current?.click()}
-                    className="col-span-4 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 bg-cover bg-center"
+                    className="col-span-4 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 bg-cover bg-center overflow-hidden"
                     style={{ backgroundImage: `url(${formData.customImage})` }}
                  >
                     {!formData.customImage && <span className="text-xs text-gray-400">Upload Image</span>}
                     <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={handleImageUpload}/>
                  </div>
               </div>
+
+              {/* 🌟 NEW OTA / GDS PROPERTY SPECS GRID 🌟 */}
+              <div className="bg-purple-50/30 border border-purple-100/60 p-4 rounded-xl space-y-4 mt-2">
+                 <h3 className="text-xs font-bold text-purple-900 uppercase tracking-wide border-b border-purple-100 pb-1">
+                    GDS Distribution & Property Specs
+                 </h3>
+                 
+                 {/* Row 1: Brand & Chains */}
+                 <div className="grid grid-cols-3 gap-3">
+                    <div>
+                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Chain Code</label>
+                       {/* @ts-ignore */}
+                       <input type="text" value={formData.chainCode || ''} onChange={e => handleChange('chainCode', e.target.value)} placeholder="e.g. BW, Marriott" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                    </div>
+                    <div>
+                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Brand</label>
+                       {/* @ts-ignore */}
+                       <input type="text" value={formData.brand || ''} onChange={e => handleChange('brand', e.target.value)} placeholder="e.g. Best Western Plus" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                    </div>
+                    <div>
+                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">GDS Location</label>
+                       {/* @ts-ignore */}
+                       <input type="text" value={formData.gdsLocation || ''} onChange={e => handleChange('gdsLocation', e.target.value)} placeholder="e.g. Resort, Suburban" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                    </div>
+                 </div>
+
+
+             
+                 {/* 🌟 Row 2: Explicit Physical Address Row (Auto-Populated) 🌟 */}
+                 <div className="grid grid-cols-4 gap-3">
+                    <div className="col-span-2">
+                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Street Address</label>
+                       <input 
+                         type="text" 
+                         value={formData.address || ''} 
+                         onChange={e => handleChange('address', e.target.value)} 
+                         placeholder="123 Main Street" 
+                         className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"
+                       />
+                    </div>
+                    <div>
+                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">City *</label>
+                       {/* @ts-ignore */}
+                       <input 
+                         type="text" 
+                         value={formData.city || ''} 
+                         onChange={e => handleChange('city', e.target.value)} 
+                         placeholder="City" 
+                         className="w-full p-2 bg-white border border-gray-200 rounded text-xs font-medium text-gray-800 outline-none focus:border-purple-400"
+                       />
+                    </div>
+                    <div>
+                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Country</label>
+                       {/* @ts-ignore */}
+                       <input 
+                         type="text" 
+                         value={formData.country || ''} 
+                         onChange={e => handleChange('country', e.target.value)} 
+                         placeholder="Country" 
+                         className="w-full p-2 bg-white border border-gray-200 rounded text-xs font-medium text-gray-800 outline-none focus:border-purple-400"
+                       />
+                    </div>
+                 </div>
+             
+
+                 {/* Row 2: Deep Locations */}
+                 <div className="grid grid-cols-3 gap-3">
+                    <div>
+                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">State / Province</label>
+                       {/* @ts-ignore */}
+                       <input type="text" value={formData.stateProvince || ''} onChange={e => handleChange('stateProvince', e.target.value)} placeholder="State" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                    </div>
+                    <div>
+                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Zip / Postal</label>
+                       {/* @ts-ignore */}
+                       <input type="text" value={formData.zipPostal || ''} onChange={e => handleChange('zipPostal', e.target.value)} placeholder="Postal code" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                    </div>
+                    <div>
+                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Phone</label>
+                       {/* @ts-ignore */}
+                       <input type="text" value={formData.phone || ''} onChange={e => handleChange('phone', e.target.value)} placeholder="+1 555-0199" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                    </div>
+                 </div>
+
+                 {/* Row 3: Physical Structure */}
+                 <div className="grid grid-cols-5 gap-2 pt-1 border-t border-purple-100/40">
+                    <div>
+                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate" title="Total Units">Total Units</label>
+                       {/* @ts-ignore */}
+                       <input type="number" value={formData.totalUnits || 0} onChange={e => handleChange('totalUnits', parseInt(e.target.value) || 0)} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center font-bold outline-none"/>
+                    </div>
+                    <div>
+                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate" title="Non-Smoking Rooms">Non-Smoke</label>
+                       {/* @ts-ignore */}
+                       <input type="number" value={formData.nonSmokingRooms || 0} onChange={e => handleChange('nonSmokingRooms', parseInt(e.target.value) || 0)} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center font-bold outline-none"/>
+                    </div>
+                    <div>
+                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate" title="Total Floors">Floors</label>
+                       {/* @ts-ignore */}
+                       <input type="number" value={formData.floors || 1} onChange={e => handleChange('floors', parseInt(e.target.value) || 1)} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center font-bold outline-none"/>
+                    </div>
+                    <div>
+                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate">Latitude</label>
+                       {/* @ts-ignore */}
+                       <input type="number" step="0.000001" value={formData.latitude || 0} onChange={e => handleChange('latitude', parseFloat(e.target.value) || 0)} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center outline-none"/>
+                    </div>
+                    <div>
+                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate">Longitude</label>
+                       {/* @ts-ignore */}
+                       <input type="number" step="0.000001" value={formData.longitude || 0} onChange={e => handleChange('longitude', parseFloat(e.target.value) || 0)} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center outline-none"/>
+                    </div>
+                 </div>
+              </div>
           </section>
+
+
+
+        
+
 
           <hr className="border-gray-100" />
 

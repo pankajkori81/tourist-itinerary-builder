@@ -953,16 +953,7 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
     // 2. If they clicked Cancel (or no backup exists), wipe safely
     localStorage.removeItem('emergency_itinerary_backup');
     clearItineraryStorage();
-    
-    // 3. 🌟 THE QUICK-SAVE BUG FIX: Assign an immediate ID so "Quick Save" hits the DB on click #1!
-    // const newId = `TRIP-${Date.now().toString()}`;
-    // setItineraryData({ 
-    //     ...DEFAULT_ITINERARY, 
-    //     id: newId, // Gives the database an anchor point immediately
-    //     tripId: newId.slice(-6),
-    //     status: 'draft'
-    // });
-
+ 
 
     // 3. 🌟 THE FIX: Give it a Database Anchor (id), but leave the visual Trip ID BLANK!
     const newId = `TRIP-${Date.now().toString()}`;
@@ -1024,42 +1015,7 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
   };
 
   
-  // const saveItinerary = async (type: 'quick' | 'full' | 'exit'): Promise<boolean> => {
-  //   setIsSaving(true);
-  //   try {
-  //     const dataToSave = { ...itineraryData, selectedCurrency: itineraryData.selectedCurrency || 'USD' };
-      
-  //     // Save locally first so UI feels fast
-  //     saveItineraryToStorage(dataToSave);
-      
-  //     // Save to DB
-  //     if (type === 'exit' || itineraryData.id) {
-  //       await saveToLibrary(dataToSave);
-  //       // Important: If it's a new trip, DB assigns an ID. Sync it.
-  //       if (dataToSave.id && !itineraryData.id) {
-  //          setItineraryData(prev => ({ ...prev, id: dataToSave.id }));
-  //       }
-  //     }
 
-  //     // if (type === 'exit') clearItineraryStorage();
-
-  //     if (type === 'exit') {
-  //         clearItineraryStorage();
-  //         localStorage.removeItem('emergency_itinerary_backup'); // Clear backup on clean exit
-  //     }
-      
-  //     setSaveSuccess(true);
-  //     setTimeout(() => setSaveSuccess(false), 2000);
-  //     showToast("Itinerary saved successfully!", "success");
-  //     return true;
-  //   } catch (e) {
-  //     console.error(e);
-  //     showToast("Failed to save itinerary.", "error");
-  //     return false;
-  //   } finally {
-  //     setIsSaving(false);
-  //   }
-  // };
 
   return (
     <ItineraryContext.Provider value={{

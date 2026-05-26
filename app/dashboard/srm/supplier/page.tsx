@@ -309,6 +309,7 @@ import {
   Wallet, Pencil, Trash2, User, Star,
   ChevronDown, ChevronRight, Globe, Briefcase, Loader2
 } from "lucide-react";
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSRM } from "@/app/context/SRMContext";
 import { SupplierData, deleteSupplier } from "@/utils/srmStorage";
 import SupplierModal from "./SupplierModal";
@@ -419,31 +420,34 @@ export default function SupplierPage() {
         </div>
 
         {/* HIERARCHICAL VIEW */}
-        <div className="flex-1 overflow-y-auto pb-10 pl-4 pr-4 space-y-4">
+
+        {/* =========================================================================
+            HIERARCHICAL LIST VIEW (Animated & Modernized)
+            ========================================================================= */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 pb-24">
             
-            {/* Loader Check */}
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center h-64 text-white">
-                    <Loader2 size={40} className="animate-spin mb-4" />
-                    <p className="font-medium text-lg drop-shadow-md">Loading Suppliers from Database...</p>
+                    <Loader2 size={40} className="animate-spin mb-4 text-blue-300" />
+                    <p className="font-medium text-lg drop-shadow-md">Loading Suppliers...</p>
                 </div>
             ) : Object.keys(groupedSuppliers).length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-500 border-2 border-dashed border-white/50 rounded-xl bg-white/40 backdrop-blur-sm">
-                    <Search size={32} className="mb-2 opacity-50"/>
-                    <p className="font-medium">No suppliers found matching "{searchText}"</p>
+                <div className="flex flex-col items-center justify-center h-64 text-gray-600 bg-white/40 rounded-xl border border-white/50 backdrop-blur-sm">
+                    <Briefcase size={48} className="opacity-50 mb-2"/>
+                    <p className="font-bold">No suppliers found.</p>
                 </div>
             ) : (
                 Object.entries(groupedSuppliers).map(([country, cities]) => (
-                    <div key={country} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <motion.div layout key={country} className="mb-2">
                         
-                        {/* 1. Country Header */}
-                        <div 
+                        {/* 1. COUNTRY HEADER */}
+                        <motion.div 
                             onClick={() => setExpandedCountries(prev => ({...prev, [country]: !prev[country]}))}
-                            className="flex items-center bg-white/95 p-3 rounded-xl gap-3 cursor-pointer group shadow-sm hover:bg-white transition-all select-none border border-white/50 backdrop-blur-sm mb-2"
+                            className="flex items-center bg-white/95 p-4 rounded-xl gap-3 cursor-pointer group shadow-sm hover:bg-white transition-all border border-white/50 backdrop-blur-sm"
                         >
-                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600 group-hover:text-blue-800 transition-colors">
-                                {expandedCountries[country] ? <ChevronDown size={20}/> : <ChevronRight size={20}/>}
-                            </div>
+                            <motion.div animate={{ rotate: expandedCountries[country] ? 90 : 0 }} className="p-2 bg-blue-100 rounded-lg text-blue-600 group-hover:text-blue-800 transition-colors">
+                                <ChevronRight size={20}/>
+                            </motion.div>
                             <div className="flex-1">
                                 <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
                                     <Globe size={18} className="text-blue-600" /> {country}
@@ -452,98 +456,137 @@ export default function SupplierPage() {
                             <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">
                                 {Object.values(cities).reduce((acc, list) => acc + list.length, 0)} Suppliers
                             </span>
-                        </div>
+                        </motion.div>
 
-                        {/* 2. Cities List */}
-                        {expandedCountries[country] && (
-                            <div className="ml-4  pl-4 border-l-2 border-white/40 space-y-3">
-                                {Object.entries(cities).map(([city, items]) => {
-                                    const cityKey = `${country}-${city}`;
-                                    return (
-                                        <div key={city}>
-                                            <div 
-                                                onClick={() => setExpandedCities(prev => ({...prev, [cityKey]: !prev[cityKey]}))}
-                                                className="flex items-center bg-white/95 p-3 rounded-lg gap-2 cursor-pointer hover:bg-white/90 transition-all select-none border border-white/30 backdrop-blur-sm mb-2"
-                                            >
-                                                {expandedCities[cityKey] ? <ChevronDown size={16} className="text-gray-500"/> : <ChevronRight size={16} className="text-gray-500"/>}
-                                                <MapPin size={16} className="text-red-800" />
-                                                <span className="font-bold text-gray-900">{city}</span>
-                                                <span className="text-xs text-gray-900 bg-blue-200 px-2 py-0.5 rounded-full">
-                                                    {items.length}
-                                                </span>
-                                            </div>
+                        {/* 2. CITIES EXPANSION */}
+                        <AnimatePresence initial={false}>
+                            {expandedCountries[country] && (
+                                <motion.div 
+                                    initial={{ height: 0, opacity: 0 }} 
+                                    animate={{ height: "auto", opacity: 1 }} 
+                                    exit={{ height: 0, opacity: 0 }} 
+                                    className="overflow-hidden"
+                                >
+                                    <div className="ml-4 pl-4 border-l-2 border-white/40 space-y-3 pt-3 pb-2">
+                                        {Object.entries(cities).map(([city, items]) => {
+                                            const cityKey = `${country}-${city}`;
+                                            return (
+                                                <div key={city}>
+                                                    
+                                                    {/* CITY HEADER */}
+                                                    <div 
+                                                        onClick={() => setExpandedCities(prev => ({...prev, [cityKey]: !prev[cityKey]}))}
+                                                        className="flex items-center bg-white/95 p-3 rounded-lg gap-2 cursor-pointer hover:bg-white/80 transition-all border border-white/30 backdrop-blur-sm shadow-sm"
+                                                    >
+                                                        <ChevronRight size={16} className={`text-gray-500 transition-transform ${expandedCities[cityKey] ? 'rotate-90' : ''}`}/>
+                                                        <MapPin size={18} className="text-red-700" />
+                                                        <span className="font-bold text-gray-900">{city}</span>
+                                                        <span className="text-xs text-gray-900 bg-blue-200 px-2 py-0.5 rounded-full">
+                                                            {items.length}
+                                                        </span>
+                                                    </div>
 
-                                            {/* 3. Supplier Cards Grid */}
-                                            {expandedCities[cityKey] && (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 ml-6 mb-4">
-                                                  
-                                                    {items.map((supplier) => (
-                                                        <div key={supplier.id} className="bg-white/95 mt-2 border border-gray-300 backdrop-blur-sm rounded-xl hover:shadow-lg transition-all group flex flex-col relative overflow-hidden  h-[284px]">
-                                                            
-                                                            {/* Preferred Badge */}
-                                                            {supplier.isPreferred && (
-                                                                <div className="absolute top-0 right-0 bg-orange-400 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg z-10 flex items-center gap-1 shadow-sm">
-                                                                    <Star size={10} fill="white" /> PREFERRED
-                                                                </div>
-                                                            )}
+                                                    {/* 3. SUPPLIER CARDS GRID (Animated) */}
+                                                    <AnimatePresence initial={false}>
+                                                        {expandedCities[cityKey] && (
+                                                            <motion.div 
+                                                                initial={{ height: 0, opacity: 0 }} 
+                                                                animate={{ height: "auto", opacity: 1 }} 
+                                                                exit={{ height: 0, opacity: 0 }} 
+                                                                className="overflow-hidden"
+                                                            >
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 ml-6 mb-4 mt-3">
+                                                                    {items.map((supplier) => (
+                                                                        <motion.div 
+                                                                            layout 
+                                                                            initial={{ opacity: 0, y: 10 }} 
+                                                                            animate={{ opacity: 1, y: 0 }} 
+                                                                            exit={{ opacity: 0, scale: 0.95 }}
+                                                                            whileHover={{ y: -4, boxShadow: "0 12px 24px -8px rgba(0, 0, 0, 0.15)" }}
+                                                                            key={supplier.id} 
+                                                                            className="bg-white rounded-2xl border border-gray-200 shadow-md flex flex-col overflow-hidden relative"
+                                                                        >
+                                                                            {/* Gradient Top Header */}
+                                                                            <div className="h-24 w-full bg-gradient-to-br from-[#6366f1] via-[#8b5cf6] to-[#d946ef] relative p-4">
+                                                                                {/* Preferred Badge */}
+                                                                                {supplier.isPreferred && (
+                                                                                    <div className="absolute top-3 right-3 bg-[#f97316] text-white text-[9px] font-extrabold px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase tracking-wider">
+                                                                                        <Star size={10} className="fill-white" /> PREFERRED
+                                                                                    </div>
+                                                                                )}
+                                                                                {/* Logo Box (Overlapping) */}
+                                                                                <div className="absolute -bottom-6 left-4 w-14 h-14 rounded-xl bg-white shadow-md border border-gray-100 flex items-center justify-center overflow-hidden z-10">
+                                                                                    {supplier.logoUrl ? (
+                                                                                        <img src={supplier.logoUrl} alt="logo" className="w-full h-full object-cover" />
+                                                                                    ) : (
+                                                                                        <span className="text-xl font-bold text-gray-400">{supplier.name.substring(0,2).toUpperCase()}</span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
 
-                                                            {/* Card Header */}
-                                                            <div className="w-full p-4 flex items-center justify-start bg-gradient-to-br from-blue-400 to-purple-500 shadow-inner border border-white/10">
-                                                                <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                                                                    {supplier.logoUrl ? (
-                                                                        <img src={supplier.logoUrl} alt="logo" className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        <span className="text-lg font-bold text-gray-500">{supplier.name.substring(0,2).toUpperCase()}</span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
+                                                                            {/* Card Body */}
+                                                                            <div className="p-5 pt-8 flex-1 flex flex-col">
+                                                                                <h3 className="font-bold text-gray-900 text-[16px] mb-2 truncate" title={supplier.name}>
+                                                                                    Supplier: {supplier.name}
+                                                                                </h3>
+                                                                                
+                                                                                {/* Service Tags */}
+                                                                                <div className="flex flex-wrap gap-1.5 mb-5">
+                                                                                    {supplier.services.map(s => {
+                                                                                        // Match colors exactly to your screenshot
+                                                                                        const tagColor = s === 'Stay' ? 'bg-[#eff6ff] text-[#3b82f6] border-[#bfdbfe]' : 
+                                                                                                         s === 'Transport' ? 'bg-[#f0fdf4] text-[#22c55e] border-[#bbf7d0]' : 
+                                                                                                         s === 'Activity' ? 'bg-[#faf5ff] text-[#a855f7] border-[#e9d5ff]' : 
+                                                                                                         'bg-[#fff7ed] text-[#f97316] border-[#fed7aa]';
+                                                                                        return (
+                                                                                            <span key={s} className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase tracking-wider ${tagColor}`}>
+                                                                                                {s}
+                                                                                            </span>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
 
-                                                            <div className="px-4 mt-2 mb-1">
-                                                                <h3 className="font-bold text-gray-800 text-md truncate" title={supplier.name}>Supplier: {supplier.name}</h3>
-                                                            </div>
-                                                            
-                                                            <div className="px-4 mt-1 flex flex-wrap gap-1">
-                                                                {supplier.services.map(s => (
-                                                                    <span key={s} className={`text-[10px] px-1.5 py-0.5 rounded border ${getServiceColor(s)}`}>{s}</span>
-                                                                ))}
-                                                            </div>
+                                                                                {/* Details (Contact & Payment) */}
+                                                                                <div className="mt-auto space-y-2.5">
+                                                                                    <div className="flex items-center gap-2 text-[12px] font-medium text-gray-600">
+                                                                                        <User size={14} className="text-gray-400 shrink-0"/> 
+                                                                                        <span className="truncate">{supplier.contactPerson || 'No contact'}</span>
+                                                                                    </div>
+                                                                                
+                                                                                </div>
+                                                                                
+                                                                                {/* Action Buttons */}
+                                                                                <div className="mt-5 border-t border-gray-100 flex gap-3 pt-4">
+                                                                                    <button onClick={() => handleEdit(supplier)} className="flex-1 py-2 text-xs font-bold text-white bg-[#3b82f6] hover:bg-[#2563eb] rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                                                                                        <Pencil size={12}/> Edit
+                                                                                    </button>
+                                                                                    <button onClick={() => handleDelete(supplier.id as string)} className="flex-1 py-2 text-xs font-bold text-white bg-[#ef4444] hover:bg-[#dc2626] rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                                                                                        <Trash2 size={12}/> Delete
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </motion.div>
+                                                                    ))}
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
 
-                                                            {/* Details */}
-                                                            <div className="p-4 flex-1 flex flex-col gap-2">
-                                                                <div className="flex items-center gap-2 text-xs text-gray-600">
-                                                                    <User size={14} className="text-gray-400 shrink-0"/> 
-                                                                    <span className="truncate">{supplier.contactPerson || 'No contact'}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2 text-xs text-gray-600">
-                                                                    <Wallet size={14} className="text-gray-400 shrink-0"/> 
-                                                                    <span className="bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded border border-yellow-100 font-medium">
-                                                                    {supplier.paymentTerms}
-                                                                    </span>
-                                                                </div>
-                                                                
-                                                                {/* Action Footer */}
-                                                                <div className="mt-auto border-t border-gray-50 flex gap-2 pt-2">
-                                                                    <button onClick={() => handleEdit(supplier)} className="flex-1 py-1.5 text-xs font-medium text-gray-100 bg-blue-500 hover:bg-blue-600 rounded flex items-center justify-center gap-1 transition-colors">
-                                                                    <Pencil size={12}/> Edit
-                                                                    </button>
-                                                                    <button onClick={() => handleDelete(supplier.id as string)} className="flex-1 py-1.5 text-xs font-medium text-gray-100 bg-red-500 hover:bg-red-600 rounded flex items-center justify-center gap-1 transition-colors">
-                                                                    <Trash2 size={12}/> Delete
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
                                                 </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
+                                            );
+                                        })}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
                 ))
             )}
         </div>
+        {/* =========================================================================
+            END HIERARCHICAL LIST VIEW
+            ========================================================================= */}
+       
 
         {/* Modal Logic */}
         {isModalOpen && (

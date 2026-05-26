@@ -1414,21 +1414,6 @@ export default function ActivitySRMPage() {
     } 
   };
   
-  // CHANGED: Async
-//   const handleSave = async () => {
-//     if (!formData.name || !formData.city) return alert("Name and City required");
-//     setIsSaving(true);
-//     const cleanData = { ...formData, country: formData.country.trim().charAt(0).toUpperCase() + formData.country.trim().slice(1) };
-//     const success = await saveAttraction(cleanData);
-//     if(success) {
-//       await refreshAll();
-//       setIsModalOpen(false);
-//       setFormData(initialForm);
-//     } else {
-//       alert("Failed to save.");
-//     }
-//     setIsSaving(false);
-//   };
 
 
 // --- EXPORT LOGIC ---

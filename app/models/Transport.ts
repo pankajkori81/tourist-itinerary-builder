@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const TransportSchema = new mongoose.Schema({
+  transportMode: { type: String, enum: ['Vehicle', 'Rail', 'Flight', 'Ferry'], default: 'Vehicle' },
   vehicleType: { type: String, required: true },
   serviceType: { type: String, enum: ['Transfer', 'Disposal'], default: 'Transfer' },
   city: { type: String, required: true },
@@ -11,6 +12,13 @@ const TransportSchema = new mongoose.Schema({
   defaultPickup: String,
   defaultDropoff: String,
   defaultDuration: String,
+
+  
+  operator: String, 
+  transportClass: String,
+  referenceNo: String,
+  stops: String,
+
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
   linkedSupplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' } // RELATIONAL LINK
 }, { timestamps: true });

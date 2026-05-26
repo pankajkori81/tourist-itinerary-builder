@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 
 const LeadSchema = new mongoose.Schema({
+
+  clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', default: null },
   // Customer Info
   customerName: { type: String, required: true },
   email: { type: String, default: "" },

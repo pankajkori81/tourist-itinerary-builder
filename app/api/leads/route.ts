@@ -112,6 +112,7 @@ import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import dbConnect from "@/app/lib/dbconnect";
 import Lead from "@/app/models/Lead";
+import Client from "@/app/models/Client";
 import { LeadSchema } from "@/app/lib/validations";
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
@@ -159,7 +160,8 @@ export const GET = async (req: NextRequest) => {
   }
 };
 
-// 2. POST: Create a new Lead
+
+// 2. POST: Create a new Lead (AND AUTO-LINK TO CLIENT)
 export const POST = async (req: NextRequest) => {
   await dbConnect();
   try {
@@ -173,17 +175,45 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ success: false, message: parsed.error.issues[0].message }, { status: 400 });
     }
 
+    const leadData = parsed.data;
+
+    // 🌟 CRM MAGIC: Check if this client already exists (by email or phone)
+    let client = await Client.findOne({
+      $or: [
+        // FIX: Check if email matches AND is not an empty string
+        { $and: [{ email: leadData.email }, { email: { $ne: "" } }] },
+        // Or match phone
+        { phone: leadData.phone }                      
+      ],
+      agentId: user.userId // Ensure it searches this specific agent's clients
+    });
+
+    // If client does not exist, AUTO-CREATE a permanent profile for them!
+    if (!client) {
+      client = await Client.create({
+        name: leadData.customerName,
+        email: leadData.email,
+        phone: leadData.phone,
+        agentId: user.userId
+      });
+    }
+
+    // Now, create the Lead and permanently link it to the Client's ID
     const newLead = await Lead.create({
-        ...parsed.data,
+        ...leadData,
+        clientId: client._id, // 🔗 THE CONNECTION IS MADE HERE
         agentId: user.userId 
     });
 
     return NextResponse.json({ success: true, data: newLead });
 
   } catch (error) {
+    console.error("POST Lead Error:", error);
     return NextResponse.json({ success: false, message: "Server Error" }, { status: 500 });
   }
 };
+
+
 
 // 3. PUT: Update Lead (Status or Full Edit)
 export const PUT = async (req: NextRequest) => {

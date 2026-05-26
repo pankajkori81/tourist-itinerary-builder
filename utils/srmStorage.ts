@@ -673,6 +673,22 @@ export interface StayData {
   description: string;
   images: string[];
   roomCategories: RoomCategory[];
+
+
+  // 🌟 NEW OTA / GDS PROPERTY SPECS 🌟
+  chainCode?: string;
+  brand?: string;
+  stateProvince?: string;
+  zipPostal?: string;
+  phone?: string;
+  propertyOverview?: string;
+  gdsLocation?: string;
+  totalUnits?: number;
+  nonSmokingRooms?: number;
+  floors?: number;
+  latitude?: number;
+  longitude?: number;
+
   linkedSupplierId?: string;
   status: 'Active' | 'Inactive';
   createdAt?: string;
@@ -705,6 +721,7 @@ export interface AttractionData {
 export interface TransportData {
   id?: string;
   _id?: string;
+  transportMode: 'Vehicle' | 'Rail' | 'Flight' | 'Ferry';
   vehicleType: string;
   serviceType: 'Transfer' | 'Disposal';
   city: string;
@@ -715,6 +732,13 @@ export interface TransportData {
   defaultPickup?: string;
   defaultDropoff?: string;
   defaultDuration?: string;
+
+  // 👈 NEW FIELDS FOR RAIL, FLIGHT, FERRY
+  operator?: string; 
+  transportClass?: string; 
+  referenceNo?: string; 
+  stops?: string;
+
   status: 'Active' | 'Inactive';
   linkedSupplierId?: string;
   createdAt?: string;

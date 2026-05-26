@@ -258,7 +258,7 @@ function MainContentWrapper({ children }: { children: React.ReactNode }) {
             <div className="h-18 flex-shrink-0 z-40 relative shadow-sm">
               <Topbar />
             </div>
-            <main className="flex-1 relative overflow-hidden">
+            <main className="flex-1 relative overflow-y-auto">
               {children}
             </main>
         </div>

@@ -19,7 +19,23 @@ const StaySchema = new mongoose.Schema({
   description: String,
   images: [String],
   roomCategories: [RoomCategorySchema],
-  linkedSupplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' }, // RELATIONAL LINK
+
+  // 🌟 NEW OTA / GDS PROPERTY SPECS 🌟
+  chainCode: { type: String, default: '' },
+  brand: { type: String, default: '' },
+  stateProvince: { type: String, default: '' },
+  zipPostal: { type: String, default: '' },
+  phone: { type: String, default: '' },
+  propertyOverview: { type: String, default: '' },
+  gdsLocation: { type: String, default: '' }, // e.g., Suburban, Resort, Downtown
+  totalUnits: { type: Number, default: 0 },
+  nonSmokingRooms: { type: Number, default: 0 },
+  floors: { type: Number, default: 1 },
+  latitude: { type: Number },
+  longitude: { type: Number },
+
+
+linkedSupplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' }, 
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' }
 }, { timestamps: true });
 

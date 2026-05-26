@@ -1212,8 +1212,9 @@ import {
   Plus, MapPin, Building2, Star, 
   Trash2, X, Save, Image as ImageIcon, 
   ChevronDown, ChevronRight, BedDouble, PlusCircle, Globe, 
-  Edit, Briefcase, Phone, Mail, CreditCard, DollarSign, Loader2
+  Edit, Briefcase, Phone, Mail, CreditCard, DollarSign, Loader2 , Upload, Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSRM } from '@/app/context/SRMContext';
 import { StayData, RoomCategory, saveStay, deleteStay } from '@/utils/srmStorage';
@@ -1224,25 +1225,34 @@ export default function StaySRMPage() {
   const [activeTab, setActiveTab] = useState<'info' | 'rooms'>('info');
   const [isSaving, setIsSaving] = useState(false); // NEW STATE
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 👈 NEW STATES FOR IMPORT/EXPORT
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
   
   const [expandedCountries, setExpandedCountries] = useState<Record<string, boolean>>({});
   const [expandedCities, setExpandedCities] = useState<Record<string, boolean>>({});
 
 
-// 👇 UPDATE initialForm to include category and the new type options
-  const initialForm: StayData = {
+
+const initialForm: StayData = {
     id: '', name: '', 
-    category: 'Hotel', // 👈 NEW FIELD
-    type: 'Premium',   // 👈 UPDATED MEANING
+    category: 'Hotel', 
+    type: 'Premium',   
     city: '', country: '', address: '',
     rating: 4.5, description: '', images: [],
+    
+    // OTA Fallbacks
+    chainCode: '', brand: '', stateProvince: '', zipPostal: '', phone: '',
+    propertyOverview: '', gdsLocation: '', 
+    totalUnits: 0, nonSmokingRooms: 0, floors: 1, latitude: 0, longitude: 0,
+
     roomCategories: [], 
     status: 'Active', createdAt: '', updatedAt: '',
     linkedSupplierId: '' 
   };
+  
   const [formData, setFormData] = useState<StayData>(initialForm);
-
-
 
   const availableSuppliers = useMemo(() => {
     return suppliers.filter(s => {
@@ -1323,7 +1333,124 @@ export default function StaySRMPage() {
   };
 
 
-// CHANGED: Async
+
+// ==========================================
+  // EXPORT LOGIC (Extended for GDS Fields)
+  // ==========================================
+  const handleExport = () => {
+    if (stays.length === 0) return alert("No hotels to export.");
+
+    const exportData = stays.map(item => ({
+      'Property Name': item.name,
+      'Category': item.category || 'Hotel',
+      'Class Type': item.type || 'Premium',
+      'Chain Code': item.chainCode || '',
+      'Brand': item.brand || '',
+      'GDS Location': item.gdsLocation || '',
+      'Street Address': item.address || '',
+      'City': item.city,
+      'State / Province': item.stateProvince || '',
+      'Country': item.country,
+      'Zip / Postal': item.zipPostal || '',
+      'Phone': item.phone || '',
+      'Rating': item.rating || 4.5,
+      'Total Units': item.totalUnits || 0,
+      'Non-Smoke Rooms': item.nonSmokingRooms || 0,
+      'Floors': item.floors || 1,
+      'Latitude': item.latitude || 0,
+      'Longitude': item.longitude || 0,
+      'Property Overview': item.description || item.propertyOverview || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Hotels");
+    XLSX.writeFile(workbook, "Stay_Inventory_Extended.xlsx");
+  };
+
+  // ==========================================
+  // IMPORT LOGIC (Extended for GDS Fields)
+  // ==========================================
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+      try {
+        const binaryStr = event.target?.result;
+        const workbook = XLSX.read(binaryStr, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as any[];
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const row of parsedData) {
+          // Resolve alternate column names dynamically
+          const rowCity = (row['City'] || row['city'])?.toString().trim();
+          const rowCountry = (row['Country'] || row['country'] || row['Country Name'])?.toString().trim();
+          const rowName = (row['Property Name'] || row['Hotel Name'] || row['name'])?.toString().trim();
+
+          if (!rowCity || !rowCountry || !rowName) {
+            errorCount++;
+            continue; 
+          }
+
+          const formattedCountry = rowCountry.charAt(0).toUpperCase() + rowCountry.slice(1);
+
+          const newStay: any = {
+            name: rowName,
+            category: row['Category'] || 'Hotel',
+            type: row['Class Type'] || 'Premium',
+            chainCode: (row['Chain Code'] || row['chainCode'])?.toString() || '',
+            brand: (row['Brand'] || row['brand'])?.toString() || '',
+            gdsLocation: (row['GDS Location'] || row['Location'])?.toString() || '',
+            address: (row['Street Address'] || row['Address'])?.toString() || '',
+            city: rowCity,
+            stateProvince: (row['State / Province'] || row['State/Province'])?.toString() || '',
+            country: formattedCountry,
+            zipPostal: (row['Zip / Postal'] || row['Zip/Postal'])?.toString() || '',
+            phone: (row['Phone'] || row['phone'])?.toString() || '',
+            rating: parseFloat(row['Rating']) || 4.5,
+            totalUnits: parseInt(row['Total Units'] || row['# Units']) || 0,
+            nonSmokingRooms: parseInt(row['Non-Smoke Rooms'] || row['# Non Smoking Rooms']) || 0,
+            floors: parseInt(row['Floors'] || row['# Floors']) || 1,
+            latitude: parseFloat(row['Latitude']) || 0,
+            longitude: parseFloat(row['Longitude']) || 0,
+            description: (row['Property Overview'] || row['Description'])?.toString() || '',
+            images: [],
+            roomCategories: [],
+            status: 'Active',
+          };
+
+          const success = await saveStay(newStay);
+          if (success) successCount++;
+          else errorCount++;
+        }
+
+        alert(`Import Complete!\nSuccessfully added: ${successCount}\nSkipped/Failed (Missing Name/City/Country): ${errorCount}`);
+        await refreshAll();
+
+      } catch (error) {
+        console.error("Import parsing error:", error);
+        alert("Failed to read the file. Please ensure it is a valid Excel or CSV file.");
+      } finally {
+        setIsImporting(false);
+        if (importInputRef.current) importInputRef.current.value = '';
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+
+
+
+
+// 👇 UPDATED handleSave with complete data mapping
   const handleSave = async () => {
     if (!formData.name || !formData.city) return alert("Hotel Name and City are required");
     setIsSaving(true);
@@ -1331,11 +1458,24 @@ export default function StaySRMPage() {
     try {
       const cleanData = {
           ...formData,
+          // Ensure strings and numbers are strictly formatted
+          chainCode: formData.chainCode || '',
+          brand: formData.brand || '',
+          stateProvince: formData.stateProvince || '',
+          zipPostal: formData.zipPostal || '',
+          phone: formData.phone || '',
+          propertyOverview: formData.propertyOverview || '',
+          gdsLocation: formData.gdsLocation || '',
+          totalUnits: Number(formData.totalUnits) || 0,
+          nonSmokingRooms: Number(formData.nonSmokingRooms) || 0,
+          floors: Number(formData.floors) || 1,
+          latitude: Number(formData.latitude) || 0,
+          longitude: Number(formData.longitude) || 0,
           city: formData.city.trim(),
           country: formData.country.trim()
       };
 
-      // 👇 THE CRITICAL FIX: Prevent empty string from crashing Mongoose
+      // Prevent empty string ObjectIds from choking Mongoose validation
       if (!cleanData.linkedSupplierId || cleanData.linkedSupplierId === "") {
           delete cleanData.linkedSupplierId;
       }
@@ -1346,11 +1486,11 @@ export default function StaySRMPage() {
         await refreshAll();
         setIsModalOpen(false);
       } else {
-        alert("Failed to save.");
+        alert("Failed to save property to live database.");
       }
     } catch (error) {
       console.error("Error during save:", error);
-      alert("Failed to save. Check the console for details.");
+      alert("Failed to save. Check the console for validation details.");
     } finally {
       setIsSaving(false);
     }
@@ -1406,6 +1546,7 @@ export default function StaySRMPage() {
       {/* CONTENT */}
       <div className="flex-1 flex flex-col relative z-10 h-full">
         
+
         {/* HEADER */}
         <div className="bg-white/95 border-b border-white/50 px-6 py-4 flex justify-between items-center backdrop-blur-md shadow-sm z-10">
             <div>
@@ -1414,9 +1555,40 @@ export default function StaySRMPage() {
                 </h1>
                 <p className="text-xs text-gray-600 font-medium">Manage hotels and room types.</p>
             </div>
-            <button onClick={() => { setFormData(initialForm); setIsModalOpen(true); }} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform hover:scale-105">
-            <Plus size={18} /> Add Hotel
-            </button>
+            
+            <div className="flex items-center gap-3">
+               {/* Hidden File Input for Import */}
+               <input 
+                 type="file" 
+                 ref={importInputRef} 
+                 onChange={handleImport} 
+                 accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+                 className="hidden" 
+               />
+
+               {/* Import Button */}
+               <button 
+                 onClick={() => importInputRef.current?.click()} 
+                 disabled={isImporting}
+                 className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+               >
+                 {isImporting ? <Loader2 size={16} className="animate-spin text-purple-600" /> : <Upload size={16} className="text-gray-500" />}
+                 {isImporting ? 'Importing...' : 'Import'}
+               </button>
+
+               {/* Export Button */}
+               <button 
+                 onClick={handleExport} 
+                 className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all"
+               >
+                 <Download size={16} className="text-gray-500" /> Export
+               </button>
+
+               {/* Add Hotel Button */}
+               <button onClick={() => { setFormData(initialForm); setIsModalOpen(true); }} className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition-transform hover:-translate-y-0.5">
+                 <Plus size={18} /> Add Hotel
+               </button>
+            </div>
         </div>
 
         {/* LIST VIEW */}
@@ -1426,12 +1598,12 @@ export default function StaySRMPage() {
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-400">
                     <Loader2 size={40} className="animate-spin mb-4 text-purple-500" />
-                    <p className="font-medium text-lg drop-shadow-md">Loading Properties...</p>
+                    <p className="font-medium text-lg drop-shadow-md">Loading Hotels...</p>
                 </div>
             ) : Object.keys(groupedData).length === 0 ? (
                  <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
                     <Building2 size={48} className="opacity-20 mb-2"/>
-                    <p className="font-bold">No properties found.</p>
+                    <p className="font-bold">No Hotels found.</p>
                     <p className="text-sm">Click "Add Hotel" to start.</p>
                  </div>
              ) : (
@@ -1601,46 +1773,87 @@ export default function StaySRMPage() {
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                  <div>
                     <h2 className="text-xl font-bold text-gray-800">{formData.id ? 'Edit Property' : 'Add New Property'}</h2>
-                    <p className="text-xs text-gray-500">Configure property details</p>
+                    <p className="text-xs text-gray-500">Configure hotel details</p>
                  </div>
                  <button onClick={() => setIsModalOpen(false)} disabled={isSaving} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 disabled:opacity-50"><X size={20}/></button>
               </div>
 
+          
+
+
+              {/* --- TAB HEADERS --- */}
               <div className="flex border-b border-gray-200 px-6 gap-6 bg-white shrink-0">
-                  <button onClick={() => setActiveTab('info')} className={`py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'info' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500'}`}>Basic Info</button>
-                  <button onClick={() => setActiveTab('rooms')} className={`py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'rooms' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500'}`}>Rooms Configuration</button>
+                  <button 
+                      onClick={() => setActiveTab('info')} 
+                      className={`py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'info' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+                  >
+                      Basic Info
+                  </button>
+                  <button 
+                      onClick={() => setActiveTab('rooms')} 
+                      className={`py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'rooms' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+                  >
+                      Rooms Configuration
+                  </button>
               </div>
 
+              {/* --- TAB CONTENT AREA --- */}
               <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-                  {/* TAB 1: BASIC INFO */}
+                  
+                  {/* TAB 1: BASIC INFO (Upgraded to OTA Standards) */}
                   {activeTab === 'info' && (
                       <div className="grid grid-cols-12 gap-6">
                           <div className="col-span-4 space-y-4">
-                              <div onClick={() => fileInputRef.current?.click()} className="aspect-video border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-white bg-cover bg-center transition-all bg-gray-100" style={{ backgroundImage: `url(${formData.images[0]})` }}>
-                                  {!formData.images[0] && (<div className="text-center text-gray-400"><ImageIcon className="mx-auto mb-2"/><span className="text-xs font-bold">Upload Cover Image</span></div>)}
+                              <div 
+                                  onClick={() => fileInputRef.current?.click()} 
+                                  className="aspect-video border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-white bg-cover bg-center transition-all bg-gray-100 overflow-hidden" 
+                                  style={{ backgroundImage: `url(${formData.images[0]})` }}
+                              >
+                                  {!formData.images[0] && (
+                                      <div className="text-center text-gray-400">
+                                          <ImageIcon className="mx-auto mb-2"/>
+                                          <span className="text-xs font-bold">Upload Cover Image</span>
+                                      </div>
+                                  )}
                                   <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={handleImageUpload}/>
                               </div>
                               <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2">
                                   <label className="text-xs font-bold text-gray-700">Star Rating</label>
-                                  <input type="number" min="1" max="5" step="0.5" value={formData.rating} onChange={e => setFormData({...formData, rating: parseFloat(e.target.value)})} className="w-16 p-1 border rounded font-bold text-center"/>
+                                  <input 
+                                      type="number" 
+                                      min="1" 
+                                      max="5" 
+                                      step="0.5" 
+                                      value={formData.rating} 
+                                      onChange={e => setFormData({...formData, rating: parseFloat(e.target.value)})} 
+                                      className="w-16 p-1 border rounded font-bold text-center outline-none"
+                                  />
                                   <div className="flex text-yellow-400"><Star className="fill-current" size={16}/></div>
                               </div>
                           </div>
                           
                           <div className="col-span-8 space-y-4">
-                        
-
-                              {/* 1st Row: Hotel Name */}
+                              {/* Row 1: Property Name */}
                               <div>
-                                  <label className="text-xs font-bold text-gray-700 mb-1 block">Hotel Name *</label>
-                                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg font-bold" placeholder="e.g. Grand Palace Hotel"/>
+                                  <label className="text-xs font-bold text-gray-700 mb-1 block">Property Name *</label>
+                                  <input 
+                                      type="text" 
+                                      value={formData.name} 
+                                      onChange={e => setFormData({...formData, name: e.target.value})} 
+                                      className="w-full p-2 border border-gray-300 rounded-lg font-bold text-gray-900 outline-none focus:border-purple-500" 
+                                      placeholder="e.g. Grand Palace Hotel"
+                                  />
                               </div>
                               
-                              {/* 2nd Row: Category and Type */}
+                              {/* Row 2: Category and Class Type */}
                               <div className="grid grid-cols-2 gap-4">
                                   <div>
                                       <label className="text-xs font-bold text-gray-700 mb-1 block">Category</label>
-                                      <select value={formData.category || 'Hotel'} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg bg-white">
+                                      <select 
+                                          value={formData.category || 'Hotel'} 
+                                          onChange={e => setFormData({...formData, category: e.target.value})} 
+                                          className="w-full p-2 border border-gray-300 rounded-lg bg-white outline-none focus:border-purple-500"
+                                      >
                                           <option value="Hotel">Hotel</option>
                                           <option value="Resort">Resort</option>
                                           <option value="Villa">Villa</option>
@@ -1650,67 +1863,192 @@ export default function StaySRMPage() {
                                   </div>
                                   <div>
                                       <label className="text-xs font-bold text-gray-700 mb-1 block">Class Type</label>
-                                      <select value={formData.type || 'Premium'} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg bg-white">
-                                          <option value="Luxury">Luxury </option>
-                                          <option value="Premium">Premium </option>
+                                      <select 
+                                          value={formData.type || 'Premium'} 
+                                          onChange={e => setFormData({...formData, type: e.target.value})} 
+                                          className="w-full p-2 border border-gray-300 rounded-lg bg-white outline-none focus:border-purple-500"
+                                      >
+                                          <option value="Luxury">Luxury</option>
+                                          <option value="Premium">Premium</option>
                                           <option value="Deluxe">Deluxe</option>
                                           <option value="Standard">Standard</option>
                                           <option value="Budget">Budget</option>
                                       </select>
                                   </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div><label className="text-xs font-bold text-gray-700 mb-1 block">City *</label><input type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg" placeholder="e.g. Rome"/></div>
-                                  <div><label className="text-xs font-bold text-gray-700 mb-1 block">Country *</label><input type="text" value={formData.country} onChange={e => setFormData({...formData, country: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg" placeholder="e.g. Italy"/></div>
+
+                              {/* Row 3: Property Overview */}
+                              <div>
+                                  <label className="text-xs font-bold text-gray-700 mb-1 block">Property Overview / Description</label>
+                                  <textarea 
+                                      rows={3} 
+                                      value={formData.description} 
+                                      onChange={e => setFormData({...formData, description: e.target.value})} 
+                                      className="w-full p-2 border border-gray-300 rounded-lg text-sm outline-none resize-none focus:border-purple-500" 
+                                      placeholder="Short overview of the property amenities, vibe, and positioning..."
+                                  />
                               </div>
-                              <div><label className="text-xs font-bold text-gray-700 mb-1 block">Address</label><input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg" placeholder="Full address..."/></div>
-                              <div><label className="text-xs font-bold text-gray-700 mb-1 block">Description</label><textarea rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg" placeholder="Property description..."/></div>
+
+                              {/* 🌟 Upgraded OTA / GDS Distribution Specs Grid 🌟 */}
+                              <div className="bg-purple-50/30 border border-purple-100/60 p-4 rounded-xl space-y-4 mt-2">
+                                 <h3 className="text-xs font-bold text-purple-900 uppercase tracking-wide border-b border-purple-100 pb-1">
+                                    GDS Distribution & Property Specs
+                                 </h3>
+                                 
+                                 {/* Distribution Brands */}
+                                 <div className="grid grid-cols-3 gap-3">
+                                    <div>
+                                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Chain Code</label>
+                                       <input type="text" value={formData.chainCode || ''} onChange={e => setFormData({...formData, chainCode: e.target.value})} placeholder="e.g. BW, Marriott" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Brand</label>
+                                       <input type="text" value={formData.brand || ''} onChange={e => setFormData({...formData, brand: e.target.value})} placeholder="e.g. Best Western Plus" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">GDS Location</label>
+                                       <input type="text" value={formData.gdsLocation || ''} onChange={e => setFormData({...formData, gdsLocation: e.target.value})} placeholder="e.g. Resort, Suburban" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                                    </div>
+                                 </div>
+
+                                 {/* Physical Address Hierarchy */}
+                                 <div className="grid grid-cols-4 gap-3">
+                                    <div className="col-span-2">
+                                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Street Address</label>
+                                       <input type="text" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="123 Main Street" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">City *</label>
+                                       <input type="text" value={formData.city || ''} onChange={e => setFormData({...formData, city: e.target.value})} placeholder="City" className="w-full p-2 bg-white border border-gray-200 rounded text-xs font-medium text-gray-800 outline-none focus:border-purple-400"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Country</label>
+                                       <input type="text" value={formData.country || ''} onChange={e => setFormData({...formData, country: e.target.value})} placeholder="Country" className="w-full p-2 bg-white border border-gray-200 rounded text-xs font-medium text-gray-800 outline-none focus:border-purple-400"/>
+                                    </div>
+                                 </div>
+
+                                 {/* Deep Regional Location */}
+                                 <div className="grid grid-cols-3 gap-3">
+                                    <div>
+                                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">State / Province</label>
+                                       <input type="text" value={formData.stateProvince || ''} onChange={e => setFormData({...formData, stateProvince: e.target.value})} placeholder="State / Region" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Zip / Postal</label>
+                                       <input type="text" value={formData.zipPostal || ''} onChange={e => setFormData({...formData, zipPostal: e.target.value})} placeholder="Postal code" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase">Phone</label>
+                                       <input type="text" value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="+1 555-0199" className="w-full p-2 bg-white border border-gray-200 rounded text-xs outline-none focus:border-purple-400"/>
+                                    </div>
+                                 </div>
+
+                                 {/* Structural Mapping */}
+                                 <div className="grid grid-cols-5 gap-2 pt-1 border-t border-purple-100/40">
+                                    <div>
+                                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate" title="Total Units">Total Units</label>
+                                       <input type="number" value={formData.totalUnits || 0} onChange={e => setFormData({...formData, totalUnits: parseInt(e.target.value) || 0})} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center font-bold outline-none"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate" title="Non-Smoking Rooms">Non-Smoke</label>
+                                       <input type="number" value={formData.nonSmokingRooms || 0} onChange={e => setFormData({...formData, nonSmokingRooms: parseInt(e.target.value) || 0})} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center font-bold outline-none"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate" title="Total Floors">Floors</label>
+                                       <input type="number" value={formData.floors || 1} onChange={e => setFormData({...formData, floors: parseInt(e.target.value) || 1})} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center font-bold outline-none"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate">Latitude</label>
+                                       <input type="number" step="0.000001" value={formData.latitude || 0} onChange={e => setFormData({...formData, latitude: parseFloat(e.target.value) || 0})} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center outline-none"/>
+                                    </div>
+                                    <div>
+                                       <label className="block text-[9px] font-bold text-gray-500 mb-1 uppercase truncate">Longitude</label>
+                                       <input type="number" step="0.000001" value={formData.longitude || 0} onChange={e => setFormData({...formData, longitude: parseFloat(e.target.value) || 0})} className="w-full p-1.5 bg-white border border-gray-200 rounded text-xs text-center outline-none"/>
+                                    </div>
+                                 </div>
+                              </div>
                           </div>
                       </div>
                   )}
 
-                  {/* TAB 2: ROOMS (No Rates) */}
+                  {/* TAB 2: ROOMS (Maintained exactly per original source logic) */}
                   {activeTab === 'rooms' && (
                       <div className="space-y-6">
                           {formData.roomCategories.length === 0 ? (
                               <div className="text-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-xl">
                                   <BedDouble className="mx-auto text-gray-300 mb-3" size={48}/>
                                   <p className="text-gray-500 font-medium mb-4">No rooms configured yet.</p>
-                                  <button onClick={addRoomCategory} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold text-sm hover:bg-purple-700 transition-colors">+ Add First Room Category</button>
+                                  <button 
+                                      onClick={addRoomCategory} 
+                                      className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold text-sm hover:bg-purple-700 transition-colors"
+                                  >
+                                      + Add First Room Category
+                                  </button>
                               </div>
                           ) : (
                               <div className="space-y-4">
                                   {formData.roomCategories.map((room, rIndex) => (
                                       <div key={rIndex} className="bg-white rounded-xl border border-gray-300 overflow-hidden shadow-sm p-4 flex gap-4 items-center">
-                                          <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">{rIndex + 1}</div>
+                                          <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+                                              {rIndex + 1}
+                                          </div>
                                           <div className="flex-1 grid grid-cols-3 gap-4">
                                             <div>
                                               <label className="text-[10px] font-bold text-gray-500 uppercase">Room Name</label>
-                                              <input type="text" value={room.name} onChange={(e) => updateRoomField(rIndex, 'name', e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none" placeholder="e.g. Deluxe"/>
+                                              <input 
+                                                  type="text" 
+                                                  value={room.name} 
+                                                  onChange={(e) => updateRoomField(rIndex, 'name', e.target.value)} 
+                                                  className="w-full p-2 border border-gray-300 rounded outline-none" 
+                                                  placeholder="e.g. Deluxe"
+                                              />
                                             </div>
                                             <div>
                                               <label className="text-[10px] font-bold text-gray-500 uppercase">Max Occupancy</label>
-                                              <input type="number" value={room.maxOccupancy} onChange={(e) => updateRoomField(rIndex, 'maxOccupancy', parseInt(e.target.value))} className="w-full p-2 border border-gray-300 rounded outline-none"/>
+                                              <input 
+                                                  type="number" 
+                                                  value={room.maxOccupancy} 
+                                                  onChange={(e) => updateRoomField(rIndex, 'maxOccupancy', parseInt(e.target.value))} 
+                                                  className="w-full p-2 border border-gray-300 rounded outline-none"
+                                              />
                                             </div>
                                             <div>
                                               <label className="text-[10px] font-bold text-gray-500 uppercase">Bed Type</label>
-                                              <input type="text" value={room.bedType} onChange={(e) => updateRoomField(rIndex, 'bedType', e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none" placeholder="e.g. King"/>
+                                              <input 
+                                                  type="text" 
+                                                  value={room.bedType} 
+                                                  onChange={(e) => updateRoomField(rIndex, 'bedType', e.target.value)} 
+                                                  className="w-full p-2 border border-gray-300 rounded outline-none" 
+                                                  placeholder="e.g. King"
+                                              />
                                             </div>
                                           </div>
-                                          <button onClick={() => removeRoom(rIndex)} className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><Trash2 size={16}/></button>
+                                          <button 
+                                              onClick={() => removeRoom(rIndex)} 
+                                              className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                                          >
+                                              <Trash2 size={16}/>
+                                          </button>
                                       </div>
                                   ))}
-                                  <button onClick={addRoomCategory} className="w-full py-3 border-2 border-dashed border-purple-300 bg-purple-50 text-purple-700 font-bold rounded-lg hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"><PlusCircle size={20}/> Add Another Room</button>
+                                  <button 
+                                      onClick={addRoomCategory} 
+                                      className="w-full py-3 border-2 border-dashed border-purple-300 bg-purple-50 text-purple-700 font-bold rounded-lg hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
+                                  >
+                                      <PlusCircle size={20}/> Add Another Room
+                                  </button>
                               </div>
                           )}
                       </div>
                   )}
               </div>
 
+              
+
               <div className="px-6 py-4 border-t border-gray-200 bg-white flex justify-end gap-3 shrink-0">
                   <button onClick={() => setIsModalOpen(false)} disabled={isSaving} className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
                   <button onClick={handleSave} disabled={isSaving} className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg shadow-md flex items-center gap-2 transition-transform active:scale-95 disabled:opacity-70">
-                    {isSaving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : <><Save size={18}/> Save Property</>}
+                    {isSaving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : <><Save size={18}/> Save Hotel</>}
                   </button>
               </div>
            </div>
@@ -1719,3 +2057,9 @@ export default function StaySRMPage() {
    </div>
   );
 }
+
+
+
+
+
+

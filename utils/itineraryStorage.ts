@@ -997,6 +997,7 @@
 
 
 
+
 import { DayPlan } from '@/app/dashboard/itinerary/create-day/constants/daywiseConstants';
 import { ReactNode } from 'react';
 
@@ -1078,26 +1079,6 @@ export const getLibrary = async (): Promise<StoredItineraryData[]> => {
   } catch (error) { console.error(error); return []; }
 };
 
-// export const saveToLibrary = async (data: StoredItineraryData): Promise<boolean> => {
-//   try {
-//     const payload = { ...data, _id: data.id }; // Map for backend
-//     if (!payload._id) delete payload._id; // Let Mongo generate ID for new trips
-
-//     const res = await fetch('/api/itineraries', {
-//       method: data.id ? 'PUT' : 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify(payload)
-//     });
-//     const json = await res.json();
-    
-//     // If new trip, bind the new MongoDB ID to our local draft
-//     if (json.success && json.data && !data.id) {
-//        data.id = json.data._id;
-//        saveItineraryToStorage(data);
-//     }
-//     return json.success;
-//   } catch (error) { console.error(error); return false; }
-// };
 
 
 export const saveToLibrary = async (data: StoredItineraryData): Promise<boolean> => {
