@@ -266,9 +266,13 @@ export default function LoginPage() {
         </form>
 
         {/* 👇 UPDATED FOOTER SECTION 👇 */}
-        <div className="mt-8 pt-6 border-t border-white/10 text-center space-y-4">
-          <div className="text-sm text-gray-400">
-            Internal Employee? <Link href="/auth/register" className="text-blue-400 hover:text-blue-300 font-medium hover:underline transition-all">Create Staff Account</Link>
+       <div className="mt-6 pt-6 border-t border-white/10 text-center space-y-5">
+          
+          {/* Forgot Password Link */}
+          <div>
+            <Link href="/auth/forgot-password" className="text-sm text-gray-400 hover:text-blue-400 font-medium hover:underline transition-all">
+              Forgot your password?
+            </Link>
           </div>
 
           {/* New Agent Link */}

@@ -771,6 +771,7 @@ import {
 } from 'lucide-react';
 import { useUser } from '@/app/context/UserContext';
 import LeadModal from './LeadModal';
+import ClientDrawer from './ClientDrawer';
 
 // --- Types ---
 interface Lead {
@@ -814,6 +815,8 @@ export default function LeadsDashboard() {
   const [groupBy, setGroupBy] = useState<'none' | 'destination' | 'budget'>('none');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+const [selectedClient, setSelectedClient] = useState<any>(null);
 
   // --- API Calls ---
   const fetchLeads = async () => {
@@ -969,23 +972,7 @@ export default function LeadsDashboard() {
         <div className="border-b border-gray-200 mx-6" />
 
         {/* Bottom Tab Row */}
-        {/* <div className="px-8 flex gap-6">
-          {CRM_TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 text-sm font-bold transition-all relative ${
-                activeTab === tab ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {tab}
-              {activeTab === tab && (
-                <motion.div layoutId="crmTabLine" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-md" />
-              )}
-            </button>
-          ))}
-        </div> */}
-
+    
        
 <div className="flex bg-slate-100 p-2 rounded-lg w-fit shadow-inner">
   {CRM_TABS.map((tab) => {
@@ -1154,10 +1141,7 @@ export default function LeadsDashboard() {
           )
         )}
 
-        {/* ========================================================
-            PLACEHOLDERS FOR UPCOMING TABS
-            ======================================================== */}
-        {/* ========================================================
+            {/* ========================================================
             CONTACTS TAB (CRM Directory)
             ======================================================== */}
         {activeTab === 'Contacts' && (
@@ -1166,46 +1150,79 @@ export default function LeadsDashboard() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Client Name</th>
+                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Client Profile</th>
                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Contact Info</th>
-                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Total Trips</th>
+                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Client Tags</th>
+                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider text-center">Total Trips</th>
                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider text-right">Lifetime Value</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {clients.length > 0 ? clients.map((client, idx) => (
-                    <tr key={client._id || idx} className="hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <tr 
+                      key={client._id || idx} 
+                      onClick={() => { setSelectedClient(client); setIsDrawerOpen(true); }}
+                      className="hover:bg-indigo-50/50 transition-colors cursor-pointer group relative"
+                    >
+                      {/* Name & Avatar */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black shrink-0 border border-indigo-100">
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-black shrink-0 border border-indigo-200 shadow-sm">
                             {getInitials(client.name)}
                           </div>
                           <div>
-                            <span className="text-sm font-bold text-gray-900 block">{client.name}</span>
+                            <span className="text-sm font-bold text-gray-900 block group-hover:text-indigo-700 transition-colors">{client.name}</span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Added {new Date(client.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </td>
+                      
+                      {/* Contact Info */}
                       <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-xs font-semibold text-gray-600 flex items-center gap-1.5"><Mail size={12} className="text-gray-400"/> {client.email || '—'}</span>
-                          <span className="text-xs font-semibold text-gray-600 flex items-center gap-1.5"><Phone size={12} className="text-gray-400"/> {client.phone || '—'}</span>
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-xs font-semibold text-gray-600 flex items-center gap-2"><Mail size={13} className="text-gray-400"/> {client.email || '—'}</span>
+                          <span className="text-xs font-semibold text-gray-600 flex items-center gap-2"><Phone size={13} className="text-gray-400"/> {client.phone || '—'}</span>
                         </div>
                       </td>
+
+                      {/* Client Tags (New UI Element) */}
                       <td className="px-6 py-4">
-                        <span className="text-sm font-extrabold text-gray-700 bg-gray-100 px-3 py-1 rounded-lg">
+                        <div className="flex gap-2">
+                           {client.totalTrips > 0 ? (
+                             <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider">Active Traveler</span>
+                           ) : (
+                             <span className="bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider">Prospect</span>
+                           )}
+                           {client.lifetimeValue > 5000 && (
+                             <span className="bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider">VIP</span>
+                           )}
+                        </div>
+                      </td>
+
+                      {/* Total Trips */}
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-extrabold text-gray-700 bg-white border border-gray-200 shadow-sm px-3 py-1 rounded-lg">
                           {client.totalTrips || 0}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className="text-sm font-black text-emerald-600">
+
+                      {/* Lifetime Value & Hover Action */}
+                      <td className="px-6 py-4 text-right relative">
+                        <span className="text-sm font-black text-emerald-600 group-hover:opacity-0 transition-opacity duration-200">
                           {formatCurrency(client.lifetimeValue || 0)}
                         </span>
+                        
+                        {/* Hidden button that appears on hover */}
+                        <div className="absolute inset-y-0 right-6 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                           <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg flex items-center gap-1">
+                             View Profile <ArrowRightCircle size={14}/>
+                           </span>
+                        </div>
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={4} className="text-center py-16 text-gray-400">
+                      <td colSpan={5} className="text-center py-16 text-gray-400">
                         <Users size={32} className="opacity-20 mx-auto mb-3"/>
                         <p className="text-sm font-semibold">No clients in database yet.</p>
                       </td>
@@ -1216,6 +1233,7 @@ export default function LeadsDashboard() {
             </div>
           </div>
         )}
+        
 
         {activeTab === 'Custom Fields' && (
           <div className="h-full flex flex-col items-center justify-center text-gray-400">
@@ -1228,15 +1246,26 @@ export default function LeadsDashboard() {
       </div>
 
       {/* 3. FLOATING MODAL */}
-      <LeadModal 
+  <LeadModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
-            fetchLeads(); // Refresh the board!
+            fetchLeads();   // 🌟 Refreshes Kanban Board
+            fetchClients(); // 🌟 Refreshes Contacts Table instantly!
         }}
         existingLead={editingLead}
       />
+
+
+  <ClientDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
+        client={selectedClient} 
+        onUpdate={() => fetchClients()} // 🌟 Added this! It refreshes the table instantly when you save.
+      />
     </div> // This is the final closing div of your LeadsDashboard
+
+    
     
   );
 }
