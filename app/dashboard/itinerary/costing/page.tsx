@@ -2112,8 +2112,13 @@ export default function CostingPage() {
   const citiesWithNights = routes.map((r: any) => `${r.city} (${r.nights}N)`).join(" → ") || rawDayPlans.map((d: any) => d.city).filter(Boolean).join(" → ") || "TBA";
   
   // Extract start and end cities
-  const startCity = routes?.[0]?.city || rawDayPlans?.[0]?.city || "TBA";
-  const endCity = routes?.[routes.length - 1]?.city || rawDayPlans?.[rawDayPlans.length - 1]?.city || "TBA";
+  // const startCity = routes?.[0]?.city || rawDayPlans?.[0]?.city || "TBA";
+  // const endCity = routes?.[routes.length - 1]?.city || rawDayPlans?.[rawDayPlans.length - 1]?.city || "TBA";
+
+  // Extract start and end cities
+  const startCity = (routes?.[0]?.cities && routes[0].cities.length > 0) ? routes[0].cities[0].name : (rawDayPlans?.[0]?.city || "TBA");
+  
+  const endCity = (routes?.[routes.length - 1]?.cities && routes[routes.length - 1].cities.length > 0) ? routes[routes.length - 1].cities[0].name : (rawDayPlans?.[rawDayPlans.length - 1]?.city || "TBA");
 
   if (loading || !user)
     return <div className="p-10 text-center">Loading...</div>;
