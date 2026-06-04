@@ -662,19 +662,6 @@ export default function EmployeesPage() {
   };
   useEffect(() => { fetchEmployees(); }, []);
 
-  // --- 2. Advanced Filtering & Pagination Logic ---
-  // const filteredEmployees = useMemo(() => {
-  //   return employees.filter(emp => {
-  //     const matchesSearch = (emp.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-  //                           (emp.email || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-  //                           (emp.department || "").toLowerCase().includes(searchQuery.toLowerCase());
-  //     const matchesRole = filterRole === "All" || emp.role === filterRole;
-  //     const matchesStatus = filterStatus === "All" || emp.status === filterStatus.toLowerCase();
-  //     const matchesType = filterType === "All" || emp.employmentType === filterType;
-  //     return matchesSearch && matchesRole && matchesStatus && matchesType;
-  //   });
-  // }, [employees, searchQuery, filterRole, filterStatus, filterType]);
-
 
   // --- 2. Advanced Filtering & Pagination Logic ---
   const filteredEmployees = useMemo(() => {
@@ -712,14 +699,43 @@ export default function EmployeesPage() {
   }, [employees]);
 
   // --- 4. API Handlers ---
+  // const handleAddEmployee = async (e: React.FormEvent) => {
+  //   e.preventDefault(); setSubmitLoading(true); setError("");
+  //   try {
+  //     const res = await fetch("/api/employees", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
+  //     const json = await res.json();
+  //     if (json.success) { setIsAddModalOpen(false); setFormData(initialFormState); fetchEmployees(); } 
+  //     else setError(json.message);
+  //   } catch (err) { setError("Something went wrong."); } finally { setSubmitLoading(false); }
+  // };
+
+
   const handleAddEmployee = async (e: React.FormEvent) => {
-    e.preventDefault(); setSubmitLoading(true); setError("");
+    e.preventDefault(); 
+    setSubmitLoading(true); 
+    setError("");
+    
     try {
-      const res = await fetch("/api/employees", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
+      const res = await fetch("/api/employees", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify(formData) 
+      });
       const json = await res.json();
-      if (json.success) { setIsAddModalOpen(false); setFormData(initialFormState); fetchEmployees(); } 
-      else setError(json.message);
-    } catch (err) { setError("Something went wrong."); } finally { setSubmitLoading(false); }
+      
+      if (json.success) { 
+        setIsAddModalOpen(false); 
+        setFormData(initialFormState); 
+        fetchEmployees(); 
+      } else {
+        // 👉 FIX: Fallback to json.error if json.message isn't available
+        setError(json.message || json.error || "Failed to add employee.");
+      }
+    } catch (err) { 
+      setError("Network error. Please check your connection."); 
+    } finally { 
+      setSubmitLoading(false); 
+    }
   };
 
   const handleEditEmployee = async (e: React.FormEvent) => {

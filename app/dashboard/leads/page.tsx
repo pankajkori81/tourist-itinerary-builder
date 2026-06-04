@@ -767,7 +767,8 @@ import {
   Plus, Phone, MapPin, Users, Briefcase, 
   Calendar, ArrowRightCircle, Loader2, Search, AlignLeft, 
   Inbox, Edit2, Trash2, Mail,
-  ChevronDown
+  ChevronDown,
+  X , Key, Type, Calendar as CalendarIcon, List, CheckCircle2
 } from 'lucide-react';
 import { useUser } from '@/app/context/UserContext';
 import LeadModal from './LeadModal';
@@ -785,6 +786,13 @@ interface Lead {
   budget: number;
   status: 'New' | 'Contacted' | 'Quoted' | 'Won' | 'Lost';
   createdAt: string;
+}
+
+interface CustomField {
+  _id: string;
+  name: string;
+  type: 'text' | 'dropdown' | 'date';
+  options?: string[];
 }
 
 const CRM_TABS = ['Opportunities', 'Contacts', 'Custom Fields'] as const;
@@ -817,6 +825,11 @@ export default function LeadsDashboard() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 const [selectedClient, setSelectedClient] = useState<any>(null);
+// Custom Fields State
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
+  const [newField, setNewField] = useState({ name: '', type: 'text', options: '' });
+  const [isSubmittingField, setIsSubmittingField] = useState(false);
 
   // --- API Calls ---
   const fetchLeads = async () => {
@@ -844,10 +857,65 @@ const [selectedClient, setSelectedClient] = useState<any>(null);
     }
   };
 
+  // 3. Fetch Custom Fields
+  const fetchCustomFields = async () => {
+    try {
+      const res = await fetch("/api/custom-fields");
+      const json = await res.json();
+      if (json.success) setCustomFields(json.data);
+    } catch (error) {
+      console.error("Failed to fetch custom fields");
+    }
+  };
+
+  // Create a Custom Field
+  const handleCreateField = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingField(true);
+    try {
+      const optionsArray = newField.type === 'dropdown' 
+        ? newField.options.split(',').map(o => o.trim()).filter(o => o) 
+        : [];
+
+      const res = await fetch("/api/custom-fields", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newField.name, type: newField.type, options: optionsArray }),
+      });
+      
+      const json = await res.json();
+      if (json.success) {
+        setIsFieldModalOpen(false);
+        setNewField({ name: '', type: 'text', options: '' });
+        fetchCustomFields();
+      } else alert(json.message);
+    } catch (error) {
+      alert("Failed to create field");
+    } finally {
+      setIsSubmittingField(false);
+    }
+  };
+
+  // Delete a Custom Field
+  const deleteCustomField = async (id: string) => {
+    if (!confirm("Are you sure? This removes the field definition for all clients.")) return;
+    try {
+      const res = await fetch("/api/custom-fields", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) fetchCustomFields();
+    } catch (error) {
+      alert("Failed to delete field");
+    }
+  };
+
 
   useEffect(() => { 
     fetchLeads(); 
     fetchClients(); 
+    fetchCustomFields();
   }, []);
 
   const updateStatus = async (leadId: string, newStatus: string) => {
@@ -1235,11 +1303,159 @@ const [selectedClient, setSelectedClient] = useState<any>(null);
         )}
         
 
+        {/* ========================================================
+            CUSTOM FIELDS TAB (CRM Settings)
+            ======================================================== */}
         {activeTab === 'Custom Fields' && (
-          <div className="h-full flex flex-col items-center justify-center text-gray-400">
-            <Edit2 size={48} className="opacity-20 mb-4"/>
-            <h2 className="text-xl font-bold text-gray-700">CRM Settings</h2>
-            <p className="text-sm">Custom tag management is coming in Phase 3.</p>
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-lg font-extrabold text-gray-900">Custom Fields Settings</h2>
+                <p className="text-sm text-gray-500 mt-1">Define the custom data points you want to track across all client profiles.</p>
+              </div>
+              <button
+                onClick={() => setIsFieldModalOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-md transition-all flex items-center gap-2"
+              >
+                <Plus size={16}/> Add Custom Field
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Field Details</th>
+                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Data Type</th>
+                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Configuration</th>
+                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {customFields.length > 0 ? customFields.map((field: any) => (
+                    <tr key={field._id} className="hover:bg-slate-50 transition-colors group">
+                      
+                      {/* 1. Field Name & Auto-Generated Key */}
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-bold text-gray-900 block">{field.name}</span>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] text-gray-400 font-mono">
+                          <Key size={10} />
+                          custom_{field.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}
+                        </div>
+                      </td>
+
+                      {/* 2. Visual Data Types */}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="flex items-center gap-1.5 w-fit bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border border-slate-200">
+                            {field.type === 'text' && <Type size={12}/>}
+                            {field.type === 'date' && <CalendarIcon size={12}/>}
+                            {field.type === 'dropdown' && <List size={12}/>}
+                            {field.type}
+                          </span>
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Optional Field</span>
+                        </div>
+                      </td>
+
+                      {/* 3. Configuration / Options */}
+                      <td className="px-6 py-4">
+                        {field.type === 'dropdown' && field.options && field.options.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+                            {field.options.map((opt: string, i: number) => (
+                              <span key={i} className="bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded text-[10px] font-bold">
+                                {opt}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic font-medium">Standard input</span>
+                        )}
+                      </td>
+
+                      {/* 4. Status & Date */}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1.5">
+                           <span className="flex items-center gap-1 w-fit bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border border-emerald-100">
+                             <CheckCircle2 size={10}/> Active
+                           </span>
+                           <span className="text-[10px] font-bold text-gray-400">
+                             Added {field.createdAt ? new Date(field.createdAt).toLocaleDateString() : 'Recently'}
+                           </span>
+                        </div>
+                      </td>
+
+                      {/* 5. Actions */}
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2  duration-200">
+                          <button
+                            onClick={() => deleteCustomField(field._id)}
+                            className="flex items-center gap-1.5 text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors border border-red-100"
+                          >
+                            <Trash2 size={14}/> 
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={5} className="text-center py-20 text-gray-400 bg-gray-50/50">
+                        <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-200">
+                          <List size={24} className="text-indigo-300"/>
+                        </div>
+                        <h3 className="text-sm font-bold text-gray-900 mb-1">No Custom Fields Yet</h3>
+                        <p className="text-xs font-medium max-w-sm mx-auto">Create specialized data points like "Dietary Needs" or "Passport Expiry" to track across all your client profiles.</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+           
+            </div>
+
+            {/* --- ADD FIELD MODAL --- */}
+            {isFieldModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                    <h2 className="text-lg font-extrabold text-gray-900">New Custom Field</h2>
+                    <button onClick={() => setIsFieldModalOpen(false)} className="p-2 text-gray-400 hover:bg-gray-200 rounded-full transition-colors">
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <form onSubmit={handleCreateField} className="space-y-5">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Field Name</label>
+                        <input required type="text" value={newField.name} onChange={(e) => setNewField({...newField, name: e.target.value})} placeholder="e.g. Dietary Needs" className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Field Type</label>
+                        <select value={newField.type} onChange={(e) => setNewField({...newField, type: e.target.value as 'text'|'dropdown'|'date'})} className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all cursor-pointer">
+                          <option value="text">Text (Short Answer)</option>
+                          <option value="date">Date</option>
+                          <option value="dropdown">Dropdown (Multiple Choice)</option>
+                        </select>
+                      </div>
+                      
+                      {newField.type === 'dropdown' && (
+                        <div className="animate-in fade-in slide-in-from-top-2">
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Options (Comma Separated)</label>
+                          <input required type="text" value={newField.options} onChange={(e) => setNewField({...newField, options: e.target.value})} placeholder="Vegan, Vegetarian, etc." className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all" />
+                        </div>
+                      )}
+
+                      <div className="pt-4 flex justify-end gap-3">
+                        <button type="button" onClick={() => setIsFieldModalOpen(false)} className="px-5 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-all">Cancel</button>
+                        <button type="submit" disabled={isSubmittingField} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-bold shadow-md flex items-center gap-2 transition-all disabled:opacity-70">
+                          {isSubmittingField ? <Loader2 size={16} className="animate-spin"/> : null} Create Field
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

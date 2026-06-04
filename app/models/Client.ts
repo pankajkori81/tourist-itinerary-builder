@@ -9,6 +9,14 @@ const ClientSchema = new mongoose.Schema({
   // CRM Custom Data
   preferences: { type: String, default: "" }, // e.g., "Aisle seat, vegetarian"
   tags: [{ type: String }], // e.g., ["VIP", "Honeymooner"]
+
+
+  // 🌟 NEW: Flexible storage for any custom fields the Admin creates
+  customData: {
+    type: Map,
+    of: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
   
   // Lifetime Value Tracking (The CRM Magic)
   totalTrips: { type: Number, default: 0 },
