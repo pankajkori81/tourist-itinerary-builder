@@ -1291,7 +1291,9 @@ export default function TripsPage() {
 // --- LOAD DATA (Corrected for MongoDB Async) ---
   const loadTrips = async () => {
     // 1. We MUST 'await' because getLibrary is now an async DB call
+    // const allItineraries = await getLibrary();
     const allItineraries = await getLibrary();
+    console.log("DEBUG: First item in library:", allItineraries[0]); // Add this!
     
     // Safety check: if for some reason data is null
     if (!allItineraries) {
@@ -1362,9 +1364,110 @@ export default function TripsPage() {
     }
   };
 
-  const handleOperationsClick = (tripId: string) => {
-      router.push(`/dashboard/trips/${tripId}/operations`);
-  };
+
+
+// Inside your TripsPage.tsx
+// const handleOperationsClick = async (trip: any) => {
+//     // 1. Call the Generate API to create the checklist in MongoDB
+//     const res = await fetch('/api/operations/generate', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({
+//             tripId: trip.id, // Ensure this matches your trip ID format
+//             tripName: trip.tripName,
+//             itineraryId: trip.id, // Or whatever ID links your itinerary
+//             dayPlans: trip.dayWiseActivities 
+//         })
+//     });
+
+// const handleOperationsClick = async (trip: any) => {
+//     // 🌟 DEBUG: Check if trip ID exists
+//     console.log("Button Clicked for Trip Object:", trip);
+    
+//     // Check if the ID is missing
+//     const tripId = trip.id || trip._id; // Sometimes MongoDB uses _id instead of id
+    
+//     if (!tripId) {
+//         alert("Error: Trip ID is missing!");
+//         return;
+//     }
+
+//     const res = await fetch('/api/operations/generate', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({
+//             tripId: tripId, 
+//             tripName: trip.tripName,
+//             itineraryId: tripId,
+//             dayPlans: trip.dayWiseActivities 
+//         })
+//     });
+
+//     // Proceed if created (201) or already exists (400)
+//     if (res.ok || res.status === 400) {
+//         router.push(`/dashboard/travel-operations/${tripId}`);
+//     } else {
+//         alert("Error initializing operations.");
+//     }
+// };
+
+
+// const handleOperationsClick = async (trip: any) => {
+//     // 1. Extract the ID safely
+//     const tripId = trip.id || trip._id; 
+    
+//     if (!tripId) {
+//         alert("Error: Trip ID is missing from this database record.");
+//         return;
+//     }
+
+    // // 2. Call the Generate API
+    // const res = await fetch('/api/operations/generate', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({
+    //         tripId: tripId, 
+    //         tripName: trip.tripName,
+    //         itineraryId: tripId,
+    //         dayPlans: trip.dayWiseActivities 
+    //     })
+    // });
+
+//     if (res.ok || res.status === 400) {
+//         router.push(`/dashboard/travel-operations/${tripId}`);
+//     } else {
+//         alert("Error initializing operations.");
+//     }
+// };
+
+
+const handleOperationsClick = async (trip: any) => {
+    // 🌟 FIX: Try trip.id, then trip._id, then alert if both are missing
+    const tripId = trip.id || trip._id; 
+    
+    if (!tripId) {
+        console.error("Trip object missing ID:", trip); // Check the terminal!
+        alert("Error: Trip ID is missing from this database record.");
+        return;
+    }
+
+    const res = await fetch('/api/operations/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            tripId: tripId, 
+            tripName: trip.tripName,
+            itineraryId: tripId,
+            dayPlans: trip.dayWiseActivities 
+        })
+    });
+
+    if (res.ok || res.status === 400) {
+        router.push(`/dashboard/travel-operations/${tripId}`);
+    } else {
+        alert("Error initializing operations.");
+    }
+};
 
   // --- FILTERING LOGIC ---
   const getFilteredTrips = () => {
@@ -1557,9 +1660,10 @@ export default function TripsPage() {
                                     
                                     {/* Top Badges */}
                                     <div className="absolute top-3 left-3 flex gap-2">
-                                        <div className="bg-white/90 backdrop-blur-md px-2 py-1 rounded text-xs font-bold text-gray-800 shadow-sm">
-                                            TripId: ####
-                                        </div>
+                                      <div className="bg-white/90 backdrop-blur-md px-2 py-1 rounded text-xs font-bold text-gray-800 shadow-sm">
+    {/* Change #### to trip.id */}
+    TripId: {trip.id || trip._id || 'N/A'}
+</div>
                                         {trip.bookingStatus === 'cancelled' && (
                                             <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold shadow-sm">
                                                 CANCELLED
@@ -1650,7 +1754,7 @@ export default function TripsPage() {
                                             View Details
                                         </button>
                                         <button 
-                                            onClick={() => handleOperationsClick(trip.id!)}
+                                            onClick={() => handleOperationsClick(trip)}
                                             disabled={trip.bookingStatus === 'cancelled'}
                                             className={`flex-1 py-2.5 rounded-lg text-white text-xs font-bold transition-colors shadow-md ${
                                                 trip.bookingStatus === 'cancelled' 

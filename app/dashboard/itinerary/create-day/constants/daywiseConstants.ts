@@ -217,6 +217,9 @@ export interface DayPlan {
   stays: Stay[]; 
   transports: Transport[];
   meals: Meal[];
+  routeStart?: string;
+  routeEnd?: string;
+  timelineSequence?: any[];
 }
 
 // ==========================================

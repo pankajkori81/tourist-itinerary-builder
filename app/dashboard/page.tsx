@@ -1608,6 +1608,30 @@ export default function DashboardPage() {
 
 
 
+  const handleGoToOperations = async (trip: any) => {
+    try {
+        // 1. Call the API to generate the manifest (Pass the required data)
+        const response = await fetch('/api/operations/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tripId: trip.tripId, 
+                tripName: trip.tripName,
+                itineraryId: trip.itineraryId,
+                dayPlans: trip.dayWiseActivities // Make sure you pass the array of days here!
+            })
+        });
+
+        // It will return 201 if created, or 400 if it already exists. Both are fine!
+        // 2. Redirect to the new Operations Manifest Page
+        router.push(`/dashboard/travel-operations/${trip.tripId}`);
+        
+    } catch (error) {
+        console.error("Failed to route to operations:", error);
+        alert("Something went wrong connecting to Operations.");
+    }
+};
+
  // ==========================================
   // EXPORT LOGIC (Download Suppliers)
   // ==========================================

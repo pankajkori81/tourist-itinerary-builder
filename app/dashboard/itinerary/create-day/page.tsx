@@ -809,7 +809,8 @@ import {
   Star, Moon, Car, Plane, Train, Ship, ArrowRight, ArrowLeft,
   Ban, CheckCircle2, PlusSquare, Briefcase, AlertTriangle, 
   Map,
-  MapPin , GripVertical
+  MapPin , GripVertical,
+  X
 } from 'lucide-react';
 
 
@@ -817,6 +818,7 @@ import { useItinerary } from '@/app/context/ItineraryContext';
 import { useSRM } from '@/app/context/SRMContext'; 
 import { DayPlan } from './constants/daywiseConstants';
 import { useUser } from '@/app/context/UserContext';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 // --- SUB COMPONENTS ---
 import StayForm from './Stay/page';
@@ -875,12 +877,21 @@ export default function DaywisePage() {
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  
+
   const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [isRouteMapOpen, setIsRouteMapOpen] = useState(false);
+  const [routeStart, setRouteStart] = useState("");
+  const [routeEnd, setRouteEnd] = useState("");
+  const [timelineSequence, setTimelineSequence] = useState<any[]>([]);
+  // 🌟 QUICK STOP STATES (For the Route Mapper Modal)
+  const [quickStopTitle, setQuickStopTitle] = useState("");
+  const [quickStopDuration, setQuickStopDuration] = useState("");
+
 
   const isMasterMode = itineraryData.isMasterItinerary;
 
 
+ 
   // 👇 LOGIC: Handles dropping the day and instantly syncing the Routing
   const handleDrop = (dropIndex: number) => {
     if (draggedIndex === null || draggedIndex === dropIndex) return;
@@ -945,6 +956,8 @@ export default function DaywisePage() {
     setDraggedIndex(null);
   };
 
+  const currentDay = dayPlans[selectedDayIndex];
+
   // --- LOGIC: Expand Routes into Days based on Nights ---
   useEffect(() => {
     if (itineraryData.routingData?.routes) {
@@ -974,6 +987,9 @@ export default function DaywisePage() {
             stays: existingPlan?.stays || [],
             transports: existingPlan?.transports || [],
             meals: existingPlan?.meals || [],
+            routeStart: existingPlan?.routeStart || "",
+            routeEnd: existingPlan?.routeEnd || "",
+            timelineSequence: existingPlan?.timelineSequence || [],
           });
 
           globalDayCounter++;
@@ -997,6 +1013,9 @@ export default function DaywisePage() {
               stays: existingPlan?.stays || [],
               transports: existingPlan?.transports || [],
               meals: existingPlan?.meals || [],
+              routeStart: existingPlan?.routeStart || "",
+            routeEnd: existingPlan?.routeEnd || "",
+            timelineSequence: existingPlan?.timelineSequence || [],
           });
       }
 
@@ -1004,7 +1023,26 @@ export default function DaywisePage() {
     }
   }, [itineraryData.routingData, isMasterMode]);
 
-  const currentDay = dayPlans[selectedDayIndex];
+
+  // 2. 🌟 NEW: ROUTE MAPPER EFFECT (Move it here, ABOVE the 'if' statement)
+  useEffect(() => {
+    if (isRouteMapOpen && currentDay) {
+        setRouteStart(currentDay.routeStart || "");
+        setRouteEnd(currentDay.routeEnd || "");
+        
+        if (currentDay.timelineSequence && currentDay.timelineSequence.length > 0) {
+            setTimelineSequence(currentDay.timelineSequence);
+        } else {
+            const initialSequence = [
+                ...(currentDay.activities || []).map((a: any) => ({ ...a, category: 'Activity' })),
+                ...(currentDay.transports || []).map((t: any) => ({ ...t, category: 'Transport' }))
+            ];
+            setTimelineSequence(initialSequence);
+        }
+    }
+  }, [isRouteMapOpen, currentDay]);
+
+  // const currentDay = dayPlans[selectedDayIndex];
 
   if (!currentDay) {
     return (
@@ -1124,14 +1162,7 @@ export default function DaywisePage() {
     return ghosts;
   };
 
-  // const displayItems = [
-  //   ...getGhostStays(),
-  //   ...currentDay.activities,
-  //   ...currentDay.stays,
-  //   ...currentDay.transports,
-  //   ...(currentDay.meals || [])
-  // ]; 
-
+  
 
 
 
@@ -1189,6 +1220,58 @@ export default function DaywisePage() {
       router.push('/dashboard/itinerary/review');
   };
 
+
+
+  // 2. Handle Dragging items inside the modal
+  const handleTimelineDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const items = Array.from(timelineSequence);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    setTimelineSequence(items);
+  };
+
+  // 3. Save the custom route back to the DayPlan database
+  const handleSaveRouteMap = () => {
+    const updatedPlans = [...dayPlans];
+    updatedPlans[selectedDayIndex] = {
+        ...currentDay,
+        routeStart,
+        routeEnd,
+        timelineSequence
+    };
+    
+    // Trigger Audit Log
+    logAction('EDIT', 'Route Map', `Updated visual route map for Day ${currentDay.dayNumber}`, user?.role || 'System');
+
+    setDayPlans(updatedPlans);
+    updateItineraryData({ dayWiseActivities: updatedPlans });
+    setIsRouteMapOpen(false);
+  };
+
+
+  // 4. Add a Quick Stop (Indigo Dot) to the timeline
+  const handleAddQuickStop = () => {
+    if (!quickStopTitle.trim()) return;
+    const newStop = {
+      id: `stop-${Date.now()}`,
+      category: 'QuickStop',
+      heading: quickStopTitle,
+      duration: quickStopDuration,
+    };
+    setTimelineSequence([...timelineSequence, newStop]);
+    setQuickStopTitle("");
+    setQuickStopDuration("");
+  };
+
+  // 5. Remove a Quick Stop from the timeline
+  const handleRemoveQuickStop = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent drag interference
+    const updated = [...timelineSequence];
+    updated.splice(index, 1);
+    setTimelineSequence(updated);
+  };
+
   return (
     <div>
       {/* INFO BANNER (If Admin Requested Changes) - Just for info, not locking */}
@@ -1238,12 +1321,29 @@ export default function DaywisePage() {
                      </div>
                  </div>
 
+        
                  {/* ADD BUTTONS (ALWAYS VISIBLE) */}
-                 <div className="flex gap-4">
-                        <NavIcon icon={<Camera size={24}/>} label="Activity" onClick={() => openAdd('add_activity')} color="bg-blue-500" />
-                        <NavIcon icon={<Hotel size={24}/>} label="Stay" onClick={() => openAdd('add_stay')} color="bg-purple-600" />
-                        <NavIcon icon={<Bus size={24}/>} label="Transport" onClick={() => openAdd('add_transport')} color="bg-green-500" />
-                        <NavIcon icon={<Utensils size={24}/>} label="Meal" onClick={() => openAdd('add_meal')} color="bg-orange-500" />
+                 <div className="flex items-center gap-6">
+                        <div className="flex gap-4">
+                            <NavIcon icon={<Camera size={24}/>} label="Activity" onClick={() => openAdd('add_activity')} color="bg-blue-500" />
+                            <NavIcon icon={<Hotel size={24}/>} label="Stay" onClick={() => openAdd('add_stay')} color="bg-purple-600" />
+                            <NavIcon icon={<Bus size={24}/>} label="Transport" onClick={() => openAdd('add_transport')} color="bg-green-500" />
+                            <NavIcon icon={<Utensils size={24}/>} label="Meal" onClick={() => openAdd('add_meal')} color="bg-orange-500" />
+                        </div>
+                        
+                        {/* Vertical Divider */}
+                        <div className="w-px h-12 bg-white/20"></div>
+
+                        {/* 🌟 NEW: MAP ROUTE BUTTON */}
+                        <button 
+                            onClick={() => setIsRouteMapOpen(true)}
+                            className="group flex flex-col items-center gap-1"
+                        >
+                           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform border border-indigo-400">
+                               <Map size={20} />
+                           </div>
+                           <span className="text-[10px] font-bold text-indigo-300 group-hover:text-white uppercase tracking-wider">Map Route</span>
+                        </button>
                  </div>
               </div>
 
@@ -1693,18 +1793,7 @@ export default function DaywisePage() {
         </div>
       </div>
       
-      {/* <div className="flex justify-between items-center mr-5 mb-5 ">
-         <button onClick={handleBack} className="flex items-center gap-2 text-gray-400 hover:text-white px-6 py-3 rounded-lg font-medium hover:bg-white/5"><ArrowLeft size={18} /> Back</button>
-
-         <div className="flex gap-3">
-             <button 
-                onClick={handleNext} 
-                className="group flex items-center gap-2 px-8 py-3 rounded-full font-semibold shadow-lg transition-all transform hover:scale-[1.02] bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/20"
-             >
-                Next Step: Review Itinerary <ArrowRight size={18} />
-             </button>
-         </div>
-      </div> */}
+ 
 
 
             {/* 3. NAVIGATION BUTTONS */}
@@ -1774,6 +1863,180 @@ export default function DaywisePage() {
               </button>
       
             </div>
+
+            {/* ========================================== */}
+      {/* 🌟 ROUTE MAPPER MODAL (SLIDE-OUT PANEL) */}
+      {/* ========================================== */}
+
+      {/* ========================================== */}
+      {/* 🌟 ROUTE MAPPER MODAL (SLIDE-OUT PANEL) */}
+      {/* ========================================== */}
+      {isRouteMapOpen && (
+        // 1. Stricter fixed positioning to break out of all parent containers
+        <div className="fixed inset-0 z-[100] flex justify-end" style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0 }}>
+          
+          {/* 2. Clickable Backdrop */}
+          <div 
+             className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+             onClick={() => setIsRouteMapOpen(false)}
+          ></div>
+          
+          {/* 3. The Right-Side Panel */}
+          <div className="relative w-[450px] max-w-full h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
+                   <Map size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-gray-900 leading-tight">Map Day Route</h2>
+                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Day {currentDay.dayNumber} • {currentDay.city}</p>
+                </div>
+              </div>
+              <button onClick={() => setIsRouteMapOpen(false)} className="text-gray-400 hover:text-gray-700 p-2 rounded-full hover:bg-gray-200 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 bg-white custom-scrollbar">
+              
+              {/* Start Point Input */}
+              <div className="mb-6">
+                 <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-2 mb-2">
+                    <div className="w-2.5 h-2.5 rounded-full border-2 border-orange-500 bg-white shadow-[0_0_0_2px_rgba(249,115,22,0.2)]"></div> 
+                    Starting Location
+                 </label>
+                 <input 
+                    type="text" 
+                    value={routeStart}
+                    onChange={(e) => setRouteStart(e.target.value)}
+                    placeholder="e.g., Hotel Lobby or Depends on option..." 
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm font-bold text-gray-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm"
+                 />
+              </div>
+
+              {/* Draggable Sequence Area */}
+              <div className="relative pl-3 ml-1 mb-6 border-l-2 border-indigo-200 border-dashed space-y-3">
+                 <DragDropContext onDragEnd={handleTimelineDragEnd}>
+                    <Droppable droppableId="route-timeline">
+                       {(provided) => (
+                          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                             {timelineSequence.length === 0 && (
+                                <p className="text-xs text-gray-400 font-medium italic ml-4">No activities or transport added to this day yet.</p>
+                             )}
+                             {timelineSequence.map((item, index) => (
+                                <Draggable key={`${item.category}-${item.id}`} draggableId={`${item.category}-${item.id}`} index={index}>
+                                   {(provided, snapshot) => (
+                                      <div 
+                                         ref={provided.innerRef}
+                                         {...provided.draggableProps}
+                                         className={`flex items-center gap-3 bg-white p-3 rounded-lg border shadow-sm transition-all relative ${snapshot.isDragging ? 'border-indigo-500 shadow-lg scale-[1.02] z-50' : 'border-gray-200 hover:border-indigo-300'}`}
+                                      >
+                                         {/* Node Dot */}
+                                         <div className={`absolute -left-[18px] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-[3px] border-gray-50 ${item.category === 'QuickStop' ? 'bg-indigo-600' : 'bg-blue-400'}`}></div>
+                                         
+                                         {/* Drag Handle */}
+                                         <div {...provided.dragHandleProps} className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing">
+                                            <GripVertical size={18} />
+                                         </div>
+                                         
+                                         {/* Content */}
+                                         <div className="flex-1 overflow-hidden">
+                                            <div className="text-[10px] font-bold text-indigo-600 uppercase mb-0.5">{item.category === 'QuickStop' ? 'Custom Stop' : item.category}</div>
+                                            <div className="text-sm font-bold text-gray-800 truncate">
+                                                {item.category === 'Activity' || item.category === 'QuickStop' ? item.heading : item.vehicleType}
+                                                {item.duration && <span className="ml-2 text-xs font-normal text-gray-500">({item.duration})</span>}
+                                            </div>
+                                         </div>
+
+                                         {/* Delete Button (Only for Quick Stops) */}
+                                         {item.category === 'QuickStop' && (
+                                            <button onClick={(e) => handleRemoveQuickStop(index, e)} className="text-red-400 hover:text-red-600 p-1">
+                                               <X size={16} />
+                                            </button>
+                                         )}
+                                      </div>
+                                   )}
+                                </Draggable>
+                             ))}
+                             {provided.placeholder}
+                          </div>
+                       )}
+                    </Droppable>
+                 </DragDropContext>
+              </div>
+
+              {/* Add Custom Quick Stop Block */}
+
+              {/* 🌟 IMPROVED: STACKED LAYOUT FOR QUICK STOPS */}
+              <div className="mb-6 bg-indigo-50/50 p-4 rounded-lg border border-indigo-100">
+                 <label className="text-[10px] font-bold text-indigo-800 uppercase flex items-center gap-2 mb-3">
+                    <MapPin size={12} /> Add Quick Stop (Photo ops, Viewpoints, etc.)
+                 </label>
+                 
+                 {/* Inputs stacked on mobile/narrow view, side-by-side on desktop */}
+                 <div className="flex flex-col gap-3">
+                    <div className="flex gap-2">
+                        <input 
+                           type="text" 
+                           value={quickStopTitle}
+                           onChange={(e) => setQuickStopTitle(e.target.value)}
+                           placeholder="Stop Name (e.g., Viewpoint)" 
+                           className="flex-[2] w-40 border border-indigo-200 rounded-md px-3 py-2 text-xs font-bold text-gray-800 focus:outline-none focus:border-indigo-500 shadow-sm"
+                        />
+                        <input 
+                           type="text" 
+                           value={quickStopDuration}
+                           onChange={(e) => setQuickStopDuration(e.target.value)}
+                           placeholder="Duration (15 mins)" 
+                           className="flex-1 w-40 border border-indigo-200 rounded-md px-2 py-2 text-xs font-bold text-gray-800 focus:outline-none focus:border-indigo-500 shadow-sm"
+                        />
+                    </div>
+                    
+                    {/* Full-width Add Button */}
+                    <button 
+                       onClick={handleAddQuickStop}
+                       className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-md text-xs transition-colors shadow-sm flex items-center justify-center gap-2"
+                    >
+                       <PlusSquare size={14} /> Add to Route
+                    </button>
+                 </div>
+              </div>
+        
+
+              {/* End Point Input */}
+              <div className="mb-2">
+                 <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.2)]"></div> 
+                    Drop-off Location
+                 </label>
+                 <input 
+                    type="text" 
+                    value={routeEnd}
+                    onChange={(e) => setRouteEnd(e.target.value)}
+                    placeholder="e.g., Churchgate, Mumbai..." 
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm font-bold text-gray-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm"
+                 />
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-5 border-t border-gray-200 bg-white flex gap-3 shrink-0">
+               <button onClick={() => setIsRouteMapOpen(false)} className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors text-sm">Cancel</button>
+               <button onClick={handleSaveRouteMap} className="flex-[2] px-4 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors text-sm shadow-md flex justify-center items-center gap-2">
+                  <CheckCircle2 size={18} /> Save Route Map
+               </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      
     </div>
   );
 }

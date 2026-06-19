@@ -764,6 +764,44 @@ export default function SupplierModal({ initialData, onClose, onSave }: Supplier
                             <div><label className="block text-xs font-bold text-gray-600 mb-1">Phone</label><input className="w-full p-2.5 border border-gray-300 rounded-lg" value={formData.phone} onChange={e=>setFormData({...formData, phone: e.target.value})}/></div>
                             <div className="col-span-2"><label className="block text-xs font-bold text-gray-600 mb-1">Email (Bookings)</label><input className="w-full p-2.5 border border-gray-300 rounded-lg" value={formData.email} onChange={e=>setFormData({...formData, email: e.target.value})}/></div>
                         </div>
+                        {/* 👇 NEW: FINANCIAL & TRADING TERMS INJECTED HERE 👇 */}
+                        <div className="col-span-2 mt-4 pt-4 border-t border-gray-200">
+                            <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                <Landmark size={16} className="text-[#0a1f44]" /> 
+                                Financial & Trading Terms
+                            </h4>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Payment Terms Dropdown */}
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1">Standard Payment Terms</label>
+                                    <select 
+                                        value={formData.paymentTerms || 'Prepaid'} 
+                                        onChange={e => setFormData({...formData, paymentTerms: e.target.value as any})}
+                                        className="w-full p-2.5 border border-gray-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="Prepaid">Prepaid</option>
+                                        <option value="Pay at Hotel">Pay at Hotel</option>
+                                        <option value="Credit-7">Credit-7 (7 Days)</option>
+                                        <option value="Credit-15">Credit-15 (15 Days)</option>
+                                        <option value="Credit-30">Credit-30 (30 Days)</option>
+                                    </select>
+                                </div>
+
+                                {/* Bank Account Number using your existing updateBankDetails function */}
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1">Bank Account Number</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.bankDetails?.accountNumber || ''} 
+                                        onChange={e => updateBankDetails('accountNumber', e.target.value)}
+                                        className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                                        placeholder="e.g., 0123456789"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        {/* 👆 END OF NEW SECTION 👆 */}
                     </div>
                 </div>
             )}

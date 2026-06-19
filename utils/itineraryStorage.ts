@@ -1005,9 +1005,11 @@ import { ReactNode } from 'react';
 // 1. INTERFACES (Unchanged - Perfectly Structured)
 // ==========================================
 export interface RouteCity { name: string; type: 'city' | 'airport'; }
-export interface RouteDay { id: number; dayNumber: number; date: string; nights: number; cities: RouteCity[]; transportMode: string; }
+export interface RouteDay {
+  city: string; id: number; dayNumber: number; date: string; nights: number; cities: RouteCity[]; transportMode: string; 
+}
 export interface RoutingData { startDate: string; endDate: string; routes: RouteDay[]; }
-export interface SpecificDeparture { id: string; date: string; status: 'Available' | 'Limited Seat' | 'Sold Out'; overridePriceDBL?: number | string; overridePriceSGL?: number | string; overridePriceTPL?: number | string; overridePriceQUAD?: number | string; isSelected: boolean; }
+export interface SpecificDeparture { id: string; date: string; endDate?: string;  status: 'Available' | 'Limited Seat' | 'Sold Out'; overridePriceDBL?: number | string; overridePriceSGL?: number | string; overridePriceTPL?: number | string; overridePriceQUAD?: number | string; isSelected: boolean; }
 export interface FixedDeparture { isSelected: unknown; label?: ReactNode; status: string; date?: any; price: number; id: string; month: string; priceDBL: number; priceSGL: number; priceTPL: number; priceQUAD: number; departures: SpecificDeparture[]; }
 export interface Installment { id: string; label: string; dueDate: string; percentage: number; amount: number; status: 'Pending' | 'Overdue' | 'Paid'; }
 export interface ClientPayment { id: string; date: string; type: 'Payment' | 'Refund'; amount: number; mode: 'Bank Transfer' | 'Credit Card' | 'Cash' | 'UPI' | 'Cheque'; status: 'Cleared' | 'Pending'; referenceId: string; allocation?: string; note?: string; }
@@ -1017,6 +1019,7 @@ export interface OperationsData { isInitialized: boolean; clientPayments: Client
 export interface PricingMatrix { [month: string]: { [itemId: string]: number } }
 
 export interface StoredItineraryData {
+    _id: string | undefined;
   startDate?: any; id?: string; tripId: string; tripName: string; numberOfTravelers: number; isMasterItinerary: boolean; tripType: string; tripStyle: string; packageType: string; creatingFor: string; showFlightDetails: boolean; showTravelerDetails: boolean; selectedCountries: string[]; selectedCurrency?: string; roundingMode?: string; flights: any[]; travelers: any[]; agentTravelers: any[]; routingData?: RoutingData; dayWiseActivities?: DayPlan[]; markupPercentage?: number; taxPercentage?: number; adultCount?: number; childCount?: number; bookingStatus?: 'quote' | 'confirmed' | 'cancelled' | 'completed'; leadGuestName?: string; finalSellPrice?: number; assignedAgentId?: string; operations?: OperationsData; isFixedDeparture?: boolean; fixedDepartures?: FixedDeparture[]; useFixedPrice?: boolean; selectedDepartureId?: string; lastSaved?: string; createdAt?: string; updatedAt?: string; status?: 'draft' | 'pending_costing' | 'approved' | 'reedit_requested' | 'active' | 'archived'; adminComment?: string; reEditReason?: string; pricingMatrix?: PricingMatrix; seasonStartDate?: string; seasonEndDate?: string; simulationDate?: string; currentVersion?: string; auditLog?: any[];
 }
 

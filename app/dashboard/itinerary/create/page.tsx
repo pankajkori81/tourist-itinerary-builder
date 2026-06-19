@@ -506,7 +506,7 @@ import { useItinerary } from "@/app/context/ItineraryContext";
 import { getLibrary } from "@/utils/itineraryStorage"; // 👈 Added this to fetch existing trips!
 
 // --- CONSTANTS ---
-const TRIP_CATEGORIES = ["Classic", "Premium", "Deluxe", "Luxury",];
+const TRIP_CATEGORIES = ["Value", "Standard", "Premium", "Deluxe", "Luxury",];
 const TRIP_STYLES = ["Join-in / Shared", "Small Group", "Large Group", "Tailor Made", "Mix&Match" ];
 const TRIP_EXPERIENCES = [
   "Architecture", "Festival", "Culture", "Photography", 
