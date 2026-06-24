@@ -664,6 +664,7 @@ interface ItineraryContextType {
 const ItineraryContext = createContext<ItineraryContextType | undefined>(undefined);
 
 const DEFAULT_ITINERARY: ItineraryData = {
+  _id: '',
   tripId: '', numberOfTravelers: 2, isMasterItinerary: false, tripName: '', tripType: '', tripStyle: '', packageType: 'land', creatingFor: 'guest', showFlightDetails: false, showTravelerDetails: true, selectedCountries: [], selectedCurrency: 'USD', flights: [], travelers: [], agentTravelers: [], routingData: undefined, dayWiseActivities: [], tripCategory: '', tripExperience: '', status: 'draft', currentVersion: '1.0',
   auditLog: [{ version: '1.0', action: 'STATUS', module: 'System', details: 'Itinerary Created', userRole: 'system', timestamp: new Date().toISOString() }],
   stepperStatus: { intro: 'incomplete', routing: 'locked', createDay: 'locked', review: 'locked', costing: 'locked', preview: 'locked' },
