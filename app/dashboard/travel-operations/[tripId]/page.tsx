@@ -519,7 +519,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import React,{ useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Hotel, Plane, MapPin, Utensils, Save, FileText, Wallet, Link2, Ticket } from 'lucide-react';
 import PurchaseOrderModal from '@/components/operations/PurchaseOrderModal';
@@ -666,125 +666,148 @@ export default function TripManifestPage() {
                                 
                             </tr>
                         </thead>
+
                         <tbody className="divide-y divide-gray-100">
-                            {operationData?.services?.map((service: any, index: number) => (
-                                <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                    <td className="p-4 font-bold text-gray-600 text-sm"> Day {service.dayNumber}</td>
-                                   
-                                    {/* <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200 shrink-0">
-                                                {getIcon(service.serviceType)}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-gray-900 text-sm">{service.serviceName}</div>
-                                                <div className="text-[10px] uppercase font-bold text-gray-400">{service.serviceType}</div>
-                                            </div>
-                                        </div>
-                                    </td> */}
+                            {/* 1. Define the professional categories */}
+                            {[
+                                { type: 'hotel', label: '🏨 Accommodations (Stays)', color: 'bg-emerald-50 text-emerald-700' },
+                                { type: 'flight', label: '✈️ Flights & Aviation', color: 'bg-blue-50 text-blue-700' },
+                                { type: 'transport', label: '🚗 Transportation & Transfers', color: 'bg-indigo-50 text-indigo-700' },
+                                { type: 'activity', label: '🎟️ Activities, Tours & Guides', color: 'bg-orange-50 text-orange-700' },
+                                { type: 'meal', label: '🍽️ Meals & Dining', color: 'bg-yellow-50 text-yellow-700' }
+                            ].map((category) => {
+                                
+                                // 2. Map original indexes, THEN filter for this specific category
+                                const categoryServices = operationData?.services
+                                    ?.map((service: any, index: number) => ({ ...service, originalIndex: index }))
+                                    .filter((service: any) => service.serviceType === category.type)
+                                    // Optional: Sort them chronologically by Day Number within the category
+                                    .sort((a: any, b: any) => a.dayNumber - b.dayNumber);
 
-                                    {/* 👇 UPDATED: Service Details + Supplier Link Dropdown */}
-                                    <td className="p-4">
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200 shrink-0 mt-1">
-                                                {getIcon(service.serviceType)}
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="font-bold text-gray-900 text-sm mb-1">{service.serviceName}</div>
+                                // 3. If there are no services in this category, don't show the header at all
+                                if (!categoryServices || categoryServices.length === 0) return null;
+
+                                return (
+                                    <React.Fragment key={category.type}>
+                                        {/* --- CATEGORY SUB-HEADER --- */}
+                                        <tr>
+                                            <td colSpan={8} className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-y border-gray-200 ${category.color}`}>
+                                                {category.label}
+                                            </td>
+                                        </tr>
+
+                                        {/* --- CATEGORY ITEMS --- */}
+                                        {categoryServices.map((service: any) => (
+                                            <tr key={service.originalIndex} className="hover:bg-gray-50 transition-colors">
                                                 
-                                                {/* SRM Dropdown */}
-                                                <div className="flex items-center gap-1 bg-blue-50/50 p-1.5 rounded border border-blue-100">
-                                                    <Link2 size={12} className="text-blue-500 shrink-0" />
+                                                <td className="p-4 font-bold text-gray-600 text-sm">Day {service.dayNumber}</td>
+                                                
+                                                {/* Service Details & SRM Link */}
+                                                <td className="p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200 shrink-0 mt-1">
+                                                            {getIcon(service.serviceType)}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="font-bold text-gray-900 text-sm mb-1">{service.serviceName}</div>
+                                                            <div className="flex items-center gap-1 bg-blue-50/50 p-1.5 rounded border border-blue-100">
+                                                                <Link2 size={12} className="text-blue-500 shrink-0" />
+                                                                <select 
+                                                                    value={service.supplierId || ''} 
+                                                                    onChange={(e) => updateService(service.originalIndex, 'supplierId', e.target.value)}
+                                                                    className="bg-transparent text-[10px] font-bold text-blue-700 w-full outline-none cursor-pointer"
+                                                                >
+                                                                    <option value="">-- Link Master Supplier --</option>
+                                                                    {suppliers.map(sup => (
+                                                                        <option key={sup._id} value={sup._id}>{sup.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* Status Dropdown */}
+                                                <td className="p-4">
                                                     <select 
-                                                        value={service.supplierId || ''} 
-                                                        onChange={(e) => updateService(index, 'supplierId', e.target.value)}
-                                                        className="bg-transparent text-[10px] font-bold text-blue-700 w-full outline-none cursor-pointer"
+                                                        value={service.status || 'Pending'} 
+                                                        onChange={(e) => updateService(service.originalIndex, 'status', e.target.value)}
+                                                        className="border border-gray-300 rounded-md text-xs font-bold p-2 w-full outline-none focus:border-indigo-500 text-gray-700 bg-white"
                                                     >
-                                                        <option value="">-- Link to Master Supplier --</option>
-                                                        {suppliers.map(sup => (
-                                                            <option key={sup._id} value={sup._id}>
-                                                                {sup.name} ({sup.type || 'Vendor'})
-                                                            </option>
-                                                        ))}
+                                                        <option value="Pending">Pending</option>
+                                                        <option value="Requested">Requested</option>
+                                                        <option value="Confirmed">Confirmed</option>
+                                                        <option value="Cancelled">Cancelled</option>
                                                     </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
+                                                </td>
 
-                                    <td className="p-4">
-                                        <select 
-                                            value={service.status || 'Pending'} 
-                                            onChange={(e) => updateService(index, 'status', e.target.value)}
-                                            className="border border-gray-300 rounded-md text-xs font-bold p-2 w-full outline-none focus:border-indigo-500 text-gray-700 bg-white cursor-pointer"
-                                        >
-                                            <option value="Pending">Pending</option>
-                                            <option value="Requested">Requested</option>
-                                            <option value="Confirmed">Confirmed</option>
-                                            <option value="Cancelled">Cancelled</option>
-                                        </select>
-                                    </td>
+                                                {/* Confirmation / PNR */}
+                                                <td className="p-4">
+                                                    <input 
+                                                        type="text" 
+                                                        value={service.confirmationNumber || ''}
+                                                        onChange={(e) => updateService(service.originalIndex, 'confirmationNumber', e.target.value)}
+                                                        placeholder="e.g., PNR/CONF" 
+                                                        className="border border-gray-300 rounded-md text-sm p-2 w-full outline-none focus:border-indigo-500 font-mono"
+                                                    />
+                                                </td>
 
-                                    <td className="p-4">
-                                        <input 
-                                            type="text" 
-                                            value={service.confirmationNumber || ''}
-                                            onChange={(e) => updateService(index, 'confirmationNumber', e.target.value)}
-                                            placeholder="e.g., CONFIG/PNR" 
-                                            className="border border-gray-300 rounded-md text-sm p-2 w-full outline-none focus:border-indigo-500 font-mono"
-                                        />
-                                    </td>
+                                                {/* Net Cost */}
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs font-bold text-gray-400"> {service.currency || 'USD'} </span>
+                                                        <input 
+                                                            type="number" 
+                                                            value={service.netCost || 0}
+                                                            onChange={(e) => updateService(service.originalIndex, 'netCost', e.target.value)}
+                                                            className="border border-gray-300 rounded-md text-sm p-2 w-24 outline-none focus:border-indigo-500 text-right font-mono"
+                                                        />
+                                                    </div>
+                                                </td>
 
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-xs font-bold text-gray-400"> {service.currency || 'USD'} </span>
-                                            <input 
-                                                type="number" 
-                                                value={service.netCost || 0}
-                                                onChange={(e) => updateService(index, 'netCost', e.target.value)}
-                                                className="border border-gray-300 rounded-md text-sm p-2 w-24 outline-none focus:border-indigo-500 text-right font-mono"
-                                            />
-                                        </div>
-                                    </td>
+                                                {/* Payment Deadline */}
+                                                <td className="p-4">
+                                                    <input 
+                                                        type="date" 
+                                                        value={service.paymentDeadline ? new Date(service.paymentDeadline).toISOString().split('T')[0] : ''}
+                                                        onChange={(e) => updateService(service.originalIndex, 'paymentDeadline', e.target.value)}
+                                                        className="border border-gray-300 rounded-md text-xs font-bold p-2 w-full outline-none focus:border-indigo-500 text-gray-700 bg-white"
+                                                    />
+                                                </td>
 
-                                    {/* 👇 NEW: Payment Deadline Date Picker */}
-<td className="p-4">
-    <input 
-        type="date" 
-        value={service.paymentDeadline ? new Date(service.paymentDeadline).toISOString().split('T')[0] : ''}
-        onChange={(e) => updateService(index, 'paymentDeadline', e.target.value)}
-        className="border border-gray-300 rounded-md text-xs font-bold p-2 w-full outline-none focus:border-indigo-500 text-gray-700 bg-white"
-    />
-</td>
+                                                {/* Payment Status */}
+                                                <td className="p-4">
+                                                    <select 
+                                                        value={service.paymentStatus || 'Unpaid'} 
+                                                        onChange={(e) => updateService(service.originalIndex, 'paymentStatus', e.target.value)}
+                                                        className={`border rounded-md text-xs font-bold p-2 w-full outline-none cursor-pointer ${
+                                                            service.paymentStatus === 'Fully Paid' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                            service.paymentStatus === 'Deposit Paid' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                                            'bg-white text-gray-700 border-gray-300'
+                                                        }`}
+                                                    >
+                                                        <option value="Unpaid">Unpaid</option>
+                                                        <option value="Deposit Paid">Deposit Paid</option>
+                                                        <option value="Fully Paid">Fully Paid</option>
+                                                    </select>
+                                                </td>
 
-{/* 👇 NEW: Payment Status Dropdown with Dynamic Colors */}
-<td className="p-4">
-    <select 
-        value={service.paymentStatus || 'Unpaid'} 
-        onChange={(e) => updateService(index, 'paymentStatus', e.target.value)}
-        className={`border rounded-md text-xs font-bold p-2 w-full outline-none focus:border-indigo-500 cursor-pointer transition-colors ${
-            service.paymentStatus === 'Fully Paid' ? 'bg-green-50 text-green-700 border-green-200' :
-            service.paymentStatus === 'Deposit Paid' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-            'bg-white text-gray-700 border-gray-300'
-        }`}
-    >
-        <option value="Unpaid">Unpaid</option>
-        <option value="Deposit Paid">Deposit Paid</option>
-        <option value="Fully Paid">Fully Paid</option>
-    </select>
-</td>
-
-                                    <td className="p-4 text-center">
-                                        <button 
-                                            onClick={() => openPoModal(service)}
-                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 py-1.5 px-3 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 mx-auto whitespace-nowrap"
-                                        >
-                                            <FileText size={14} className="text-blue-600"/> Generate PO
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                                                {/* Generate PO Button */}
+                                                <td className="p-4 text-center">
+                                                    <button 
+                                                        onClick={() => openPoModal(service)}
+                                                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 py-1.5 px-3 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 mx-auto whitespace-nowrap"
+                                                    >
+                                                        <FileText size={14} className="text-blue-600"/> Generate PO
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </React.Fragment>
+                                );
+                            })}
                         </tbody>
+                      
                     </table>
                 </div>
             </div>

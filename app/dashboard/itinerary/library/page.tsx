@@ -1240,27 +1240,7 @@ const handleDelete = async (id: string) => {
                             )}
 
                             <div className="p-5 flex-1 flex flex-col">
-                                {/* <div className="flex justify-between items-start mb-2 pr-8"> 
-                                    <h3 className="font-bold text-gray-800 text-lg leading-tight line-clamp-2" title={item.tripName}>
-                                        {item.tripName}
-                                    </h3>
-                                </div> */}
-
-
-                                {/* <div className="flex justify-between items-start mb-2 pr-8"> 
-                                    <div>
-                                      
-                                        <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 mb-1.5 inline-block shadow-sm">
-                                            {item.tripId || 'ID Pending'}
-                                        </span>
-                                        
-                                        <h3 className="font-bold text-gray-800 text-lg leading-tight line-clamp-2" title={item.tripName}>
-                                            {item.tripName}
-                                        </h3>
-                                    </div>
-                                </div> */}
-
-
+                              
                                 <div className="flex justify-between items-start mb-2 pr-8"> 
                                     <div className="flex flex-col gap-2">
                                         

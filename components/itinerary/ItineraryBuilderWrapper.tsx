@@ -1025,7 +1025,8 @@ export default function ItineraryBuilderWrapper({ children }: { children: React.
     itineraryData, 
     saveItinerary, 
     isSaving, 
-    toastMessage
+    toastMessage,
+    clearSavedItinerary
    
   } = useItinerary();
 
@@ -1154,45 +1155,7 @@ useEffect(() => {
         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1600')", backgroundSize: 'cover' }}
       />
 
-      {/* {!isFullWidthPage && (
-        <div className="relative z-10 bg-[#0f172a]/90 backdrop-blur-md border-b border-gray-700 px-4 py-3 flex items-center justify-between shrink-0 h-16">
-          <div className="flex items-center gap-4">
-             <h2 className="text-white font-bold text-lg tracking-wide">
-               Itinerary <span className="text-blue-400">Builder</span>
-             </h2>
-             <button onClick={libraryPage} className="hidden ml-11 md:flex px-7 py-2 bg-blue-600 text-blue-100 hover:bg-blue-600/40 rounded text-sm font-medium transition-all border border-blue-500/30">
-                Library
-             </button>
-          </div>
-          
-          <div className="flex items-center gap-3">
-
-        
-            <button 
-              onClick={() => setIsHistoryOpen(true)}
-              className="px-4 py-2 bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white rounded-sm text-sm font-bold transition-all flex items-center gap-2 shadow-sm border border-gray-600"
-            >
-              <History className="w-4 h-4" /> History
-            </button>
-            <button 
-              onClick={handleQuickSave} 
-              disabled={isSaving} 
-              className="px-4 py-2 bg-blue-600 text-blue-100 hover:bg-blue-500 rounded-sm text-sm font-medium transition-all flex items-center gap-2 shadow-sm"
-            >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
-              {isSaving ? 'Saving...' : 'Quick Save'}
-            </button>
-            
-            <button 
-              onClick={handleSaveAndExit} 
-              disabled={isSaving}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-sm text-sm font-medium transition-all shadow-sm"
-            >
-              Save & Exit
-            </button>
-          </div>
-        </div>
-      )} */}
+     
 
 {!isFullWidthPage && (
         <div className="relative z-10 bg-[#0f172a]/90 backdrop-blur-md border-b border-gray-700 px-5 py-3 flex items-center justify-between shrink-0 h-16 shadow-sm">
@@ -1227,6 +1190,20 @@ useEffect(() => {
              >
                 <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
                 <span className="relative z-10">Library</span>
+             </button>
+
+
+             <button 
+                onClick={() => {
+                    sessionStorage.removeItem('editing_itinerary_id');
+                    clearSavedItinerary();
+                    router.push('/dashboard/itinerary/create');
+                    setActiveTab('INTRO');
+                }} 
+                className="group relative overflow-hidden hidden md:flex ml-3 px-5 py-2 bg-emerald-600 text-white font-bold text-sm rounded-md border border-transparent hover:border-white/40 shadow-lg shadow-emerald-900/20 transition-all duration-300 ease-out hover:bg-emerald-700 hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#0f172a]"
+             >
+                <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
+                <span className="relative z-10 flex items-center gap-1.5"><Plus size={16}/> Create New</span>
              </button>
              
           </div>
@@ -1338,61 +1315,8 @@ useEffect(() => {
           {children}
         </main>
       </div>
-      {/* <div className="relative z-10 flex flex-1 overflow-hidden">
-        
-      
-        {!isFullWidthPage && (
-          <div className="w-55 bg-gradient-to-br from-[#0f172a]  to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
-            <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
-              <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
-             
-              <p className="text-blue-300 text-xs font-mono mb-2">
-                 Ref ID. {itineraryData.tripId || 'Pending...'}
-              </p>
-
-              <span className="bg-blue-900/50 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider">
-                    v{itineraryData.currentVersion || '1.0'}
-                 </span>
-            </div>
-
-            <nav className="space-y-1">
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.id;
-                
-                // 👇 CALL THE NEW FUNCTION
-                const { isLocked, isCompleted } = getTabState(tab.id);
-
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabChange(tab)}
-                    disabled={isLocked}
-                    className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between group 
-                    ${isActive 
-                        ? 'bg-blue-600 text-white shadow-lg' 
-                        : isLocked 
-                            ? 'text-gray-500 cursor-not-allowed opacity-60' 
-                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                        {isLocked && <Lock size={12} />}
-                        {isCompleted && !isLocked && <CheckCircle2 size={12} className={isActive ? "text-white" : "text-green-400"} />}
-                        {tab.label}
-                    </div>
-                    {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white"/>}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        )}
-
-        <main className={`flex-1 overflow-y-auto bg-gray-50/5 relative ${!isFullWidthPage ? 'p-0' : ''}`}>
-          {children}
-        </main>
-      </div> */}
-
+    
+    
       {/* Error Popup Code */}
       {showErrorPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
