@@ -182,12 +182,24 @@ export default function LoginPage() {
 
       const data = await res.json();
 
+      // if (res.ok) {
+      //   // 1. Refresh Context (Fetch user profile immediately)
+      //   await refreshUser(); 
+        
+      //   // 2. Smooth Redirect (SPA style)
+      //   router.push("/dashboard"); 
+      // } 
       if (res.ok) {
         // 1. Refresh Context (Fetch user profile immediately)
         await refreshUser(); 
         
-        // 2. Smooth Redirect (SPA style)
-        router.push("/dashboard"); 
+        // 2. THE TRAFFIC COP: Route based on role
+        if (data.user.role === "admin") {
+          router.push("/dashboard/admin"); // Admin goes to specific Admin home
+        } else {
+          router.push("/dashboard"); // Agents and Employees go to standard dashboard
+        }
+        
       } else {
         setError(data.message);
         setLoading(false);

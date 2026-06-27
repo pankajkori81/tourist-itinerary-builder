@@ -135,6 +135,7 @@ const UserSchema = new mongoose.Schema({
   position: { type: String, default: "" },   
   dateOfJoining: { type: Date, default: Date.now },
   agencyName: { type: String, default: "" },
+  internalNotes: { type: String, default: "" },
 
   // 👇 NEW FIELD: Employment Type (Needed for the new UI Cards)
   employmentType: { 

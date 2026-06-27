@@ -405,7 +405,7 @@ export function Sidebar() {
       label: "Travel Operations", 
       path: "/dashboard/travel-operations", 
       icon: RouteIcon,
-      roles: ['admin', 'employee', 'agent']
+      roles: ['admin', 'employee']
     },
 
 
