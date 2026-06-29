@@ -779,18 +779,73 @@ export default function TravelAdvisorPage() {
                                   
 
                                     {/* Security & Access */}
+                                 {/* Security & Access */}
                                     <div className="bg-red-50 rounded-2xl border border-red-100 p-6">
                                         <h4 className="text-sm font-black text-red-800 mb-2 flex items-center gap-2">
                                             <Lock size={16} /> Security & Access
                                         </h4>
-                                        <p className="text-xs text-red-600 mb-4">Reset this agent's password or suspend their account access.</p>
+                                        <p className="text-xs text-red-600 mb-4">Manage system access, temporarily suspend, or permanently remove this agent.</p>
                                         
-                                        <div className="flex flex-col sm:flex-row gap-3">
+                                        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                                            {/* 1. Reset Password */}
                                             <button className="px-4 py-2 bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 font-bold rounded-xl text-xs transition-colors shadow-sm">
-                                                Send Password Reset Link
+                                                Reset Password
                                             </button>
-                                            <button className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 font-bold rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-1.5">
-                                                <Ban size={14} /> Suspend Account
+                                            
+                                            {/* 2. Suspend Account (Temporary) */}
+                                            <button 
+                                                onClick={async () => {
+                                                    const newStatus = performanceAgent.status === 'suspended' ? 'active' : 'suspended';
+                                                    try {
+                                                        const res = await fetch("/api/admin/agents", {
+                                                            method: "PUT",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({ agentId: performanceAgent._id, status: newStatus })
+                                                        });
+                                                        if (res.ok) {
+                                                            alert(`Agent successfully ${newStatus}.`);
+                                                            setPerformanceAgent(null);
+                                                            fetchActiveAgents();
+                                                        }
+                                                    } catch (err) {
+                                                        alert("Failed to update status.");
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-white text-orange-600 border border-orange-200 hover:bg-orange-50 hover:border-orange-300 font-bold rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                                            >
+                                                <Ban size={14} /> {performanceAgent.status === 'suspended' ? 'Reactivate Account' : 'Suspend Account'}
+                                            </button>
+
+                                            {/* 3. Remove Agent (Soft Delete / Archive) */}
+                                            <button 
+                                                onClick={async () => {
+                                                    const isConfirmed = window.confirm("Are you sure you want to remove this agent? Their historical sales will be kept for accounting, but they will lose all access and be removed from this roster.");
+                                                    if (!isConfirmed) return;
+
+                                                    try {
+                                                        const res = await fetch("/api/admin/agents", {
+                                                            method: "PUT",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({
+                                                                agentId: performanceAgent._id,
+                                                                status: "archived"
+                                                            })
+                                                        });
+                                                        const data = await res.json();
+                                                        if (data.success) {
+                                                            alert("Agent successfully removed.");
+                                                            setPerformanceAgent(null); // Close the drawer
+                                                            fetchActiveAgents(); // Refresh the grid (they will disappear!)
+                                                        } else {
+                                                            alert(data.message);
+                                                        }
+                                                    } catch (err) {
+                                                        alert("Failed to remove agent.");
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-red-600 text-white border border-red-700 hover:bg-red-700 font-bold rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-1.5 sm:ml-auto"
+                                            >
+                                                Remove Agent
                                             </button>
                                         </div>
                                     </div>

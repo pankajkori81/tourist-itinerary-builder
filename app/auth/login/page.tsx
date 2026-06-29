@@ -156,7 +156,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, Loader2, LogIn, Briefcase } from "lucide-react";
+import { Mail, Lock, Loader2, LogIn, Briefcase, Eye, EyeOff} from "lucide-react";
 import { useUser } from "@/app/context/UserContext"; 
 
 export default function LoginPage() {
@@ -167,6 +167,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,18 +253,27 @@ export default function LoginPage() {
             </div>
           </div>
 
+
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-400 uppercase ml-1">Password</label>
             <div className="relative group">
               <Lock className="absolute left-3 top-3.5 text-gray-500 group-focus-within:text-blue-500 transition-colors" size={18}/>
               <input 
-                type="password" 
+                type={showPassword ? "text" : "password"} 
                 value={password} 
                 onChange={(e) => setPassword(e.target.value)} 
-                className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
+                className="w-full pl-10 pr-12 py-3 bg-black/20 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
                 placeholder="••••••••"
                 required 
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3.5 text-gray-500 hover:text-white transition-colors focus:outline-none"
+                tabIndex={-1} // Prevents "tabbing" to the icon instead of the submit button
+              >
+                {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
             </div>
           </div>
 

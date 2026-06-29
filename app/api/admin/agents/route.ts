@@ -122,7 +122,7 @@ export const PUT = async (req: NextRequest) => {
 
     // Logic 1: If updating status/financials (from Approval modal)
     if (status) {
-        const validStatuses = ["active", "inactive", "suspended", "pending", "rejected"];
+        const validStatuses = ["active", "inactive", "suspended", "pending", "rejected" ,"archived"];
         if (!validStatuses.includes(status)) {
           return NextResponse.json({ success: false, message: "Invalid status value" }, { status: 400 });
         }
