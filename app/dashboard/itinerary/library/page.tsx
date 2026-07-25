@@ -987,7 +987,7 @@ const handleUseTemplate = async (item: StoredItineraryData) => {
 
 
 
-const handleConfirmDateSelection = async (exactDate: string, specificDepartureId: string) => {
+const handleConfirmDateSelection = async (exactDate: string, specificDepartureId: string, explicitEndDate?: string) => {
      if (!selectedTemplate) return;
      
      try {
@@ -1005,7 +1005,9 @@ const handleConfirmDateSelection = async (exactDate: string, specificDepartureId
                  currentDayDate.setDate(currentDayDate.getDate() + nights);
                  return { ...route, date: rowDate };
              });
-             const finalEndDate = toDateStr(currentDayDate);
+             
+             // 👇 FIX: Use the Explicit End Date from the Costing table if it exists, otherwise fallback to the math
+             const finalEndDate = explicitEndDate || toDateStr(currentDayDate);
 
              cloned.routingData = { startDate: exactDate, endDate: finalEndDate, routes: updatedRoutes };
              cloned.useFixedPrice = true; 
@@ -1020,7 +1022,6 @@ const handleConfirmDateSelection = async (exactDate: string, specificDepartureId
              setActiveTab('quotes'); 
              await loadLibraries(); 
          } else {
-             // 👇 If the DB crashes again, it will tell you instead of freezing silently!
              alert("Failed to copy the template. Check terminal for errors.");
          }
      } catch (error) {
@@ -1028,7 +1029,6 @@ const handleConfirmDateSelection = async (exactDate: string, specificDepartureId
          alert("An unexpected error occurred.");
      }
   };
-
 
 const handleConfirmTrip = async (guestName: string, calculatedPrice: number, pax: number) => {
       if (!confirmModal.itinerary?.id) return;
@@ -1378,7 +1378,7 @@ const handleDelete = async (id: string) => {
                                    return (
                                        <button 
                                            key={dateRow.id}
-                                           onClick={() => !isSoldOut && handleConfirmDateSelection(dateRow.date, dateRow.id)}
+                                           onClick={() => !isSoldOut && handleConfirmDateSelection(dateRow.date, dateRow.id, dateRow.endDate)}
                                            disabled={isSoldOut}
                                            className={`w-full flex items-center justify-between p-4 mb-2 rounded-xl border transition-all text-left group relative overflow-hidden ${
                                                isSoldOut

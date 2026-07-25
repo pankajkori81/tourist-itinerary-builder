@@ -10,7 +10,7 @@ import {
   Globe, Search, Plus, ChevronDown, MapPin, X,
   BarChart2, Plane, UserCheck, AlertCircle , Image as ImageIcon,
   HelpCircle,
-  User, 
+  User,  ClipboardList, UserCircle, Flag, Trash2, Pencil, CheckCircle, Circle, Clock, ChevronRight, 
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
@@ -29,7 +29,7 @@ const MONTH_FULL = ["January","February","March","April","May","June","July","Au
 
 const PIE_COLORS = ["#2563EB","#0EA5E9","#6366F1","#8B5CF6","#EC4899","#F59E0B"];
 
-const TABS = ["Dashboard", "Bookings", "Commissions", "Contacts"] as const;
+const TABS = ["Dashboard", "Bookings", "Commissions", "Contacts" , "Tasks"] as const;
 type Tab = typeof TABS[number];
 
 const STATUS_STYLES: Record<string, string> = {
@@ -135,6 +135,130 @@ export default function DashboardPage() {
   const [showAllPkgs, setShowAllPkgs] = useState(false);
 
 
+
+  // ── NEW: Task tab states ──
+const [tasks,          setTasks]          = useState<any[]>([]);
+const [employees,      setEmployees]      = useState<any[]>([]);
+const [loadingTasks,   setLoadingTasks]   = useState(false);
+const [selectedEmp,    setSelectedEmp]    = useState<any | null>(null);
+const [showTaskForm,   setShowTaskForm]   = useState(false);
+const [taskSubmitting, setTaskSubmitting] = useState(false);
+const [editingTask,    setEditingTask]    = useState<any | null>(null);
+
+// 🌟 NEW: Global Table & Modal States
+const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+const [taskSearch, setTaskSearch]           = useState("");
+const [taskStatusFilter, setTaskStatusFilter]     = useState("all");
+const [taskPriorityFilter, setTaskPriorityFilter] = useState("all");
+const [taskUserFilter, setTaskUserFilter]         = useState("all");
+const [taskTimeFilter, setTaskTimeFilter]         = useState("all");
+
+
+// 🌟 NEW: Calculate Live KPI Metrics
+const taskMetrics = useMemo(() => {
+  const now = new Date().getTime();
+  return {
+    total: tasks.length,
+    active: tasks.filter(t => t.status !== "completed").length,
+    overdue: tasks.filter(t => t.status !== "completed" && new Date(t.deadline).getTime() < now).length,
+    urgent: tasks.filter(t => t.priority === "urgent" && t.status !== "completed").length,
+    completed: tasks.filter(t => t.status === "completed").length,
+  };
+}, [tasks]);
+
+
+
+// 🌟 UPDATED: Advanced Filtering & Sorting Logic (Now with Time Filtering)
+const filteredAndSortedTasks = useMemo(() => {
+  return tasks
+    .filter(t => {
+      // 1. Search Filter
+      const matchSearch = !taskSearch || 
+        t.title.toLowerCase().includes(taskSearch.toLowerCase()) ||
+        (t.linkedTripId?.tripName || "").toLowerCase().includes(taskSearch.toLowerCase());
+      
+      // 2. Status Filter
+      const matchStatus = taskStatusFilter === "all" || t.status === taskStatusFilter;
+      
+      // 3. Priority Filter
+      const matchPriority = taskPriorityFilter === "all" || t.priority === taskPriorityFilter;
+      
+      // 4. User Filter
+      const matchUser = taskUserFilter === "all" || 
+        t.assignedTo?._id === taskUserFilter || 
+        t.assignedTo === taskUserFilter;
+
+      // 5. Time Filter
+      let matchTime = true;
+      if (taskTimeFilter !== "all") {
+        const deadlineTime = new Date(t.deadline).getTime();
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const tomorrowStart = todayStart + 86400000;
+        const nextWeekStart = todayStart + (86400000 * 7);
+
+        if (taskTimeFilter === "overdue") {
+          matchTime = t.status !== "completed" && deadlineTime < now.getTime();
+        } else if (taskTimeFilter === "today") {
+          matchTime = deadlineTime >= todayStart && deadlineTime < tomorrowStart;
+        } else if (taskTimeFilter === "week") {
+          matchTime = deadlineTime >= todayStart && deadlineTime < nextWeekStart;
+        }
+      }
+
+      return matchSearch && matchStatus && matchPriority && matchUser && matchTime;
+    })
+    .sort((a, b) => {
+      // Sort newest created first
+      const dateA = new Date(a.createdAt || a.deadline).getTime();
+      const dateB = new Date(b.createdAt || b.deadline).getTime();
+      return dateB - dateA;
+    });
+}, [tasks, taskSearch, taskStatusFilter, taskPriorityFilter, taskUserFilter, taskTimeFilter]);
+
+
+// // 🌟 NEW: Advanced Filtering & Sorting Logic
+// const filteredAndSortedTasks = useMemo(() => {
+//   return tasks
+//     .filter(t => {
+//       // 1. Search Filter
+//       const matchSearch = !taskSearch || 
+//         t.title.toLowerCase().includes(taskSearch.toLowerCase()) ||
+//         (t.linkedTripId?.tripName || "").toLowerCase().includes(taskSearch.toLowerCase());
+      
+//       // 2. Status Filter
+//       const matchStatus = taskStatusFilter === "all" || t.status === taskStatusFilter;
+      
+//       // 3. Priority Filter
+//       const matchPriority = taskPriorityFilter === "all" || t.priority === taskPriorityFilter;
+      
+//       // 4. User Filter
+//       const matchUser = taskUserFilter === "all" || 
+//         t.assignedTo?._id === taskUserFilter || 
+//         t.assignedTo === taskUserFilter;
+
+//       return matchSearch && matchStatus && matchPriority && matchUser;
+//     })
+//     .sort((a, b) => {
+//       // Sort newest created first (so new tasks appear at the top)
+//       const dateA = new Date(a.createdAt || a.deadline).getTime();
+//       const dateB = new Date(b.createdAt || b.deadline).getTime();
+//       return dateB - dateA;
+//     });
+// }, [tasks, taskSearch, taskStatusFilter, taskPriorityFilter, taskUserFilter]);
+
+// Task form state
+const [taskForm, setTaskForm] = useState({
+  title       : "",
+  description : "",
+  assignedTo  : "",
+  priority    : "medium",
+  category    : "other",
+  deadline    : "",
+  linkedTripId: "",
+});
+
+
   // Inner State for Contacts Tab
   const [contactSubTab, setContactSubTab] = useState<'suppliers' | 'clients'>('suppliers');
   const [addContactDropdown, setAddContactDropdown] = useState(false);
@@ -180,6 +304,118 @@ export default function DashboardPage() {
         console.error("Failed to route to operations:", error);
         alert("Something went wrong connecting to Operations.");
     }
+};
+
+
+
+// ── Fetch tasks + employees when Tasks tab opens ──────────────
+const fetchTasksData = async () => {
+  setLoadingTasks(true);
+  try {
+    // 1. Fetch Tasks and Employees simultaneously using your exact backend routes
+    const [tasksRes, empRes] = await Promise.all([
+      fetch("/api/tasks"),
+      fetch("/api/admin/employees") // 👈 Strictly use the employees endpoint
+    ]);
+    
+    const tasksJson = await tasksRes.json();
+    const empJson   = await empRes.json();
+
+    if (tasksJson.success) {
+        setTasks(tasksJson.data);
+    }
+
+    if (empJson?.success) {
+      // 2. PERMANENT FIX: Safely filter the internal team
+      // This ensures both 'Admins' (like Sandeep) and 'Employees' can be assigned tasks,
+      // and it converts strings to lowercase so a typo in the DB doesn't break your app.
+      const internalStaff = empJson.data.filter((e: any) => {
+        const role = String(e.role || "").toLowerCase();
+        const status = String(e.status || "").toLowerCase();
+        
+        return (role === "employee" || role === "admin") && status === "active";
+      });
+      
+      setEmployees(internalStaff);
+    }
+  } catch (e) {
+    console.error("Failed to load tasks data:", e);
+  } finally {
+    setLoadingTasks(false);
+  }
+};
+
+// ── Handle task form submit ───────────────────────────────────
+
+// ── Handle task form submit ───────────────────────────────────
+const handleAssignTask = async (e: React.FormEvent) => {
+  e.preventDefault();
+  // 🌟 Check taskForm.assignedTo instead of selectedEmp
+  if (!taskForm.assignedTo || !taskForm.title || !taskForm.deadline) {
+    alert("Please fill all required fields, including assigning an employee.");
+    return;
+  }
+  setTaskSubmitting(true);
+
+  try {
+    const url    = editingTask ? `/api/tasks/${editingTask._id}` : "/api/tasks";
+    const method = editingTask ? "PUT" : "POST";
+
+    const res  = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...taskForm,
+        linkedTripId : taskForm.linkedTripId || null,
+      }),
+    });
+    const json = await res.json();
+
+    if (json.success) {
+      await fetchTasksData();
+      setIsTaskModalOpen(false); // 👈 Close the modal
+      setEditingTask(null);
+      setTaskForm({
+        title:"", description:"", assignedTo:"", priority:"medium",
+        category:"other", deadline:"", linkedTripId:"",
+      });
+    } else {
+      alert(json.message || "Failed to save task");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Network error");
+  } finally {
+    setTaskSubmitting(false);
+  }
+};
+
+
+// ── Handle task delete ────────────────────────────────────────
+const handleDeleteTask = async (taskId: string) => {
+  if (!confirm("Delete this task?")) return;
+  try {
+    const res  = await fetch(`/api/tasks/${taskId}`, { method:"DELETE" });
+    const json = await res.json();
+    if (json.success) {
+      setTasks(prev => prev.filter(t => t._id !== taskId));
+    }
+  } catch(e) { console.error(e); }
+};
+
+// ── Handle status update ──────────────────────────────────────
+const handleTaskStatusUpdate = async (taskId: string, status: string) => {
+  try {
+    const res  = await fetch(`/api/tasks/${taskId}`, {
+      method : "PUT",
+      headers: { "Content-Type": "application/json" },
+      body   : JSON.stringify({ status }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      setTasks(prev => prev.map(t => t._id === taskId ? json.data : t));
+    }
+  } catch(e) { console.error(e); }
 };
 
  // ==========================================
@@ -316,6 +552,17 @@ export default function DashboardPage() {
       }
     })();
   }, []);
+
+
+  // ── Tab-Specific Data Fetching ──
+  // This ensures data is fetched exactly when the user navigates to the tab
+  useEffect(() => {
+    if (activeTab === "Tasks") {
+      fetchTasksData();
+    }
+    // Note: If you build out API routes for Commissions later, add them here:
+    // if (activeTab === "Commissions") { fetchCommissionsLedger(); }
+  }, [activeTab]);
 
   // ── KPI Metrics ──
   const metrics = useMemo(() => {
@@ -1375,9 +1622,367 @@ export default function DashboardPage() {
               </div>
             </motion.div>
           )}
-    
 
+
+
+          {/* ════════════════════════════════════════════════
+    TASKS TAB
+════════════════════════════════════════════════ */}
+
+{/* ========================================================
+              TASKS TAB (Global Data Table)
+              ======================================================== */}
+          {activeTab === "Tasks" && (
+            <motion.div key="tasks"
+              initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
+              transition={{ duration:0.22 }}
+              className="space-y-6"
+            >
+              {/* ── TOP CONTROL BAR ── */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                {/* ── KPI PULSE CHECK ── */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                  { label:"Total Tasks", val: taskMetrics.total,    color:"bg-white text-slate-700 border-slate-200" },
+                  { label:"Active",      val: taskMetrics.active,   color:"bg-blue-50 text-blue-700 border-blue-200" },
+                  { label:"Urgent",      val: taskMetrics.urgent,   color:"bg-orange-50 text-orange-700 border-orange-200" },
+                  { label:"Overdue",     val: taskMetrics.overdue,  color:"bg-red-50 text-red-700 border-red-200" },
+                  { label:"Completed",   val: taskMetrics.completed,color:"bg-emerald-50 text-emerald-700 border-emerald-200" },
+                ].map(s => (
+                  <div key={s.label} className={`border rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center ${s.color}`}>
+                    <p className="text-2xl font-black">{s.val}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider opacity-80 mt-1">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── TOP CONTROL BAR ── */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    {/* Search */}
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+                      <input type="text" placeholder="Search tasks or trips..."
+                        value={taskSearch} onChange={e => setTaskSearch(e.target.value)}
+                        className="pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-48 bg-slate-50"
+                      />
+                    </div>
+                    {/* Status Filter */}
+                    <select value={taskStatusFilter} onChange={e => setTaskStatusFilter(e.target.value)}
+                      className="px-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 text-slate-600">
+                      <option value="all">All Statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                    {/* Time Filter 👈 NEW */}
+                    <select value={taskTimeFilter} onChange={e => setTaskTimeFilter(e.target.value)}
+                      className="px-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 text-slate-600">
+                      <option value="all">All Time</option>
+                      <option value="overdue">⚠️ Overdue</option>
+                      <option value="today">📅 Due Today</option>
+                      <option value="week">📅 Due This Week</option>
+                    </select>
+                    {/* Priority Filter */}
+                    <select value={taskPriorityFilter} onChange={e => setTaskPriorityFilter(e.target.value)}
+                      className="px-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 text-slate-600">
+                      <option value="all">All Priorities</option>
+                      <option value="urgent">🔴 Urgent</option>
+                      <option value="high">🟠 High</option>
+                      <option value="medium">🔵 Medium</option>
+                      <option value="low">🟢 Low</option>
+                    </select>
+                    {/* User Filter */}
+                    <select value={taskUserFilter} onChange={e => setTaskUserFilter(e.target.value)}
+                      className="px-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 text-slate-600">
+                      <option value="all">All Team Members</option>
+                      {employees.map(emp => (
+                        <option key={emp._id} value={emp._id}>{emp.name}</option>
+                      ))}
+                    </select>
+                 </div>
+
+                 {/* Add Task Button */}
+                 <motion.button
+                    whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }}
+                    onClick={() => {
+                      setEditingTask(null);
+                      setTaskForm({ title:"", description:"", assignedTo:"", priority:"medium", category:"other", deadline:"", linkedTripId:"" });
+                      setIsTaskModalOpen(true);
+                    }}
+                    className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-md transition-colors whitespace-nowrap"
+                 >
+                    <Plus size={16}/> Add Task
+                 </motion.button>
+              </div>
+
+              </div>
+
+              {/* ── DATA TABLE ── */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                {loadingTasks ? (
+                  <div className="flex items-center justify-center py-24 gap-3 text-slate-400">
+                    <Loader2 size={22} className="animate-spin text-blue-600"/>
+                    <span className="text-sm font-semibold">Loading tasks...</span>
+                  </div>
+                ) : filteredAndSortedTasks.length === 0 ? (
+                  <div className="text-center py-16 text-slate-400">
+                    <ClipboardList size={36} className="opacity-30 mx-auto mb-3"/>
+                    <p className="text-sm font-semibold">No tasks found matching your filters.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto max-h-[600px] custom-scrollbar">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="sticky top-0 bg-slate-50 border-b border-slate-100 z-10">
+                        <tr>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-wider">Description</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-wider">Task Type</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-wider">Priority</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-wider">Deadline</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-wider">Assign To</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {filteredAndSortedTasks.map((task: any) => {
+                          const isOverdue = task.status !== "completed" && new Date(task.deadline).getTime() < new Date().getTime();
+
+                          const PRIORITY_STYLE: any = {
+                            urgent:{ badge:"bg-red-50 text-red-700 border-red-100", label:"🔴 Urgent" },
+                            high  :{ badge:"bg-orange-50 text-orange-700 border-orange-100", label:"🟠 High" },
+                            medium:{ badge:"bg-blue-50 text-blue-700 border-blue-100", label:"🔵 Medium" },
+                            low   :{ badge:"bg-green-50 text-green-700 border-green-100", label:"🟢 Low" },
+                          };
+                          
+                          const STATUS_STYLE: any = {
+                            pending: "bg-slate-100 text-slate-600",
+                            in_progress: "bg-blue-100 text-blue-700",
+                            completed: "bg-emerald-100 text-emerald-700",
+                            overdue: "bg-red-100 text-red-700"
+                          };
+                          
+                          const pCfg = PRIORITY_STYLE[task.priority] || PRIORITY_STYLE.medium;
+
+                          return (
+                            <tr key={task._id} className="hover:bg-slate-50/50 transition-colors group">
+                              <td className="px-6 py-4">
+                                <p className={`text-sm font-bold ${task.status === "completed" ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                                  {task.title}
+                                </p>
+                                {task.linkedTripId && (
+                                  <p className="text-[11px] text-blue-600 font-semibold mt-0.5 flex items-center gap-1">
+                                    ✈️ {task.linkedTripId.tripName || "Linked Trip"}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                              <span className="text-xs font-semibold text-slate-500 capitalize">
+  {(task.category || "other").replace("_", " ")}
+</span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <select
+                                  value={task.status}
+                                  onChange={(e) => handleTaskStatusUpdate(task._id, e.target.value)}
+                                  className={`text-[11px] font-bold px-2.5 py-1 rounded-full outline-none cursor-pointer appearance-none border border-transparent hover:border-slate-300 ${isOverdue ? STATUS_STYLE.overdue : STATUS_STYLE[task.status]}`}
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="in_progress">In Progress</option>
+                                  <option value="completed">Completed</option>
+                                </select>
+                              </td>
+                              <td className="px-6 py-4">
+                                 <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${pCfg.badge}`}>
+                                   {pCfg.label}
+                                 </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className={`text-xs font-semibold flex items-center gap-1.5 ${isOverdue ? "text-red-600" : "text-slate-600"}`}>
+                                  <Clock size={12}/>
+                                  {new Date(task.deadline).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[10px] font-black text-white shadow-sm">
+                                    {task.assignedTo?.name?.[0]?.toUpperCase() || "?"}
+                                  </div>
+                                  <span className="text-xs font-bold text-slate-700">{task.assignedTo?.name?.split(" ")[0] || "Unknown"}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-2 ">
+                                  <button
+                                    onClick={() => {
+                                      setEditingTask(task);
+                                      setTaskForm({
+                                        title: task.title, description: task.description || "",
+                                        assignedTo: task.assignedTo?._id || task.assignedTo,
+                                        priority: task.priority, category: task.category,
+                                        deadline: new Date(task.deadline).toISOString().slice(0,16),
+                                        linkedTripId: task.linkedTripId?._id || ""
+                                      });
+                                      setIsTaskModalOpen(true);
+                                    }}
+                                    className="p-1.5 text-slate-400  hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  >
+                                    <Pencil size={14}/>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteTask(task._id)}
+                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 size={14}/>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* ========================================================
+                  GLOBAL TASK CREATION MODAL
+                  ======================================================== */}
+              <AnimatePresence>
+                {isTaskModalOpen && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                      className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]"
+                    >
+                      {/* Modal Header */}
+                      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                          {editingTask ? <Pencil size={18} className="text-blue-600"/> : <Plus size={18} className="text-blue-600"/>}
+                          {editingTask ? "Edit Task" : "Create New Task"}
+                        </h3>
+                        <button
+                          onClick={() => { setIsTaskModalOpen(false); setEditingTask(null); }}
+                          className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                        >
+                          <X size={18}/>
+                        </button>
+                      </div>
+
+                      {/* Modal Body / Form */}
+                      <div className="p-6 overflow-y-auto custom-scrollbar">
+                        <form id="task-form" onSubmit={handleAssignTask} className="space-y-5">
+                          
+                          {/* Task Title */}
+                          <div>
+                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5 block">Task Title *</label>
+                            <input type="text" required
+                              value={taskForm.title}
+                              onChange={e => setTaskForm(p => ({ ...p, title:e.target.value }))}
+                              placeholder="e.g. Prepare new quotation for Jason Family"
+                              className="w-full px-4 py-2.5 text-sm font-semibold border border-slate-200 bg-slate-50 focus:bg-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            />
+                          </div>
+
+                          {/* Assign To & Deadline Row */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5 block">Assign To *</label>
+                              <select required
+                                value={taskForm.assignedTo}
+                                onChange={e => setTaskForm(p => ({ ...p, assignedTo:e.target.value }))}
+                                className="w-full px-4 py-2.5 text-sm font-semibold border border-slate-200 bg-slate-50 focus:bg-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                              >
+                                <option value="" disabled>Select Team Member...</option>
+                                {employees.map(emp => (
+                                  <option key={emp._id} value={emp._id}>{emp.name} ({emp.role})</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5 block">Deadline *</label>
+                              <input type="datetime-local" required
+                                value={taskForm.deadline}
+                                onChange={e => setTaskForm(p => ({ ...p, deadline:e.target.value }))}
+                                className="w-full px-4 py-2.5 text-sm font-semibold text-slate-700 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Category & Priority Row */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5 block">Task Type</label>
+                              <select
+                                value={taskForm.category}
+                                onChange={e => setTaskForm(p => ({ ...p, category:e.target.value }))}
+                                className="w-full px-4 py-2.5 text-sm font-semibold border border-slate-200 bg-slate-50 focus:bg-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                              >
+                                <option value="follow_up">📞 Follow Up / Call</option>
+                                <option value="document">📄 Document / Quote</option>
+                                <option value="client">👤 Client Meeting</option>
+                                <option value="operations">✈️ Operations</option>
+                                <option value="other">📋 Other</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5 block">Priority</label>
+                              <select
+                                value={taskForm.priority}
+                                onChange={e => setTaskForm(p => ({ ...p, priority:e.target.value }))}
+                                className="w-full px-4 py-2.5 text-sm font-semibold border border-slate-200 bg-slate-50 focus:bg-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                              >
+                                <option value="low">🟢 Low</option>
+                                <option value="medium">🔵 Medium</option>
+                                <option value="high">🟡 High</option>
+                                <option value="urgent">🔴 Urgent</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <div>
+                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5 block">Description / Notes</label>
+                            <textarea rows={3}
+                              value={taskForm.description}
+                              onChange={e => setTaskForm(p => ({ ...p, description:e.target.value }))}
+                              placeholder="Add specific instructions for the assignee..."
+                              className="w-full px-4 py-3 text-sm font-semibold border border-slate-200 bg-slate-50 focus:bg-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                            />
+                          </div>
+                        </form>
+                      </div>
+
+                      {/* Modal Footer */}
+                      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+                        <button type="button"
+                          onClick={() => { setIsTaskModalOpen(false); setEditingTask(null); }}
+                          className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-xl transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                          type="submit" form="task-form" disabled={taskSubmitting}
+                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-2.5 rounded-xl shadow-md shadow-blue-200 transition-colors disabled:opacity-60"
+                        >
+                          {taskSubmitting ? <><Loader2 size={16} className="animate-spin"/> Saving...</> : <><CheckCircle2 size={16}/> {editingTask ? "Update Task" : "Assign Task"}</>}
+                        </motion.button>
+                      </div>
+
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
+
+            </motion.div>
+          )}
+          
         </div>
+
 
         {/* ── FOOTER ── */}
         <div className="text-center pb-4">

@@ -28,10 +28,51 @@
 
 
 
+// import type { Metadata } from "next";
+// import { Inter } from "next/font/google";
+// import "./globals.css";
+// import { UserProvider } from "@/app/context/UserContext"; // <--- Essential for Auth
+
+
+// const inter = Inter({ subsets: ["latin"] });
+
+// export const metadata: Metadata = {
+//   title: "Travdek Itinerary Builder",
+//   description: "Advanced Travel Itinerary Management",
+// };
+
+// export default function RootLayout({
+//   children,
+// }: Readonly<{
+//   children: React.ReactNode;
+// }>) {
+//   return (
+//     <html lang="en">
+//       <head>
+//         {/* 👇 FONT AWESOME CDN — must be inside <head> */}
+//         <link 
+//           rel="stylesheet" 
+//           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" 
+//         />
+//       </head>
+//       <body className={inter.className}>
+//         {/* Providing User Context to the entire app (Auth + Dashboard) */}
+//         <UserProvider>
+//           {children}
+//         </UserProvider>
+//       </body>
+//     </html>
+//   );
+// }
+
+
+
+
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { UserProvider } from "@/app/context/UserContext"; // <--- Essential for Auth
+import { UserProvider } from "@/app/context/UserContext"; 
+import AuthProvider from "@/components/AuthProvider"; // <--- NextAuth Provider
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,7 +87,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* 👇 FONT AWESOME CDN — must be inside <head> */}
         <link 
@@ -55,10 +96,13 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        {/* Providing User Context to the entire app (Auth + Dashboard) */}
-        <UserProvider>
-          {children}
-        </UserProvider>
+        {/* 1. NextAuth Session Provider at the top level */}
+        <AuthProvider>
+          {/* 2. Your custom User Context Provider */}
+          <UserProvider>
+            {children}
+          </UserProvider>
+        </AuthProvider>
       </body>
     </html>
   );

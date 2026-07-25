@@ -521,7 +521,7 @@
 
 import React,{ useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Clock, Hotel, Plane, MapPin, Utensils, Save, FileText, Wallet, Link2, Ticket } from 'lucide-react';
+import { ArrowLeft, Clock, Hotel, Plane, MapPin, Utensils, Save, FileText, Wallet, Link2, Ticket, Loader2 ,User, Calendar, ArrowRight, Briefcase } from 'lucide-react';
 import PurchaseOrderModal from '@/components/operations/PurchaseOrderModal';
 import ClientVoucherModal from '@/components/operations/ClientVoucherModal';
 
@@ -598,8 +598,21 @@ export default function TripManifestPage() {
         setIsPoModalOpen(true);
     };
 
-    if (isLoading) return <div className="p-8 text-white relative z-10">Loading...</div>;
-
+      if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-200">
+            <Plane className="text-white animate-pulse" size={28} />
+          </div>
+          <div className="flex items-center gap-2 text-slate-500 text-sm font-semibold">
+            <Loader2 size={16} className="animate-spin text-blue-600" />
+            Loading your travel Operation..
+          </div>
+        </div>
+      </div>
+    );
+  }
     return (
         <div className="relative min-h-screen overflow-hidden">
             {/* --- Background Layers --- */}
@@ -650,9 +663,65 @@ export default function TripManifestPage() {
                 </div>
                 </div>
 
+
+
+                {operationData && (
+                    <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-white/40 p-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-6 relative overflow-hidden">
+                        {/* Decorative background glow */}
+                        <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                        
+                        {/* Column 1: Trip & Client */}
+                        <div className="flex flex-col gap-1 border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 md:pr-4 relative z-10">
+                            <span className="text-[10px] font-black uppercase text-indigo-500 tracking-wider">Trip & Client</span>
+                            <h2 className="text-lg font-black text-gray-900 leading-tight truncate" title={operationData.tripContext?.tripName || operationData.tripName}>
+                                {operationData.tripContext?.tripName || operationData.tripName}
+                            </h2>
+                            <div className="flex items-center gap-2 mt-2">
+                                <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-md border border-indigo-100"><User size={14} /></div>
+                                <span className="text-sm font-bold text-gray-500">
+                                    Client: <span className="text-gray-900">{operationData.tripContext?.clientName || "Unknown"}</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Column 2: Schedule */}
+                        <div className="flex flex-col gap-1 border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 md:px-4 relative z-10">
+                            <span className="text-[10px] font-black uppercase text-emerald-500 tracking-wider">Schedule</span>
+                            <div className="flex items-center gap-3 text-gray-900 font-bold text-sm mt-1.5">
+                                <div className="flex items-center gap-1.5">
+                                    <Calendar size={16} className="text-emerald-500" />
+                                    <span>{operationData.tripContext?.startDate || "TBA"}</span>
+                                </div>
+                                <ArrowRight size={14} className="text-gray-300" />
+                                <span>{operationData.tripContext?.endDate || "TBA"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2 text-gray-500 bg-gray-50 w-fit px-2 py-1 rounded border border-gray-100">
+                                <Clock size={12} />
+                                <span className="text-xs font-bold">{operationData.tripContext?.duration || "N/A"}</span>
+                            </div>
+                        </div>
+
+                        {/* Column 3: Sales Channel */}
+                        <div className="flex flex-col gap-1 md:pl-4 relative z-10">
+                            <span className="text-[10px] font-black uppercase text-orange-500 tracking-wider">Sales Channel</span>
+                            <div className="mt-2 flex items-center">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-xs font-bold shadow-sm">
+                                    <Briefcase size={14} />
+                                    {operationData.tripContext?.agentName || "Internal Sale"}
+                                </span>
+                            </div>
+                            <span className="text-[10px] text-gray-400 font-bold mt-2 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                Ref: {operationData.tripId}
+                            </span>
+                        </div>
+                    </div>
+                )}
+                {/* 👆 END OF TRIP CONTEXT HEADER 👆 */}
+
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <table className="w-full text-left">
-                        <thead>
+                        {/* <thead>
                             <tr className="bg-gray-100 text-xs text-gray-500 font-black uppercase">
                                 <th className="p-4 w-24">Day</th>
                                 <th className="p-4">Service</th>
@@ -664,6 +733,21 @@ export default function TripManifestPage() {
                                 <th className="p-4 w-32 text-center">Procurement</th>
                               
                                 
+                            </tr>
+                        </thead> */}
+
+                        {/* ── UPGRADED TABLE HEADER ── */}
+                        <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                                <th className="p-4 w-20">Day</th>
+                                {/* Added min-w-[250px] to prevent text from wrapping awkwardly */}
+                                <th className="p-4 min-w-[250px]">Service</th>
+                                <th className="p-4 w-40">Status</th>
+                                <th className="p-4 w-44">Conf # / PNR</th>
+                                <th className="p-4 w-36">Net Cost</th>
+                                <th className="p-4 w-40">Pay Deadline</th>
+                                <th className="p-4 w-36">Pay Status</th>
+                                <th className="p-4 w-40 text-center">Procurement</th>
                             </tr>
                         </thead>
 
@@ -702,7 +786,7 @@ export default function TripManifestPage() {
                                                 
                                                 <td className="p-4 font-bold text-gray-600 text-sm">Day {service.dayNumber}</td>
                                                 
-                                                {/* Service Details & SRM Link */}
+                                           
                                                 <td className="p-4">
                                                     <div className="flex items-start gap-3">
                                                         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200 shrink-0 mt-1">
@@ -727,7 +811,7 @@ export default function TripManifestPage() {
                                                     </div>
                                                 </td>
 
-                                                {/* Status Dropdown */}
+                                                
                                                 <td className="p-4">
                                                     <select 
                                                         value={service.status || 'Pending'} 
@@ -741,7 +825,6 @@ export default function TripManifestPage() {
                                                     </select>
                                                 </td>
 
-                                                {/* Confirmation / PNR */}
                                                 <td className="p-4">
                                                     <input 
                                                         type="text" 
@@ -752,7 +835,7 @@ export default function TripManifestPage() {
                                                     />
                                                 </td>
 
-                                                {/* Net Cost */}
+                                               
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-1">
                                                         <span className="text-xs font-bold text-gray-400"> {service.currency || 'USD'} </span>
@@ -765,7 +848,7 @@ export default function TripManifestPage() {
                                                     </div>
                                                 </td>
 
-                                                {/* Payment Deadline */}
+                                           
                                                 <td className="p-4">
                                                     <input 
                                                         type="date" 
@@ -775,7 +858,7 @@ export default function TripManifestPage() {
                                                     />
                                                 </td>
 
-                                                {/* Payment Status */}
+                                           
                                                 <td className="p-4">
                                                     <select 
                                                         value={service.paymentStatus || 'Unpaid'} 
@@ -792,7 +875,7 @@ export default function TripManifestPage() {
                                                     </select>
                                                 </td>
 
-                                                {/* Generate PO Button */}
+                                                
                                                 <td className="p-4 text-center">
                                                     <button 
                                                         onClick={() => openPoModal(service)}

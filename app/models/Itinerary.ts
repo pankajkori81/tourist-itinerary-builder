@@ -50,7 +50,7 @@ const ItinerarySchema = new mongoose.Schema({
   // 7. Operations & CRM
   bookingStatus: { type: String, default: 'quote' }, // quote, confirmed, cancelled, completed
   leadGuestName: { type: String, default: '' },
-  assignedAgentId: { type: String },
+  assignedAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   adultCount: { type: Number },
   childCount: { type: Number },
   operations: { type: mongoose.Schema.Types.Mixed },

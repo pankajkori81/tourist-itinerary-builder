@@ -839,43 +839,82 @@ export default function PreviewPage() {
   };
 
   // 👇 3. Master Share Button Logic
+
+  // 👇 3. Master Share Button Logic (UPDATED FOR RESEND & WEB VIEW)
   const handleShareEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (shareForm.sendEmail && !shareForm.clientEmail) return alert("Client Email is required.");
-    if (shareForm.sendWhatsapp && !shareForm.clientPhone) return alert("Client Phone is required.");
-    if (!shareForm.sendEmail && !shareForm.sendWhatsapp) return alert("Please select a sending method.");
+    if (!shareForm.clientEmail) return alert("Client Email is required.");
     
     setIsSharing(true);
 
     try {
-        const pdf = await createPdfObject();
-        const pdfBase64 = pdf.output('datauristring'); 
+        // NOTE: We no longer generate the PDF here! 
+        // The client gets a secure token link to view the interactive web version.
         const res = await fetch('/api/share', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                // Pass the DB ID of the itinerary so the backend can link it
+                itineraryId: (itineraryData as any)._id, 
                 clientName: shareForm.clientName,
                 clientEmail: shareForm.clientEmail,
-                clientPhone: shareForm.clientPhone,
-                pdfBase64: pdfBase64,
                 tripName: itineraryData.tripName || "Custom Itinerary",
-                sendEmail: shareForm.sendEmail,
-                sendWhatsapp: shareForm.sendWhatsapp
             })
         });
 
         const data = await res.json();
+        
         if (data.success) {
-            alert("Successfully shared with client!"); 
+            alert("Secure link generated and email sent successfully!"); 
             setIsShareModalOpen(false);
             setShareForm({ clientName: '', clientEmail: '', clientPhone: '', sendEmail: true, sendWhatsapp: false });
-        } else { alert("Failed to process: " + data.message); }
+        } else { 
+            alert("Failed to process: " + data.message); 
+        }
     } catch (error) {
+        console.error("Share API Error:", error);
         alert("An error occurred while sharing.");
     } finally {
         setIsSharing(false);
     }
   };
+//   const handleShareEmail = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (shareForm.sendEmail && !shareForm.clientEmail) return alert("Client Email is required.");
+//     if (shareForm.sendWhatsapp && !shareForm.clientPhone) return alert("Client Phone is required.");
+//     if (!shareForm.sendEmail && !shareForm.sendWhatsapp) return alert("Please select a sending method.");
+    
+//     setIsSharing(true);
+
+//     try {
+//         const pdf = await createPdfObject();
+//         const pdfBase64 = pdf.output('datauristring'); 
+//         const res = await fetch('/api/share', {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({
+//                 clientName: shareForm.clientName,
+//                 clientEmail: shareForm.clientEmail,
+//                 clientPhone: shareForm.clientPhone,
+//                 pdfBase64: pdfBase64,
+//                 tripName: itineraryData.tripName || "Custom Itinerary",
+//                 sendEmail: shareForm.sendEmail,
+//                 sendWhatsapp: shareForm.sendWhatsapp
+//             })
+//         });
+
+//         const data = await res.json();
+//         if (data.success) {
+//             alert("Successfully shared with client!"); 
+//             setIsShareModalOpen(false);
+//             setShareForm({ clientName: '', clientEmail: '', clientPhone: '', sendEmail: true, sendWhatsapp: false });
+//         } else { alert("Failed to process: " + data.message); }
+//     } catch (error) {
+//         alert("An error occurred while sharing.");
+//     } finally {
+//         setIsSharing(false);
+//     }
+//   };
 
   if (loading) return <div>Loading Preview...</div>;
 
@@ -1594,7 +1633,7 @@ return (
     </div>
 
       {/* 👇 NEW SHARE MODAL UI PAasted HERE */}
-      {isShareModalOpen && (
+      {/* {isShareModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
               <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                   <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
@@ -1612,7 +1651,7 @@ return (
                           Generate a clean PDF presentation and send it directly to your client.
                       </div>
 
-                      {/* Delivery Methods Checkboxes */}
+                  
                       <div className="flex gap-4 mb-4">
                           <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
                               <input type="checkbox" checked={shareForm.sendEmail} onChange={(e) => setShareForm({...shareForm, sendEmail: e.target.checked})} className="w-4 h-4 text-green-600 rounded" />
@@ -1664,6 +1703,66 @@ return (
                       >
                           {isSharing ? <><Loader2 size={18} className="animate-spin" /> Processing...</> : 'Send to Client'}
                       </button>
+                  </form>
+              </div>
+          </div>
+      )} */}
+
+
+
+      {/* 👇 NEW SHARE MODAL UI (Resend Token Flow) */}
+      {isShareModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                      <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                          <Share2 className="text-blue-600" size={20} /> Share via Secure Link
+                      </h2>
+                      <button onClick={() => setIsShareModalOpen(false)} disabled={isSharing} className="text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50">
+                          <X size={20} />
+                      </button>
+                  </div>
+
+                  <form onSubmit={handleShareEmail} className="p-6 space-y-5">
+                      <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-blue-800 leading-relaxed mb-2">
+                          <strong>New Web Experience:</strong> This will generate a secure, expiring token and email the client a link to view, approve, or request changes to their itinerary directly online.
+                      </div>
+
+                      <div className="space-y-4">
+                          <div>
+                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Client Name</label>
+                              <input 
+                                  type="text" required 
+                                  value={shareForm.clientName} 
+                                  onChange={(e) => setShareForm({...shareForm, clientName: e.target.value})}
+                                  placeholder="e.g. John Doe" 
+                                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
+                              />
+                          </div>
+                          
+                          <div>
+                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Client Email <span className="text-red-500">*</span></label>
+                              <div className="relative">
+                                  <Mail size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                                  <input 
+                                      type="email" required
+                                      value={shareForm.clientEmail} 
+                                      onChange={(e) => setShareForm({...shareForm, clientEmail: e.target.value})}
+                                      placeholder="john@example.com" 
+                                      className="w-full pl-10 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
+                                  />
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="pt-2">
+                          <button 
+                              type="submit" disabled={isSharing}
+                              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-70 shadow-lg shadow-blue-200"
+                          >
+                              {isSharing ? <><Loader2 size={18} className="animate-spin" /> Generating Link & Sending...</> : <><Mail size={18}/> Send Secure Web Link</>}
+                          </button>
+                      </div>
                   </form>
               </div>
           </div>

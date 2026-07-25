@@ -452,7 +452,7 @@ export function Sidebar() {
     // 9. HR / Employee Management (Admin Only)
     { 
       label: "Employees", 
-      path: "/dashboard/employees", 
+      path: "/dashboard/admin/employees", 
       icon: User,
       roles: ['admin']
     },
