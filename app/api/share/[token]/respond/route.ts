@@ -1,11 +1,4 @@
-// ══════════════════════════════════════════════════════════════
-// FILE: app/api/share/[token]/respond/route.ts
-// PURPOSE:
-//   POST → PUBLIC (no auth) — client submits their response
-//          Either "approved" or "changes_requested"
-//   When client approves → itinerary bookingStatus → "confirmed"
-//   Admin gets notified via email automatically
-// ══════════════════════════════════════════════════════════════
+
 
 import { NextRequest, NextResponse } from "next/server";
 import { Resend }                    from "resend";
@@ -18,11 +11,7 @@ import "@/app/models/User";
 // ── Resend client ─────────────────────────────────────────────
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// ══════════════════════════════════════════════════════════════
-// POST: Client submits approval or change request
-// Called from: app/view/[token]/page.tsx
-// No auth required — token is the security key
-// ══════════════════════════════════════════════════════════════
+
 export const POST = async (
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }

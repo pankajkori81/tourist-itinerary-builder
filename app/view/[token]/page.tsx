@@ -2376,7 +2376,7 @@ const displayNights = nightCount > 0 ? ` (${nightCount}N)` : '';
         </div>  
 
         {/* --- CLIENT APPROVAL ACTION FORM --- */}
-        <div style={{ borderTop: "2px solid #e5e7eb", padding: "32px 24px" }}>
+        {/* <div style={{ borderTop: "2px solid #e5e7eb", padding: "32px 24px" }}>
           {submitted ? (
             <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "12px", padding: "40px", textAlign: "center" }}>
               <CheckCircle2 size={48} style={{ color: "#16a34a", margin: "0 auto 16px" }} />
@@ -2428,7 +2428,7 @@ const displayNights = nightCount > 0 ? ` (${nightCount}N)` : '';
               )}
             </div>
           )}
-        </div>
+        </div> */}
 
       </div>
     </div>
