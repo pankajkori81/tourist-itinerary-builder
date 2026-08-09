@@ -129,7 +129,7 @@ export const POST = async (
     const countries = (itinerary?.selectedCountries || []).join(", ");
     const fromEmail = process.env.FROM_EMAIL || "onboarding@resend.dev";
     const baseUrl   = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const adminEmail= process.env.ADMIN_EMAIL || "Sandeep@TravDek.com";
+    const adminEmail= process.env.ADMIN_EMAIL || "sandeep@travdek.com";
 
     // ── 9. Send notification email to ADMIN ───────────────────
     const isApproved      = action === "approved";
@@ -431,9 +431,9 @@ export const POST = async (
 
                       <p style="color:#64748b;font-size:14px;margin:0;">
                         Questions? Contact your travel advisor:<br>
-                        <a href="mailto:Sandeep@TravDek.com"
+                        <a href="mailto:sandeep@travdek.com"
                           style="color:#1d4ed8;font-weight:600;">
-                          Sandeep@TravDek.com
+                          sandeep@travdek.com
                         </a>
                         &nbsp;|&nbsp; +1 650 759 4331
                       </p>
