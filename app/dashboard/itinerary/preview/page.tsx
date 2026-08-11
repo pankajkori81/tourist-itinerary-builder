@@ -878,43 +878,7 @@ export default function PreviewPage() {
         setIsSharing(false);
     }
   };
-//   const handleShareEmail = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     if (shareForm.sendEmail && !shareForm.clientEmail) return alert("Client Email is required.");
-//     if (shareForm.sendWhatsapp && !shareForm.clientPhone) return alert("Client Phone is required.");
-//     if (!shareForm.sendEmail && !shareForm.sendWhatsapp) return alert("Please select a sending method.");
-    
-//     setIsSharing(true);
 
-//     try {
-//         const pdf = await createPdfObject();
-//         const pdfBase64 = pdf.output('datauristring'); 
-//         const res = await fetch('/api/share', {
-//             method: 'POST',
-//             headers: { 'Content-Type': 'application/json' },
-//             body: JSON.stringify({
-//                 clientName: shareForm.clientName,
-//                 clientEmail: shareForm.clientEmail,
-//                 clientPhone: shareForm.clientPhone,
-//                 pdfBase64: pdfBase64,
-//                 tripName: itineraryData.tripName || "Custom Itinerary",
-//                 sendEmail: shareForm.sendEmail,
-//                 sendWhatsapp: shareForm.sendWhatsapp
-//             })
-//         });
-
-//         const data = await res.json();
-//         if (data.success) {
-//             alert("Successfully shared with client!"); 
-//             setIsShareModalOpen(false);
-//             setShareForm({ clientName: '', clientEmail: '', clientPhone: '', sendEmail: true, sendWhatsapp: false });
-//         } else { alert("Failed to process: " + data.message); }
-//     } catch (error) {
-//         alert("An error occurred while sharing.");
-//     } finally {
-//         setIsSharing(false);
-//     }
-//   };
 
   if (loading) return <div>Loading Preview...</div>;
 

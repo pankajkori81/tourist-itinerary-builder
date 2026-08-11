@@ -1755,13 +1755,16 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useRef } from "react";
 import { useParams } from "next/navigation";
 import {
   Loader2, AlertCircle, Clock, XCircle,
   ThumbsUp, ThumbsDown, Send, CheckCircle2, Plane,
   Download
 } from "lucide-react";
+
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 // --- HELPERS ---
 const formatDate = (dateStr?: string) => {
@@ -1800,6 +1803,10 @@ export default function ClientViewPage() {
   const params = useParams();
   const token  = params?.token as string;
 
+  // --- PDF State & Ref ---
+  const pdfRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
   // --- State ---
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1813,6 +1820,19 @@ export default function ClientViewPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
+
+
+
+    // --- REFS FOR NEW PDF ENGINE ---
+     const printRef = useRef<HTMLDivElement>(null);
+    const headerSectionRef  = useRef<HTMLDivElement>(null);
+    const itineraryLabelRef = useRef<HTMLHeadingElement>(null);
+    const tableRef          = useRef<HTMLTableElement | null>(null);
+    const tableHeadRef      = useRef<HTMLTableSectionElement>(null);
+    const dayRefsMap        = useRef<Map<number, HTMLElement>>(new Map());
+    const pricingRef        = useRef<HTMLDivElement>(null);
+    const footerRef         = useRef<HTMLDivElement>(null);
+  
 
   // --- Fetch Data ---
   useEffect(() => {
@@ -1884,6 +1904,175 @@ export default function ClientViewPage() {
     }
   };
 
+
+  // 👇 1. THE NEW OFF-SCREEN PDF ENGINE (Zero Blank Spaces!)
+    const createPdfObject = async () => {
+        const PDF_W_MM  = 210;  
+        const PDF_H_MM  = 297;  
+        const MARGIN_MM = 10;   
+        const CONTENT_W_MM = PDF_W_MM - (MARGIN_MM * 2);
+  
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        let currentY = MARGIN_MM; 
+  
+        const H2C_OPTS = {
+          scale: 2, 
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          ignoreElements: (el: Element) => el.hasAttribute('data-html2canvas-ignore'),
+        };
+  
+        const toMm = (canvas: HTMLCanvasElement): number => (canvas.height * CONTENT_W_MM) / canvas.width;
+        
+        const placeCanvas = (canvas: HTMLCanvasElement, y: number): number => {
+          const h = toMm(canvas);
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', MARGIN_MM, y, CONTENT_W_MM, h);
+          return h;
+        };
+        
+        const ensureFits = (neededMm: number): void => {
+          if (currentY + neededMm > PDF_H_MM - MARGIN_MM) { 
+              pdf.addPage(); 
+              currentY = MARGIN_MM; 
+          }
+        };
+  
+        // ─────────────────────────────────────────────────────────
+        // A. CAPTURE HEADER
+        // ─────────────────────────────────────────────────────────
+        if (headerSectionRef.current) {
+          const headerCanvas = await html2canvas(headerSectionRef.current, H2C_OPTS);
+          ensureFits(toMm(headerCanvas));
+          currentY += placeCanvas(headerCanvas, currentY) + 4;
+        }
+  
+        // ─────────────────────────────────────────────────────────
+        // B. NATIVE TEXT FOR "ITINERARY DETAILS"
+        // ─────────────────────────────────────────────────────────
+        ensureFits(8);
+        pdf.setFontSize(10); 
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(220, 38, 38); 
+        
+        const headingText = "ITINERARY DETAILS";
+        pdf.text(headingText, MARGIN_MM, currentY + 5);
+        
+        const textWidth = pdf.getTextWidth(headingText);
+        pdf.setDrawColor(220, 38, 38);
+        pdf.setLineWidth(0.5);
+        pdf.line(MARGIN_MM, currentY + 6, MARGIN_MM + textWidth, currentY + 6); 
+        
+        currentY += 9; 
+  
+        // ─────────────────────────────────────────────────────────
+        // C. OFF-SCREEN TABLE CLONING
+        // ─────────────────────────────────────────────────────────
+        if (tableRef.current) {
+          const originalTable = tableRef.current;
+          const hiddenWrapper = document.createElement('div');
+          hiddenWrapper.style.position = 'absolute';
+          hiddenWrapper.style.left = '-9999px';
+          hiddenWrapper.style.top = '0px';
+          hiddenWrapper.style.width = `${originalTable.offsetWidth + 2}px`;
+          hiddenWrapper.style.paddingRight = '1px';
+          hiddenWrapper.style.backgroundColor = '#ffffff';
+  
+          const clonedTable = originalTable.cloneNode(true) as HTMLTableElement;
+          hiddenWrapper.appendChild(clonedTable);
+          document.body.appendChild(hiddenWrapper);
+  
+          const clonedTbodies = Array.from(clonedTable.querySelectorAll('tbody'));
+          const clonedThead = clonedTable.querySelector('thead');
+  
+          clonedTbodies.forEach(el => el.style.display = 'none');
+          if (clonedThead) clonedThead.style.display = '';
+  
+          for (let i = 0; i < clonedTbodies.length; i++) {
+            const currentTbody = clonedTbodies[i];
+            currentTbody.style.display = '';
+            currentTbody.style.boxShadow = 'none';
+  
+            const dayCanvas = await html2canvas(clonedTable, H2C_OPTS);
+            const dayH = toMm(dayCanvas);
+  
+            ensureFits(dayH);
+            currentY += placeCanvas(dayCanvas, currentY); 
+  
+            currentTbody.style.display = 'none';
+            if (clonedThead) clonedThead.style.display = 'none';
+          }
+          
+          document.body.removeChild(hiddenWrapper);
+          currentY += 8; 
+        }
+  
+        // ─────────────────────────────────────────────────────────
+        // D. CAPTURE PRICING SEPARATELY (Off-Screen Clone Fix!)
+        // ─────────────────────────────────────────────────────────
+        if (pricingRef.current) {
+            const hiddenWrapper = document.createElement('div');
+            hiddenWrapper.style.position = 'absolute';
+            hiddenWrapper.style.left = '-9999px';
+            hiddenWrapper.style.top = '0px';
+            hiddenWrapper.style.width = `${pricingRef.current.offsetWidth}px`;
+            hiddenWrapper.style.backgroundColor = '#ffffff';
+  
+            const clone = pricingRef.current.cloneNode(true) as HTMLElement;
+            hiddenWrapper.appendChild(clone);
+            document.body.appendChild(hiddenWrapper);
+  
+            const pricingCanvas = await html2canvas(clone, H2C_OPTS);
+            const pricingH = toMm(pricingCanvas);
+            
+            document.body.removeChild(hiddenWrapper);
+  
+            ensureFits(pricingH + 5);
+            currentY += placeCanvas(pricingCanvas, currentY) + 12; 
+        }
+  
+        // ─────────────────────────────────────────────────────────
+        // E. CAPTURE FOOTER (Off-Screen Clone Fix!)
+        // ─────────────────────────────────────────────────────────
+        if (footerRef.current) {
+            const hiddenWrapper = document.createElement('div');
+            hiddenWrapper.style.position = 'absolute';
+            hiddenWrapper.style.left = '-9999px';
+            hiddenWrapper.style.top = '0px';
+            hiddenWrapper.style.width = `${footerRef.current.offsetWidth}px`;
+            hiddenWrapper.style.backgroundColor = '#ffffff';
+  
+            const clone = footerRef.current.cloneNode(true) as HTMLElement;
+            hiddenWrapper.appendChild(clone);
+            document.body.appendChild(hiddenWrapper);
+  
+            const footerCanvas = await html2canvas(clone, H2C_OPTS);
+            const footerH = toMm(footerCanvas);
+            
+            document.body.removeChild(hiddenWrapper);
+  
+            ensureFits(footerH);
+            placeCanvas(footerCanvas, currentY);
+        }
+  
+        return pdf;
+    };
+    // 👇 2. Download Button Logic
+    const handleDownloadPdf = async () => {
+      try {
+          setIsDownloading(true);
+          const pdf = await createPdfObject();
+          pdf.save(`${data.tripName || 'Itinerary'}.pdf`);
+      } catch (error) {
+          console.error("PDF Gen Error:", error);
+          alert("Failed to generate PDF.");
+      } finally {
+          setIsDownloading(false);
+      }
+    };
+
+
+
   // --- Loading & Error States ---
   if (isLoading) return (
     <div style={{ minHeight: "100vh", background: "#f0f4ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1949,6 +2138,19 @@ export default function ClientViewPage() {
   const priceDBL = selectedDep?.priceDBL || data?.finalSellPrice || 0;
   const finalGrandTotal = priceDBL * travelerCount;
 
+  // Calculate per-pax costs for display
+  const finalPaxCosts = Array(travelerCount).fill(priceDBL);
+  
+  // Process optionals from data
+  const processedOptionals = (data?.optionalExtras || []).map((opt: any) => ({
+    name: opt.name,
+    pax: opt.paxCount || travelerCount,
+    retailPP: opt.pricePerPerson || 0,
+    retailTotal: (opt.pricePerPerson || 0) * (opt.paxCount || travelerCount),
+  }));
+  
+  const finalOptionalGrandTotal = processedOptionals.reduce((sum: number, opt: any) => sum + opt.retailTotal, 0);
+
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency", currency, maximumFractionDigits: 0
@@ -1960,8 +2162,8 @@ export default function ClientViewPage() {
     
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center">
-      
+    <div className="min-h-screen bg-gray-100 p-0  flex flex-col items-center gap-6">
+         
       {/* --- TOP NOTIFICATION BAR --- */}
       <div style={{ width: "100%", background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 50, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
         {/* LEFT SIDE: Actual Base64 Company Logo */}
@@ -1977,14 +2179,20 @@ export default function ClientViewPage() {
     />
   </div>
 
-  {/* <a 
-    href={`/api/share/${token}/pdf`} 
-    download={`Travdek_Itinerary_${data.refId}.pdf`}
-    className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-lg transition-colors"
-  >
-    <Download size={16} />
-    Download PDF
-  </a> */}
+
+  <button 
+          onClick={handleDownloadPdf}
+          disabled={isDownloading}
+          style={{
+            display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px",
+            background: "#f1f5f9", color: "#334155", fontSize: "14px", fontWeight: "bold",
+            borderRadius: "8px", border: "none", cursor: isDownloading ? "not-allowed" : "pointer",
+            opacity: isDownloading ? 0.7 : 1, transition: "background 0.2s"
+          }}
+        >
+          {isDownloading ? <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> : <Download size={16} />}
+          {isDownloading ? "Generating PDF..." : "Download PDF"}
+        </button>
 
 
         <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
@@ -1993,470 +2201,740 @@ export default function ClientViewPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-[390mm] bg-white shadow-2xl mt-8 mb-8" style={{ color: '#1f2937', fontFamily: 'Arial, sans-serif' }}>
+
+      
+            {/* --- PRINTABLE AREA --- */}
+            <div 
+              ref={printRef}
+              id="pdf-content"
+              style={{ backgroundColor: '#ffffff', color: '#1f2937', fontFamily: 'Arial, sans-serif' }} 
+              className="w-full max-w-[390mm] min-h-[297mm] shadow-2xl p-0"
+            >
+              
+              {/* 👇 HEADER SECTION (Ref added!) */}
         
-        {/* --- EXACT HEADER FROM PREVIEW --- */}
-        <div style={{ borderBottom: '2px solid #e5e7eb', padding: '32px 24px', backgroundColor: '#fff' }}>
+                  <div ref={headerSectionRef} style={{ borderBottom: '2px solid #e5e7eb', padding: '32px 24px', backgroundColor: '#fff' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+              
+              {/* LEFT SIDE: Trip Name & Duration */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: '16px', textTransform: 'uppercase' }}>
                   <h1 style={{ color: '#001d6a', fontSize: '32px', fontWeight: 'bold', margin: '0 0 4px 0', lineHeight: '1.2' }}>
-                      {data?.tripName || "Itinerary"}
+                      {data.tripName || "Draft Itinerary"}
                   </h1>
                   <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#001d6a' }}>
                       {totalDays} Days | {totalNights} Nights
                   </div>
               </div>
+      
+              {/* RIGHT SIDE: Logo & Contact Details */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                  
+                  {/* Logo */}
                   <div style={{ height: '50px', marginBottom: '14px' }}>
-                      <img src="/logo.png" alt="Company Logo" style={{ height: '100%', objectFit: 'contain', objectPosition: 'left center' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      <img 
+                          src="/logo.png" 
+                          alt="Company Logo" 
+                          style={{ height: '100%', objectFit: 'contain', objectPosition: 'left center' }} 
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }} 
+                      />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontFamily: 'inherit', minWidth: '240px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
-                          <i className="fa-solid fa-envelope" style={{ color: '#712400', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
-                          <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Email:</span>
-                          <span style={{ color: '#001d6a', fontWeight: 'bold' }}>Sandeep@TravDek.com</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
-                          <i className="fa-solid fa-phone" style={{ color: '#000000', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
-                          <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Tel:</span>
-                          <span style={{ color: '#001d6a', fontWeight: 'bold' }}>+1 650 759 4331</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
-                          <i className="fa-solid fa-globe" style={{ color: '#0038a8', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
-                          <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Web:</span>
-                          <a href="http://www.TravDek.com" style={{ color: '#001d6a', fontWeight: 'bold', textDecoration: 'none' }}>www.TravDek.com</a>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                          <i className="fa-solid fa-location-dot" style={{ color: '#df0000', width: '16px', textAlign: 'center', fontSize: '13px', marginTop: '2px' }}></i>
-                          <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Add:</span>
-                          <span style={{ color: '#001d6a', fontWeight: 'bold', lineHeight: '1.5' }}>750 Alma lane #4459 Foster City, CA 94404 USA</span>
-                      </div>
-                  </div>
+      
+                  {/* Contact Details */}
+                  <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '6px', 
+                      fontSize: '13px', 
+                      fontFamily: 'inherit',
+                      minWidth: '240px' 
+                  }}>
+            
+      
+                  {/* Email */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
+          <i className="fa-solid fa-envelope" style={{ color: '#712400', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+          <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Email:</span>
+          <span style={{ color: '#001d6a', fontWeight: 'bold' }}>sandeep@travdek.com</span>
+      </div>
+      
+      {/* Phone */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
+          <i className="fa-solid fa-phone" style={{ color: '#000000', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+          <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Tel:</span>
+          <span style={{ color: '#001d6a', fontWeight: 'bold' }}>+1 650 759 4331</span>
+      </div>
+      
+      {/* Website */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', lineHeight: '18px' }}>
+          <i className="fa-solid fa-globe" style={{ color: '#0038a8', width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+          <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Web:</span>
+          <a href="http://www.TravDek.com" style={{ color: '#001d6a', fontWeight: 'bold', textDecoration: 'none' }}>www.TravDek.com</a>
+      </div>
+      
+      {/* Address */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+          <i className="fa-solid fa-location-dot" style={{ color: '#df0000', width: '16px', textAlign: 'center', fontSize: '13px', marginTop: '2px' }}></i>
+          <span style={{ width: '42px', color: '#121214', fontWeight: 'bold' }}>Add:</span>
+          <span style={{ color: '#001d6a', fontWeight: 'bold', lineHeight: '1.5' }}>
+              750 Alma lane #4459 Foster City, CA 94404 USA
+          </span>
+      </div>
+      </div>
               </div>
           </div>
              
-          {/* EXACT DETAILS GRID FROM PREVIEW */}
-          <div style={{ borderTop: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '12px' }}>
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Ref. ID:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{data?.tripId || "Pending..."}</div>
-                  
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Travelers:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>{data?.numberOfTravelers} Pax</div>
-
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Release Date:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{formatDate(new Date().toISOString())}</div>
-                  
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Trip Validity:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>
-                      {data?.seasonStartDate ? formatDate(data?.seasonStartDate) : formatDate(data?.routingData?.startDate)} 
-                      {' to '} 
-                      {data?.seasonEndDate ? formatDate(data?.seasonEndDate) : formatDate(data?.routingData?.endDate)}
+                  {/* DETAILS GRID */}
+                  <div style={{ borderTop: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '12px' }}>
+                          
+                          {/* ROW 1: Ref ID & Travelers */}
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Ref. ID:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{data.tripId || "Pending..."}</div>
+                          
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Travelers:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>{data.numberOfTravelers} Pax</div>
+      
+                          {/* ROW 2: Release Date & Trip Validity */}
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Release Date:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{formatDate(new Date().toISOString())}</div>
+                          
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Trip Validity:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>
+                              {data.seasonStartDate ? formatDate(data.seasonStartDate) : formatDate(data.routingData?.startDate)} 
+                              {' to '} 
+                              {data.seasonEndDate ? formatDate(data.seasonEndDate) : formatDate(data.routingData?.endDate)}
+                          </div>
+      
+                          {/* ROW 3: Country */}
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Country:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff', textTransform: 'uppercase', gridColumn: 'span 3' }}>{data.selectedCountries?.join(', ') || "India"}</div>
+                          
+                          {/* ROW 4: Cities */}
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Cities:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff', textTransform: 'uppercase', gridColumn: 'span 3' }}>{citiesWithNights}</div>
+                          
+                          {/* ROW 5: Start / End & Route */}
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Start / End:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{startCity} / {endCity}</div>
+                          
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Route:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>{data.selectedCountries?.length || 1} Country | {routes.length} Cities</div>
+                          
+                      {/* ROW 6: Type & Package */}
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff' }}>Type:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase', borderRight: '1px solid #636363ff' }}>{data.tripStyle || "TBA"}</div>
+      
+                          <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff' }}>Package:</div>
+                          <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase' }}>{data.packageType || "Premium"}</div>
+                      </div>
                   </div>
-
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Country:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff', textTransform: 'uppercase', gridColumn: 'span 3' }}>{data?.selectedCountries?.join(', ') || "India"}</div>
-                  
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Cities:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff', textTransform: 'uppercase', gridColumn: 'span 3' }}>{citiesWithNights}</div>
-                  
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Start / End:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>{startCity} / {endCity}</div>
-                  
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff', borderBottom: '1px solid #636363ff' }}>Route:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', borderBottom: '1px solid #636363ff' }}>{data?.selectedCountries?.length || 1} Country | {routes.length} Cities</div>
-                  
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff' }}>Type:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase', borderRight: '1px solid #636363ff' }}>{data?.tripStyle || "TBA"}</div>
-
-                  <div style={{ backgroundColor: '#f9fafb', padding: '8px', fontWeight: 'bold', borderRight: '1px solid #636363ff' }}>Package:</div>
-                  <div style={{ color: '#1d4ed8', padding: '8px', fontWeight: 'bold', textTransform: 'uppercase' }}>{data?.packageType || "Premium"}</div>
+         
               </div>
-          </div>
-        </div>
-
-        {/* --- EXACT ITINERARY TABLE FROM PREVIEW --- */}
-        <div style={{ marginTop: '32px', paddingLeft: '24px', paddingRight: '24px', paddingBottom: '48px' }}>
-          <h3 style={{ color: '#dc2626', fontWeight: 'bold', textTransform: 'uppercase', textDecoration: 'underline', marginBottom: '16px', fontSize: '16px', letterSpacing: '0em' }}>Itinerary Details</h3>
+      
+              {/* 👇 ITINERARY Details Label (Ref added, font size fixed to 10px in PDF) */}
+              <div style={{ marginTop: '32px', paddingLeft: '24px', paddingRight: '24px', paddingBottom: '48px' }}>
+                  <h3 ref={itineraryLabelRef} style={{ color: '#dc2626', fontWeight: 'bold', textTransform: 'uppercase', textDecoration: 'underline', marginBottom: '16px', fontSize: '16px', letterSpacing: '0em' }}>Itinerary Details</h3>
+                  
+                  {/* 👇 TABLE SECTION (Ref & Colgroup added!) */}
+      
+                  <table 
+          ref={tableRef}
+          style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #6b6b6b', fontSize: '14px', tableLayout: 'fixed' }}
+      >
+          {/* 3 Columns: Category, Details, Inclusion */}
+          <colgroup>
+              <col style={{ width: '200px' }} />
+              <col style={{ width: 'auto' }} />
+              <col style={{ width: '140px' }} />
+          </colgroup>
+      
+    {rawDayPlans.map((day: { city: any; dayNumber: React.Key | null | undefined; }, idx: number) => {
+                  const items = getRenderableItemsForDay(idx, day);
           
-          <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #6b6b6b', fontSize: '14px', tableLayout: 'fixed' }}>
-            <colgroup>
-                <col style={{ width: '200px' }} />
-                <col style={{ width: 'auto' }} />
-                <col style={{ width: '140px' }} />
-            </colgroup>
-
-            {rawDayPlans.map((day: any, idx: number) => {
-                const items = getRenderableItemsForDay(idx, day);
-                const prevCity = idx > 0 ? rawDayPlans[idx - 1].city : null;
-                const isCityChange = prevCity && prevCity !== day.city;
-                const displayCityName = isCityChange ? `${prevCity} - ${day.city}` : day.city;
-
-                // let nightCount = 0;
-                // if (!prevCity || isCityChange) {
-                //     const currentRoute = routes.find((r: any) => r.cities.some((c: any) => c.name === day.city));
-                //     if (currentRoute) nightCount = currentRoute.nights;
-                // }
-                // const displayNights = nightCount > 0 ? ` (${nightCount}N)` : '';
-                let nightCount = 0;
-if (!prevCity || isCityChange) {
-    // FIX: Added the '?' after r.cities to safely handle undefined arrays
-    const currentRoute = routes.find((r: any) => r.cities?.some((c: any) => c.name === day.city));
-    if (currentRoute) nightCount = currentRoute.nights;
-}
-const displayNights = nightCount > 0 ? ` (${nightCount}N)` : '';
-                const finalDayHeader = `${displayCityName}${displayNights}`.toUpperCase();
-
-                return (
-                    <tbody key={day.dayNumber} style={{ breakInside: 'avoid', pageBreakInside: 'avoid', outline: '1px solid #6b6b6b' }}>
-                        <tr style={{ backgroundColor: '#fefce8' }}>
-                            <td colSpan={3} style={{ padding: '12px 16px', border: '1px solid #6b6b6b', borderTop: idx > 0 ? '2px solid #6b6b6b' : '1px solid #6b6b6b' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                    <span style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '16px' }}>DAY {String(day.dayNumber).padStart(2, '0')}</span>
-                                    <span style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '16px' }}>{finalDayHeader}</span>
-                                </div>
-                            </td>
-                        </tr>
-
-                        {items.length === 0 && (
-                            <tr>
-                                <td colSpan={3} style={{ border: '1px solid #6b6b6b', padding: '16px', color: '#9ca3af', fontStyle: 'italic', textAlign: 'center' }}>
-                                    Leisure day. No activities scheduled.
-                                </td>
-                            </tr>
-                        )}
-
-                        {items.map((item, itemIdx) => {
-                            const inclusionStatus = item.inclusionType || 'included'; 
-                            const isExcluded = inclusionStatus === 'excluded';
-                            const isOptional = inclusionStatus === 'optional';
-                            const badgeBg = '#ffffff';
-                            const badgeColor = '#454545';
-                            const badgeText = isExcluded ? 'Excluded' : isOptional ? 'Optional' : 'Included';
-
-                            // FontAwesome Icon Logic
-                            let iconClass = 'fa-solid fa-camera'; 
-                            let iconColor = '#0284c7'; 
-                            
-                            if (item.category === 'Stay') { 
-                                iconClass = 'fa-solid fa-hotel'; iconColor = '#059669'; 
-                            } else if (item.category === 'Meal') { 
-                                iconClass = 'fa-solid fa-utensils'; iconColor = '#d97706'; 
-                            } else if (item.category === 'Transport') {
-                                iconColor = '#6366f1'; 
-                                if (item.mode === 'flight') iconClass = 'fa-solid fa-plane';
-                                else if (item.mode === 'rail') iconClass = 'fa-solid fa-train';
-                                else if (item.mode === 'ferry') iconClass = 'fa-solid fa-ship';
-                                else if (item.mode === 'bus') iconClass = 'fa-solid fa-bus';
-                                else iconClass = 'fa-solid fa-car';
-                            }
-
-                            return (
-                                <tr key={`${day.dayNumber}-${itemIdx}`}>
-                                    {/* COL 1: CATEGORY WITH ICON */}
-                                    <td style={{ border: '1px solid #6b6b6b', padding: '16px 24px', verticalAlign: 'middle', width: '200px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '16px', fontWeight: 'bold', color: '#454545', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.05em', height: '20px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px' }}>
-                                                <i className={iconClass} style={{ color: iconColor, fontSize: '18px', display: 'block', textAlign: 'center', lineHeight: '20px' }}></i>
-                                            </div>
-                                            <span style={{ lineHeight: '20px', display: 'inline-block' }}>
-                                                {item.category === 'Stay' ? 'Hotel' : item.category}
-                                            </span>
-                                        </div>
-                                    </td>
-
-                                    {/* COL 2: DESCRIPTION */}
-                                    <td style={{ border: '1px solid #6b6b6b', padding: '16px', verticalAlign: 'top' }}>
-                                        
-                                        {item.category === 'Activity' && (
-                                            <div>
-                                                <div style={{ fontWeight: 'bold', color: '#1f2937', fontSize: '16px' }}>{item.heading}</div>
-                                                <div style={{ color: '#292d33ff', fontSize: '12px', marginTop: '4px', marginBottom: '8px' }}>{item.description}</div>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', padding: '8px' }}>
-                                                    {item.slot && <span style={{ color: '#292d33ff' }}>Slot: {item.slot}</span>}
-                                                    {item.duration && <span style={{ color: '#292d33ff' }}>Duration: {item.duration}</span>}
-                                                    {item.startTime && <span style={{ color: '#292d33ff' }}>Start: {item.startTime}</span>}
-                                                    {item.pickupLocation && <span style={{ color: '#292d33ff' }}>Pickup: {item.pickupLocation}</span>}
-                                                    {item.dropoffLocation && <span style={{ color: '#292d33ff' }}>Drop: {item.dropoffLocation}</span>}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {item.category === 'Stay' && (
-                                            <div style={{ opacity: item.status === 'Residence' ? 0.8 : 1, display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', width: '100%' }}>
-                                                {item.status === 'Check-in' ? (
-                                                    <>
-                                                        <div style={{ fontWeight: 'bold', color: '#22252bff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            {item.hotelName}
-                                                            {item.rating && <span style={{ fontSize: '12px', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', backgroundColor: '#fff' }}>⭐ {item.rating}</span>}
-                                                        </div>
-                                                        <div style={{ color: '#555555', fontSize: '12px', fontWeight: 'bold' }}>Room: {item.roomCategory}</div>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <div style={{ fontSize: '13px', color: '#292d33ff', fontStyle: 'italic', fontWeight: 'bold' }}>Continuing stay at {item.hotelName}.</div>
-                                                        <div style={{ color: '#555555', fontSize: '12px', fontWeight: 'bold' }}>Room: {item.roomCategory}</div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {item.category === 'Transport' && (
-                                            <div>
-                                                <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px' }}>
-                                                    {item.vehicleType}
-                                                    {['flight', 'rail', 'ferry'].includes(item.mode) && item.flightNumber && <span style={{ color: '#2563eb' }}> • {item.flightNumber}</span>}
-                                                </div>
-
-                                                {item.mode === 'flight' ? (
-                                                    <div style={{ marginTop: '12px', padding: '12px'}}>
-                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', alignItems: 'center', gap: '16px' }}>
-                                                            <div>
-                                                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>{item.pickupTime || '--:--'}</div>
-                                                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555555', textTransform: 'uppercase' }}>{item.pickupLocation || 'Not Set'}</div>
-                                                            </div>
-                                                            <div style={{ textAlign: 'center' }}>
-                                                                <div style={{ fontSize: '10px', color: '#555555', fontWeight: 'bold', marginBottom: '4px' }}>DURATION: {item.duration || '--'}</div>
-                                                                <div style={{ position: 'relative', width: '100%', height: '2px', backgroundColor: '#6b6b6b', margin: '8px 0' }}>
-                                                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '14px' }}>✈️</div>
-                                                                </div>
-                                                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: item.flightStops && item.flightStops !== 'Direct' ? '#2563eb' : '#16a34a' }}>
-                                                                    {item.flightStops && item.flightStops !== 'Direct' ? `${item.flightStops} ${item.layoverInfo ? `• ${item.layoverInfo}` : ''}` : 'Direct Flight'}
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ textAlign: 'right' }}>
-                                                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>{item.dropoffTime || '--:--'}</div>
-                                                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555555', textTransform: 'uppercase' }}>{item.dropoffLocation || 'Not Set'}</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ) : ['rail', 'ferry'].includes(item.mode) ? (
-                                                    <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px',  padding: '12px' }}>
-                                                        <div>
-                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Schedule</div>
-                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupTime || '--:--'} to {item.dropoffTime || '--:--'}</div>
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>{item.mode === 'ferry' ? 'Ports' : 'Route'}</div>
-                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupLocation || 'Not Set'} → {item.dropoffLocation || 'Not Set'}</div>
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Duration</div>
-                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.duration || '--'}</div>
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>{item.mode === 'ferry' ? 'Deck Info' : 'Travel Info'}</div>
-                                                            <div style={{ fontSize: '12px', color: '#555555' }}>{item.serviceDescription || '--'}</div>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: item.subType === 'transfer' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: '12px', padding: '12px' }}>
-                                                        <div>
-                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Pickup</div>
-                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupLocation || 'Not Set'}</div>
-                                                            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555555', marginTop: '2px' }}>{item.pickupTime || '--:--'}</div>
-                                                        </div>
-                                                        {item.subType === 'transfer' && (
-                                                            <div>
-                                                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Drop-off</div>
-                                                                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.dropoffLocation || 'Not Set'}</div>
-                                                                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555555', marginTop: '2px' }}>{item.dropoffTime || '--:--'}</div>
-                                                            </div>
-                                                        )}
-                                                        <div>
-                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Duration</div>
-                                                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.duration || '--'}</div>
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ fontSize: '10px',  fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Journey Info</div>
-                                                            <div style={{ fontSize: '11px', color: '#555555' }}>{item.serviceDescription || '--'}</div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {item.category === 'Meal' && (
-                                            <div>
-                                                <div style={{ color: '#1f2937', fontSize: '15px', fontWeight: 'bold' }}>{item.mealType}</div>
-                                                {(item.restaurantName || item.cuisine) && (
-                                                    <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '4px' }}>
-                                                        {item.restaurantName ? `at ${item.restaurantName}` : ''} {item.cuisine ? `(${item.cuisine})` : ''}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </td>
-
-                                    {/* COL 3: INCLUSION BADGE */}
-                                    <td style={{ border: '1px solid #6b6b6b', padding: '16px', verticalAlign: 'middle', textAlign: 'center', width: '140px' }}>
-                                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: badgeColor, backgroundColor: badgeBg, textTransform:"uppercase" }}>
-                                            {badgeText}
-                                        </span>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                );
-            })}
-          </table>
-        </div>
-
-        {/* --- PRICING BOX FROM PREVIEW --- */}
-        {priceDBL > 0 && (
-          <div style={{ paddingLeft: '24px', paddingRight: '24px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '100%', boxSizing: 'border-box' }}>
-              <div style={{ backgroundColor: '#1d4ed8', borderRadius: '12px', padding: '20px', color: '#ffffff', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#bfdbfe' }}>Price Per Person</span>
-                      <i className="fa-solid fa-user" style={{ color: '#60a5fa', fontSize: '18px' }}></i>
-                  </div>
+                  const prevCity = idx > 0 ? rawDayPlans[idx - 1].city : null;
+                  const isCityChange = prevCity && prevCity !== day.city;
+                  const displayCityName = isCityChange ? `${prevCity} - ${day.city}` : day.city;
+          
+                  let nightCount = 0;
+                  if (!prevCity || isCityChange) {
+                      const currentRoute = routes.find((r: any) => r.cities.some((c: any) => c.name === day.city));
+                      if (currentRoute) nightCount = currentRoute.nights;
+                  }
+                  const displayNights = nightCount > 0 ? ` (${nightCount}N)` : '';
+                  const finalDayHeader = `${displayCityName}${displayNights}`.toUpperCase();
+          
+                  return (
+                      <tbody
+                          key={day.dayNumber}
+                          ref={(el) => { if (el && typeof day.dayNumber === 'number') dayRefsMap.current.set(day.dayNumber, el); }}
+                      style={{ 
+                          breakInside: 'avoid', 
+                          pageBreakInside: 'avoid',
+                          outline: '1px solid #6b6b6b',
+                      }}
+                  >
+                      {/* DAY HEADER ROW */}
+                      <tr style={{ backgroundColor: '#fefce8' }}>
+                          <td colSpan={3} style={{ 
+                              padding: '12px 16px', 
+                              border: '1px solid #6b6b6b',
+                              borderTop: idx > 0 ? '2px solid #6b6b6b' : '1px solid #6b6b6b'
+                          }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                  <span style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '16px' }}>DAY {String(day.dayNumber).padStart(2, '0')}</span>
+                                  <span style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '16px' }}>{finalDayHeader}</span>
+                              </div>
+                          </td>
+                      </tr>
+      
+                      {/* Leisure Day */}
+                      {items.length === 0 && (
+                          <tr>
+                              <td colSpan={3} style={{ border: '1px solid #6b6b6b', padding: '16px', color: '#9ca3af', fontStyle: 'italic', textAlign: 'center' }}>
+                                  Leisure day. No activities scheduled.
+                              </td>
+                          </tr>
+                      )}
+      
+                      {/* Items Loop */}
+                      {items.map((item, itemIdx) => {
+                          const inclusionStatus = item.inclusionType || 'included'; 
+                          const isExcluded = inclusionStatus === 'excluded';
+                          const isOptional = inclusionStatus === 'optional';
+                          const badgeBg = isExcluded ? '#ffffff' : isOptional ? '#ffffff' : '#ffffff';
+                          const badgeColor = isExcluded ? '#454545' : isOptional ? '#454545' : '#454545';
+                          const badgeText = isExcluded ? 'Excluded' : isOptional ? 'Optional' : 'Included';
+      
+                       
+      
+                          // 🌟 SMART ICON LOGIC (FontAwesome)
+                                                  let iconClass = 'fa-solid fa-camera'; // Default for Activity
+                                                  let iconColor = '#0284c7'; // Default blue
+                                                  
+                                                  if (item.category === 'Stay') { 
+                                                      iconClass = 'fa-solid fa-hotel'; 
+                                                      iconColor = '#059669'; 
+                                                  } 
+                                                  else if (item.category === 'Meal') { 
+                                                      iconClass = 'fa-solid fa-utensils'; 
+                                                      iconColor = '#d97706'; 
+                                                  } 
+                                                  else if (item.category === 'Transport') {
+                                                      iconColor = '#6366f1'; // Indigo
+                                                      if (item.mode === 'flight') iconClass = 'fa-solid fa-plane';
+                                                      else if (item.mode === 'rail') iconClass = 'fa-solid fa-train';
+                                                      else if (item.mode === 'ferry') iconClass = 'fa-solid fa-ship';
+                                                      else if (item.mode === 'bus') iconClass = 'fa-solid fa-bus';
+                                                      else iconClass = 'fa-solid fa-car';
+                                                  }
+      
+                          return (
+                                                      <tr key={`${day.dayNumber}-${itemIdx}`} className="pdf-row" >
+                                                          
+                                                
+      
+      
+                                                          {/* 🌟 COL 1: CATEGORY WITH ICON (FontAwesome + PDF Fixed) */}
+                                                          <td style={{ border: '1px solid #6b6b6b', padding: '16px 24px', verticalAlign: 'middle', width: '200px' }}>
+                                                              <div style={{ 
+                                                                  display: 'flex', 
+                                                                  alignItems: 'center', 
+                                                                  justifyContent: 'flex-start', 
+                                                                  gap: '16px', 
+                                                                  fontWeight: 'bold', 
+                                                                  color: '#454545', 
+                                                                  fontSize: '14px', 
+                                                                  textTransform: 'uppercase', 
+                                                                  letterSpacing: '0.05em',
+                                                                  height: '20px' // Lock container height
+                                                              }}>
+                                                                  {/* Strict Icon Wrapper for FontAwesome */}
+                                                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px' }}>
+                                                                      <i className={iconClass} style={{ color: iconColor, fontSize: '18px', display: 'block', textAlign: 'center', lineHeight: '20px' }}></i>
+                                                                  </div>
+                                                                  {/* Strict Text Wrapper with Locked Line-Height */}
+                                                                  <span style={{ lineHeight: '20px', display: 'inline-block' }}>
+                                                                      {item.category === 'Stay' ? 'Hotel' : item.category}
+                                                                  </span>
+                                                              </div>
+                                                          </td>
+      
+      
+      
+                                                       
+                                                          {/* 🌟 COL 2: DESCRIPTION (Middle Content) */}
+      <td style={{ border: '1px solid #6b6b6b', padding: '16px', verticalAlign: 'top' }}>
+                                                              
+                                                   
+      
+                                                                   {/* --- ACTIVITY PDF BLOCK --- */}
+                                                              {item.category === 'Activity' && (
+                                                                  <div>
+                                                                      <div style={{ fontWeight: 'bold', color: '#1f2937', fontSize: '16px' }}>{item.heading}</div>
+                                                                      <div style={{ color: '#292d33ff', fontSize: '12px', marginTop: '4px', marginBottom: '8px' }}>{item.description}</div>
+                                                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', padding: '8px' }}>
+                                                                          <span style={{ color: '#292d33ff', display: 'flex', alignItems: 'center', gap: '4px', }}>Slot: {item.slot}</span>
+                                                                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Duration: {item.duration}</span>
+                                                                          {item.startTime && <span style={{ color: '#292d33ff' }}>Start: {item.startTime}</span>}
+                                                                          {(item as any).endTime && <span style={{ color: '#292d33ff' }}>End: {(item as any).endTime}</span>}
+                                                                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Pickup: {item.pickupLocation || "TBA"}</span>
+                                                                          {(item as any).dropoffLocation && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Drop: {(item as any).dropoffLocation}</span>}
+                                                                      </div>
+                                                                  </div>
+                                                              )}
+      
+                                              
+      
+                                                              {/* --- STAY PDF BLOCK --- */}
+                                                              {item.category === 'Stay' && (
+                                                                  <div style={{ 
+                                                                      opacity: item.status === 'Residence' ? 0.8 : 1, 
+                                                                      display: 'grid', 
+                                                                      gridTemplateColumns: '1fr 1fr', 
+                                                                      alignItems: 'center', 
+                                                                      width: '100%' 
+                                                                  }}>
+                                                                      
+                                                                      {item.status === 'Check-in' ? (
+                                                                          <>
+                                                                              {/* Left Side: Hotel Name & Rating */}
+                                                                              <div style={{ fontWeight: 'bold', color: '#22252bff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                                  {item.hotelName}
+                                                                                  <span style={{ fontSize: '12px', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', backgroundColor: '#fff' }}>⭐ {item.rating}</span>
+                                                                              </div>
+                                                                              
+                                                                              {/* Right Side: Room Category */}
+                                                                              <div style={{ color: '#555555', fontSize: '12px', fontWeight: 'bold' }}>
+                                                                                  Room: {item.roomCategory}
+                                                                              </div>
+                                                                          </>
+                                                                      ) : (
+                                                                          <>
+                                                                              {/* Left Side: Continuing Text */}
+                                                                              <div style={{ fontSize: '13px', color: '#292d33ff', fontStyle: 'italic', fontWeight: 'bold' }}>
+                                                                                  Continuing stay at {item.hotelName}. 
+                                                                              </div>
+                                                                              
+                                                                              {/* Right Side: Room Category */}
+                                                                              <div style={{ color: '#555555', fontSize: '12px', fontWeight: 'bold' }}>
+                                                                                  Room: {item.roomCategory}
+                                                                              </div>
+                                                                          </>
+                                                                      )}
+                                                                  </div>
+                                                              )}
+      
+                                                                {/* --- TRANSPORT PDF BLOCK --- */}
+                                                               {item.category === 'Transport' && (
+                                                                  <div>
+                                                                      {/* Title & Badge */}
+                                                                      <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px' }}>
+                                                                          {item.vehicleType}
+                                                                          {['flight', 'rail', 'ferry'].includes(item.mode) && item.flightNumber && (
+                                                                              <span style={{ color: '#2563eb' }}> • {item.flightNumber}</span>
+                                                                          )}
+                                                                          
+                                                                      </div>
+      
+                                  
+      
+                                                                      {/* Flight Layout */}
+                                                                      {item.mode === 'flight' ? (
+                                                                          <div style={{ marginTop: '12px', padding: '12px'}}>
+                                                                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', alignItems: 'center', gap: '16px' }}>
+                                                                                  {/* Dep */}
+                                                                                  <div>
+                                                                                      <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>{item.pickupTime || '--:--'}</div>
+                                                                                      <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555555', textTransform: 'uppercase' }}>{item.pickupLocation || 'Not Set'}</div>
+                                                                                  </div>
+                                                                                  {/* Middle */}
+                                                                                  <div style={{ textAlign: 'center' }}>
+                                                                                      <div style={{ fontSize: '10px', color: '#555555', fontWeight: 'bold', marginBottom: '4px' }}>DURATION: {item.duration || '--'}</div>
+                                                                                      <div style={{ position: 'relative', width: '100%', height: '2px', backgroundColor: '#6b6b6b', margin: '8px 0' }}>
+                                                                                          {item.flightStops && item.flightStops !== 'Direct' ? (
+                                                                                              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '8px', height: '8px', backgroundColor: '#2563eb', borderRadius: '50%', border: '#6b6b6b' }}></div>
+                                                                                          ) : (
+                                                                                              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '14px' }}>✈️</div>
+                                                                                          )}
+                                                                                      </div>
+                                                                                      <div style={{ fontSize: '10px', fontWeight: 'bold', color: item.flightStops && item.flightStops !== 'Direct' ? '#2563eb' : '#16a34a' }}>
+                                                                                          {item.flightStops && item.flightStops !== 'Direct' ? `${item.flightStops} ${item.layoverInfo ? `• ${item.layoverInfo}` : ''}` : 'Direct Flight'}
+                                                                                      </div>
+                                                                                  </div>
+                                                                                  {/* Arr */}
+                                                                                  <div style={{ textAlign: 'right' }}>
+                                                                                      <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>
+                                                                                          {item.dropoffTime || '--:--'}
+                                                                                          {(item as any).arrivalDayOffset === '+1' && <sup style={{ fontSize: '10px', color: '#ef4444', marginLeft: '2px' }}>+1</sup>}
+                                                                                      </div>
+                                                                                      <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555555', textTransform: 'uppercase' }}>{item.dropoffLocation || 'Not Set'}</div>
+                                                                                  </div>
+                                                                              </div>
+                                                                              {item.serviceDescription && (
+                                                                                  <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #e5e7eb', fontSize: '11px', fontWeight:"bold", color: '#555555' }}>
+                                                                                      <strong>Cabin:</strong> {item.serviceDescription}
+                                                                                  </div>
+                                                                              )}
+                                                                          </div>
+                                                                      ) : ['rail', 'ferry'].includes(item.mode) ? (
+                                                                          <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px',  padding: '12px' }}>
+                                                                              <div>
+                                                                                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Schedule</div>
+                                                                                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>
+                                                                                      {item.pickupTime || '--:--'} <span style={{color: '555555', fontWeight: 'normal'}}>to</span> {item.dropoffTime || '--:--'}
+                                                                                      {(item as any).arrivalDayOffset === '+1' && <sup style={{ fontSize: '9px', color: '#ef4444', marginLeft: '2px' }}>+1</sup>}
+                                                                                  </div>
+                                                                              </div>
+                                                                              <div>
+                                                                                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>{item.mode === 'ferry' ? 'Ports' : 'Route'}</div>
+                                                                                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupLocation || 'Not Set'} → {item.dropoffLocation || 'Not Set'}</div>
+                                                                              </div>
+                                                                              <div>
+                                                                                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Duration</div>
+                                                                                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555', display: 'inline-block', padding: '2px 6px', borderRadius: '4px' }}>{item.duration || '--'}</div>
+                                                                              </div>
+                                                                              <div>
+                                                                                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>{item.mode === 'ferry' ? 'Deck Info' : 'Travel Info'}</div>
+                                                                                  <div style={{ fontSize: '12px', color: '#555555' }}>{item.serviceDescription || '--'}</div>
+                                                                              </div>
+                                                                          </div>
+                                                                      ) : (
+                                                                          /* Vehicle Mode */
+      <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: item.subType === 'transfer' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: '12px', padding: '12px',  }}>
+                                                                              
+                                                                              {/* Col 1: Pickup */}
+                                                                              <div>
+                                                                                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Pickup</div>
+                                                                                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupLocation || 'Not Set'}</div>
+                                                                                  <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555555', marginTop: '2px' }}>{item.pickupTime || '--:--'}</div>
+                                                                              </div>
+      
+                                                                              {/* Col 2: Drop-off (Only for Transfers) */}
+                                                                              {item.subType === 'transfer' && (
+                                                                                  <div>
+                                                                                      <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Drop-off</div>
+                                                                                      <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.dropoffLocation || 'Not Set'}</div>
+                                                                                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555555', marginTop: '2px' }}>{item.dropoffTime || '--:--'}</div>
+                                                                                  </div>
+                                                                              )}
+      
+                                                                              {/* Col 3: Duration (Always Visible) */}
+                                                                              <div>
+                                                                                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Duration</div>
+                                                                                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555', display: 'inline-block', padding: '2px 6px', borderRadius: '4px' }}>{item.duration || '--'}</div>
+                                                                              </div>
+      
+                                                                              {/* Col 4: Journey Info */}
+                                                                              <div>
+                                                                                  <div style={{ fontSize: '10px',  fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Journey Info</div>
+                                                                                  <div style={{ fontSize: '11px', color: '#555555'  }}>{item.serviceDescription || '--'}</div>
+                                                                              </div>
+                                                                              
+                                                                          </div>
+                                                                      )}
+                                                                  </div>
+                                                              )}
+      
+      
+                                                              {/* --- MEAL PDF BLOCK --- */}
+                                                              {item.category === 'Meal' && (
+                                                                  <div>
+                                                                      <div style={{ color: '#1f2937', fontSize: '15px', fontWeight: 'bold' }}>
+                                                                           {item.mealType}
+                                                                      </div>
+                                                                      {(item.restaurantName || item.cuisine) && (
+                                                                          <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '4px' }}>
+                                                                              {item.restaurantName ? `at ${item.restaurantName}` : ''} {item.cuisine ? `(${item.cuisine})` : ''}
+                                                                          </div>
+                                                                      )}
+                                                                  </div>
+                                                              )}
+                                                              
+                                                          </td>
+      
+                                                          {/* 🌟 COL 3: INCLUSION BADGE (Far Right) */}
+                                                       
+      {/* 🌟 COL 3: INCLUSION BADGE (Far Right) */}
+      <td style={{ border: '1px solid #6b6b6b', padding: '16px', verticalAlign: 'middle', textAlign: 'center', width: '140px' }}>
+                                                              
+                                                              <span style={{ 
+                                                                  fontSize: '12px', 
+                                                                  fontWeight: 'bold', 
+                                                                  color: badgeColor, 
+                                                                  backgroundColor: badgeBg,
+                                                                  textTransform:"uppercase"
+                                                              }}>
+                                                                  {badgeText}
+                                                              </span>
+                                                          </td>
+      
+                                                      </tr>
+                          
+                          );
+                      })}
+                  </tbody>
+              );
+          })}
+      </table>
+          
+              </div>
+      
+      
+                {/* 👇 INCLUSIONS, EXCLUSIONS, NOTES, POLICIES & PRICING (Ref added!) */}
+             
+             {/* 👇 NEW: PRICING BLOCK (Separated into its own ref so it fits under the table!) */}
+              <div ref={pricingRef} style={{ paddingLeft: '24px', paddingRight: '24px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '100%', boxSizing: 'border-box' }}>
                   
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: '8px', marginBottom: '16px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#dbeafe' }}>{travelerCount} Adult Cost</span>
-                      <span style={{ fontSize: '24px', fontWeight: '900', fontFamily: 'monospace' }}>
-                          {fmt(priceDBL)}
-                      </span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#bfdbfe' }}>Total Group Value ({travelerCount} Adult)</span>
-                      <span style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace' }}>
-                          {fmt(finalGrandTotal)}
-                      </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px', breakInside: 'avoid', width: '100%', maxWidth: '400px' }}>
+                      
+                      {/* BLUE BOX: Selling Price */}
+                      <div style={{ backgroundColor: '#1d4ed8', borderRadius: '12px', padding: '20px', color: '#ffffff', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#bfdbfe' }}>Price Per Person</span>
+                              <i className="fa-solid fa-user" style={{ color: '#60a5fa', fontSize: '18px' }}></i>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                            {Object.entries(
+                              finalPaxCosts.reduce((acc: any, cost: number) => {
+                                acc[cost] = (acc[cost] || 0) + 1;
+                                return acc;
+                              }, {})
+                            ).map(([cost, count], idx) => (
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: '8px' }}>
+                                  <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#dbeafe' }}>{Number(count)} Adult Cost</span>
+                                  <span style={{ fontSize: '24px', fontWeight: '900', fontFamily: 'monospace' }}>
+                                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(Number(cost))}
+                                  </span>
+                              </div>
+                            ))}
+                          </div>
+      
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#bfdbfe' }}>Total Group Value ({travelerCount} Adult)</span>
+                              <span style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(finalGrandTotal)}
+                              </span>
+                          </div>
+                      </div>
+      
+                      {/* ORANGE BOX: Optionals (Only shows if there are checked optionals) */}
+                      {processedOptionals.length > 0 && (
+                          <div style={{ backgroundColor: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '12px', padding: '16px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid #fed7aa', paddingBottom: '8px' }}>
+                                  <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#9a3412' }}>Optional Add-ons</span>
+                                  <span style={{ fontSize: '10px', backgroundColor: '#fed7aa', color: '#9a3412', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>EXTRA</span>
+                              </div>
+      
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px', borderBottom: '1px solid #fed7aa', paddingBottom: '12px' }}>
+                                  {processedOptionals.map((opt: any, idx: number) => (
+                                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#7c2d12' }}>{opt.name}</div>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                              <span style={{ fontSize: '11px', color: '#ea580c', fontWeight: '500' }}>
+                                                  {opt.pax} Pax @ {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(opt.retailPP)}/pp
+                                              </span>
+                                              <span style={{ fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace', color: '#9a3412' }}>
+                                                  +{new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(opt.retailTotal)}
+                                              </span>
+                                          </div>
+                                      </div>
+                                  ))}
+                              </div>
+      
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#9a3412' }}>Group Total Optionals</span>
+                                  <span style={{ fontSize: '16px', fontWeight: '900', fontFamily: 'monospace', color: '#7c2d12' }}>
+                                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(finalOptionalGrandTotal)}
+                                  </span>
+                              </div>
+                          </div>
+                      )}
                   </div>
               </div>
+      
+              {/* 👇 EXISTING FOOTER REF NOW STARTS HERE (Strictly sized for cloning) */}
+              <div ref={footerRef} style={{ paddingLeft: '24px', paddingRight: '24px', paddingBottom: '32px', display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '24px', width: '100%', boxSizing: 'border-box' }}>
+                  
+                  {/* 1. IMPORTANT NOTES */}
+                  <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '16px', breakInside: 'avoid', display: 'inline-block', width: '100%' }}>
+                      <h4 style={{ color: '#374151', fontWeight: 'bold', fontSize: '14px', marginBottom: '12px', textTransform: 'uppercase' }}>Important Notes</h4>
+                       <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '6px', lineHeight: '1.4' }}>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Entrances, Tours once booked are non-refundable and non-transferable.</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>For all Group Based Tours, passengers have to join from a designated point advised upon confirmation. For Hotel Pickups, the meeting point is the Hotel Lobby.</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>All mentioned Distances represent actual travel time and do not account for waiting periods at sightseeing activities, theme parks, airports, etc.</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Optional tours can be taken only when there is enough time available between leisure time and included tours; please plan accordingly.</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>You must be present at the meeting point at least 10 mins prior to the start time of the activity mentioned in the itinerary.</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Tour durations are indicative and subject to change based on local conditions. Meeting points will be confirmed post-booking.</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>In case mentioned hotels are unavailable, we will provide similar/alternate properties (any change/additional cost will be advised).</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Hotel Check-in time is between 2:00 PM - 3:00 PM and Check-out is 11:00 AM - 12:00 NOON. (Early Check In / Late Check Out is on Request ONLY - NOT GUARANTEED).</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>No booking has been made; prices may change depending on availability at the time of your confirmation.</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Credit Card will be required at Hotels for deposits and incidentals.</span></li>
+                          <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Upon receipt, if you believe any details in the booking are wrong you must advise us immediately (within 24 Hours) as changes made after will incur Penalties/Fees.</span></li>
+                       </ul>
+                  </div>  
+      
+                  {/* 2. INCLUSIONS & EXCLUSIONS */}
+                  <div style={{ display: 'flex', width: '100%', gap: '16px',  marginTop: '14px', breakInside: 'avoid' }}>
+                      
+                      {/* Inclusions (Green Box - 50% width) */}
+                      <div style={{ flex: 1, backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '16px' }}>
+                          <h4 style={{ color: '#166534', fontWeight: 'bold', fontSize: '14px', marginBottom: '18px', textTransform: 'uppercase', borderBottom: '1px solid #bbf7d0', paddingBottom: '6px' }}>Inclusions</h4>
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#1f2937', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.4' }}>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Personalized Meet-and-Assist Services upon Arrival and Departure at the respective Airports</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Accommodation at the Mentioned Hotels</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Meals as Mentioned</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Sightseeing as Mentioned</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Entrance Fees for all Sites visited as per program mentioned</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Services of a Driver and Private Air-Conditioned Vehicles during all Tours and Transfers</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span><strong>For Individual Travelers:</strong> Services of an English-Speaking Guide during visits in each City</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span><strong>For Groups of 16 PAX or more:</strong> Services of an English-Speaking Tour Leader throughout the entire Tour, including all activities and transfers from Airport to Airport</span></li>
+                          </ul>
+                      </div>
+      
+                      {/* Exclusions (Red Box - 50% width) */}
+                      <div style={{ flex: 1, backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '16px' }}>
+                          <h4 style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '14px', marginBottom: '18px', textTransform: 'uppercase', borderBottom: '1px solid #fecaca', paddingBottom: '6px' }}>Exclusions</h4>
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#1f2937', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.4' }}>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>International & Domestic Flights arriving into the starting City and departing from the ending City of the Tour</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Visa Arrangement (not required for EU / US Citizenship)</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>All Service Charges / Local Taxes / Hotel Taxes, which have to be paid directly by the PAX at the Hotel during Check-in</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Meals other than those mentioned above (Beverages during Meals)</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Personal Expenses such as Laundry, Telephone, Drinks etc.</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Tips for Guide / Driver / Restaurants / Porterage</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Travel insurance - We strongly recommend the purchase of travel insurance (covering emergency medical evacuation)</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>If proposed service(s) is not available at the moment of booking/travel, we will try to find other similar service(s)</span></li>
+                          </ul>
+                      </div>
+      
+                  </div>
+      
+                  {/* 3. T&C and CANCELLATION */}
+                  <div style={{ display: 'flex', width: '100%', gap: '32px', marginTop: '12px' ,  backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderTop: '4px solid #dc2626', borderRadius: '6px', padding: '16px', breakInside: 'avoid' }}>
+                      
+                      {/* Terms and Conditions */}
+                      <div style={{ flex: 1 }}>
+                          <h4 style={{ color: '#1f2937', fontWeight: 'bold', fontSize: '14px', marginBottom: '12px', textTransform: 'uppercase' }}>Terms & Conditions</h4>
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.4' }}>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span><strong>30% Non Refundable Deposit</strong> at the time of booking.</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span>Final payment to be made <strong>60 days prior</strong> to Tour Start Date.</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span>If your confirmed arrangements include a Flight, <strong>Full Payment</strong> for the flights must be made in advance.</span></li>
+                          </ul>
+                      </div>
+      
+                      {/* Cancellations */}
+                      <div style={{ flex: 1 }}>
+                          <h4 style={{ color: '#1f2937', fontWeight: 'bold', fontSize: '14px', marginBottom: '12px', textTransform: 'uppercase' }}>For Cancellations</h4>
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.4' }}>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span>Received prior to final payment will incur loss of non-refundable deposit.</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span><strong>More than 91 days prior</strong> to departure: Loss of non-refundable deposit.</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span><strong>Between 90-61 days prior</strong> to departure: 75% of the total tour price.</span></li>
+                              <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span><strong>60 days or less prior</strong> to departure: 100% Non-Refundable.</span></li>
+                          </ul>
+                      </div>
+      
+                  </div>
+      
+              </div>
+           
+            {/* Footer */}
+              {/* <div style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', marginTop: '32px', padding: '24px', textAlign: 'center', fontSize: '12px', color: '#505050ff' }}>
+                  <p>Generated by Travdek. Prices and availability are subject to change.</p>
+              </div>
+      
+            </div> */}
+           
+          
+            {/* Footer */}
+              <div style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', marginTop: '32px', padding: '24px', textAlign: 'center', fontSize: '12px', color: '#505050ff' }}>
+                  <p>Generated by Travdek. Prices and availability are subject to change.</p>
+              </div>
+      
+            </div>
+      
+    
+      
+            {/* 👇 NEW SHARE MODAL UI PAasted HERE */}
+            {/* {isShareModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <Share2 className="text-green-600" size={20} /> Share Itinerary
+                            </h2>
+                            <button onClick={() => setIsShareModalOpen(false)} disabled={isSharing} className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                                <X size={20} />
+                            </button>
+                        </div>
+      
+      
+                        <form onSubmit={handleShareEmail} className="p-6 space-y-5">
+                            <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg text-sm text-blue-800 mb-2">
+                                Generate a clean PDF presentation and send it directly to your client.
+                            </div>
+      
+                        
+                            <div className="flex gap-4 mb-4">
+                                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                                    <input type="checkbox" checked={shareForm.sendEmail} onChange={(e) => setShareForm({...shareForm, sendEmail: e.target.checked})} className="w-4 h-4 text-green-600 rounded" />
+                                    Send via Email
+                                </label>
+                                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                                    <input type="checkbox" checked={shareForm.sendWhatsapp} onChange={(e) => setShareForm({...shareForm, sendWhatsapp: e.target.checked})} className="w-4 h-4 text-green-600 rounded" />
+                                    Send WhatsApp Alert
+                                </label>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Client Name</label>
+                                <input 
+                                    type="text" required value={shareForm.clientName} onChange={(e) => setShareForm({...shareForm, clientName: e.target.value})}
+                                    placeholder="e.g. John Doe" 
+                                    className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                />
+                            </div>
+                            
+                            {shareForm.sendEmail && (
+                                <div className="animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">Client Email <span className="text-red-500">*</span></label>
+                                    <div className="relative">
+                                        <Mail size={16} className="absolute left-3 top-3 text-gray-400" />
+                                        <input 
+                                            type="email" required={shareForm.sendEmail} value={shareForm.clientEmail} onChange={(e) => setShareForm({...shareForm, clientEmail: e.target.value})}
+                                            placeholder="john@example.com" 
+                                            className="w-full pl-9 p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+      
+                            {shareForm.sendWhatsapp && (
+                                <div className="animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">Client Phone <span className="text-red-500">*</span></label>
+                                    <input 
+                                        type="tel" required={shareForm.sendWhatsapp} value={shareForm.clientPhone} onChange={(e) => setShareForm({...shareForm, clientPhone: e.target.value})}
+                                        placeholder="+919876543210 (Include country code)" 
+                                        className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+                                </div>
+                            )}
+      
+                            <button 
+                                type="submit" disabled={isSharing || (!shareForm.sendEmail && !shareForm.sendWhatsapp)}
+                                className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-70 mt-2"
+                            >
+                                {isSharing ? <><Loader2 size={18} className="animate-spin" /> Processing...</> : 'Send to Client'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )} */}
+      
+      
+    
+      
           </div>
-        )}
 
-        {/* --- EXACT TERMS AND CONDITIONS FROM PREVIEW --- */}
-        <div style={{ paddingLeft: '24px', paddingRight: '24px', paddingBottom: '32px', display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '24px', width: '100%', boxSizing: 'border-box' }}>
-            <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '16px' }}>
-                <h4 style={{ color: '#374151', fontWeight: 'bold', fontSize: '14px', marginBottom: '12px', textTransform: 'uppercase' }}>Important Notes</h4>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '6px', lineHeight: '1.4' }}>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Entrances, Tours once booked are non-refundable and non-transferable.</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>For all Group Based Tours, passengers have to join from a designated point advised upon confirmation. For Hotel Pickups, the meeting point is the Hotel Lobby.</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>All mentioned Distances represent actual travel time and do not account for waiting periods at sightseeing activities, theme parks, airports, etc.</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Optional tours can be taken only when there is enough time available between leisure time and included tours; please plan accordingly.</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>You must be present at the meeting point at least 10 mins prior to the start time of the activity mentioned in the itinerary.</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Tour durations are indicative and subject to change based on local conditions. Meeting points will be confirmed post-booking.</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>In case mentioned hotels are unavailable, we will provide similar/alternate properties (any change/additional cost will be advised).</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Hotel Check-in time is between 2:00 PM - 3:00 PM and Check-out is 11:00 AM - 12:00 NOON. (Early Check In / Late Check Out is on Request ONLY - NOT GUARANTEED).</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>No booking has been made; prices may change depending on availability at the time of your confirmation.</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Credit Card will be required at Hotels for deposits and incidentals.</span></li>
-                    <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><span style={{ color: '#6b7280', marginTop: '2px' }}>➣</span> <span>Upon receipt, if you believe any details in the booking are wrong you must advise us immediately (within 24 Hours) as changes made after will incur Penalties/Fees.</span></li>
-                 </ul>
-            </div>  
 
-            <div style={{ display: 'flex', width: '100%', gap: '16px' }}>
-                <div style={{ flex: 1, backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '16px' }}>
-                    <h4 style={{ color: '#166534', fontWeight: 'bold', fontSize: '14px', marginBottom: '18px', textTransform: 'uppercase', borderBottom: '1px solid #bbf7d0', paddingBottom: '6px' }}>Inclusions</h4>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#1f2937', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.4' }}>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Personalized Meet-and-Assist Services upon Arrival and Departure at the respective Airports</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Accommodation at the Mentioned Hotels</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Meals as Mentioned</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Sightseeing as Mentioned</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Entrance Fees for all Sites visited as per program mentioned</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span>Services of a Driver and Private Air-Conditioned Vehicles during all Tours and Transfers</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span><strong>For Individual Travelers:</strong> Services of an English-Speaking Guide during visits in each City</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> <span><strong>For Groups of 16 PAX or more:</strong> Services of an English-Speaking Tour Leader throughout the entire Tour, including all activities and transfers from Airport to Airport</span></li>
-                    </ul>
-                </div>
-                <div style={{ flex: 1, backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '16px' }}>
-                    <h4 style={{ color: '#991b1b', fontWeight: 'bold', fontSize: '14px', marginBottom: '18px', textTransform: 'uppercase', borderBottom: '1px solid #fecaca', paddingBottom: '6px' }}>Exclusions</h4>
-                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#1f2937', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.4' }}>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>International & Domestic Flights arriving into the starting City and departing from the ending City of the Tour</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Visa Arrangement (not required for EU / US Citizenship)</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>All Service Charges / Local Taxes / Hotel Taxes, which have to be paid directly by the PAX at the Hotel during Check-in</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Meals other than those mentioned above (Beverages during Meals)</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Personal Expenses such as Laundry, Telephone, Drinks etc.</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Tips for Guide / Driver / Restaurants / Porterage</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>Travel insurance - We strongly recommend the purchase of travel insurance (covering emergency medical evacuation)</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626', fontWeight: 'bold', marginTop: '1px' }}>⛌</span> <span>If proposed service(s) is not available at the moment of booking/travel, we will try to find other similar service(s)</span></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div style={{ display: 'flex', width: '100%', gap: '32px', backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderTop: '4px solid #dc2626', borderRadius: '6px', padding: '16px' }}>
-                <div style={{ flex: 1 }}>
-                    <h4 style={{ color: '#1f2937', fontWeight: 'bold', fontSize: '14px', marginBottom: '12px', textTransform: 'uppercase' }}>Terms & Conditions</h4>
-                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.4' }}>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span><strong>30% Non Refundable Deposit</strong> at the time of booking.</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span>Final payment to be made <strong>60 days prior</strong> to Tour Start Date.</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span>If your confirmed arrangements include a Flight, <strong>Full Payment</strong> for the flights must be made in advance.</span></li>
-                    </ul>
-                </div>
-                <div style={{ flex: 1 }}>
-                    <h4 style={{ color: '#1f2937', fontWeight: 'bold', fontSize: '14px', marginBottom: '12px', textTransform: 'uppercase' }}>For Cancellations</h4>
-                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.4' }}>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span>Received prior to final payment will incur loss of non-refundable deposit.</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span><strong>More than 91 days prior</strong> to departure: Loss of non-refundable deposit.</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span><strong>Between 90-61 days prior</strong> to departure: 75% of the total tour price.</span></li>
-                        <li style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}><span style={{ color: '#dc2626' }}>➣</span> <span><strong>60 days or less prior</strong> to departure: 100% Non-Refundable.</span></li>
-                    </ul>
-                </div>
-            </div>
-        </div>  
-
-        {/* --- CLIENT APPROVAL ACTION FORM --- */}
-        {/* <div style={{ borderTop: "2px solid #e5e7eb", padding: "32px 24px" }}>
-          {submitted ? (
-            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "12px", padding: "40px", textAlign: "center" }}>
-              <CheckCircle2 size={48} style={{ color: "#16a34a", margin: "0 auto 16px" }} />
-              <h3 style={{ color: "#15803d", fontSize: "20px", fontWeight: 900, margin: "0 0 8px" }}>Response Submitted!</h3>
-              <p style={{ color: "#166534", fontSize: "14px", margin: 0 }}>{submitMessage}</p>
-            </div>
-          ) : (
-            <div>
-              <h3 style={{ color: "#0f172a", fontSize: "16px", fontWeight: 900, margin: "0 0 6px" }}>Your Response</h3>
-              <p style={{ color: "#64748b", fontSize: "13px", fontWeight: 600, margin: "0 0 20px" }}>Please review the itinerary above and let us know your decision</p>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }}>
-                <button
-                  onClick={() => setResponseAction("approved")}
-                  style={{
-                    padding: "16px", borderRadius: "12px", border: `2px solid ${responseAction === "approved" ? "#16a34a" : "#bbf7d0"}`,
-                    background: responseAction === "approved" ? "#16a34a" : "#f0fdf4", color: responseAction === "approved" ? "#fff" : "#15803d",
-                    fontWeight: 700, fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px"
-                  }}
-                >
-                  <ThumbsUp size={18} /> ✅ I Approve This Itinerary
-                </button>
-                <button
-                  onClick={() => setResponseAction("changes_requested")}
-                  style={{
-                    padding: "16px", borderRadius: "12px", border: `2px solid ${responseAction === "changes_requested" ? "#d97706" : "#fde68a"}`,
-                    background: responseAction === "changes_requested" ? "#d97706" : "#fffbeb", color: responseAction === "changes_requested" ? "#fff" : "#92400e",
-                    fontWeight: 700, fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px"
-                  }}
-                >
-                  <ThumbsDown size={18} /> 📝 Request Changes
-                </button>
-              </div>
-
-              {responseAction && (
-                <div style={{ background: "#f8fafc", borderRadius: "12px", padding: "20px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>Your Name</label>
-                    <input type="text" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Your full name" style={{ width: "100%", padding: "10px 14px", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }} />
-                  </div>
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>{responseAction === "approved" ? "Any special requests? (optional)" : "What changes would you like? *"}</label>
-                    <textarea rows={4} value={clientMessage} onChange={e => setClientMessage(e.target.value)} placeholder={responseAction === "approved" ? "e.g. Dietary requirements..." : "Please describe..."} style={{ width: "100%", padding: "10px 14px", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "14px", outline: "none", resize: "none", boxSizing: "border-box" }} />
-                  </div>
-                  <button onClick={handleSubmit} disabled={isSubmitting} style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "none", background: responseAction === "approved" ? "#16a34a" : "#d97706", color: "#fff", fontWeight: 700, fontSize: "15px", cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                    {isSubmitting ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Submitting...</> : <><Send size={16} /> {responseAction === "approved" ? "Confirm Approval" : "Submit Change Request"}</>}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div> */}
-          <div style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', marginTop: '32px', padding: '24px', textAlign: 'center', fontSize: '12px', color: '#505050ff' }}>
-            <p>Generated by Travdek. Prices and availability are subject to change.</p>
-        </div>
-
-      </div>
-    </div>
   );
 }
