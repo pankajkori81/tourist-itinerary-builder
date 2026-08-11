@@ -62,8 +62,11 @@ export const ItineraryShareEmail = ({
           <Section style={content}>
             <Text style={paragraph}>{greeting}</Text>
             <Text style={paragraph}>
-              Your personalized travel itinerary is ready to review. We have put together a detailed plan specifically tailored for you.
+            
+                Your personalized travel itinerary is ready to review. We have organized all the arrangements so you can simply review the plan and look forward to your trip.
             </Text>
+
+      
 
             {/* ── TRIP CARD ── */}
             <Section style={tripCard}>
