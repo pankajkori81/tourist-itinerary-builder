@@ -1332,10 +1332,10 @@ export default function DaywisePage() {
                         </div>
                         
                         {/* Vertical Divider */}
-                        <div className="w-px h-12 bg-white/20"></div>
+                         {/* <div className="w-px h-12 bg-white/20"></div> */}
 
                         {/* 🌟 NEW: MAP ROUTE BUTTON */}
-                        <button 
+                        {/* <button 
                             onClick={() => setIsRouteMapOpen(true)}
                             className="group flex flex-col items-center gap-1"
                         >
@@ -1343,7 +1343,7 @@ export default function DaywisePage() {
                                <Map size={20} />
                            </div>
                            <span className="text-[10px] font-bold text-indigo-300 group-hover:text-white uppercase tracking-wider">Map Route</span>
-                        </button>
+                        </button> */}
                  </div>
               </div>
 
