@@ -1854,7 +1854,7 @@ export default function DaywisePage() {
                 {/* The Shine Effect Element */}
                 <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
                 
-                <span className="relative z-10">Next Step: Create Day</span>
+                <span className="relative z-10">Next Step: Review</span>
                 
                 <ArrowRight 
                   size={20} 
