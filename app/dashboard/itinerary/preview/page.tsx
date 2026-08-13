@@ -1407,7 +1407,7 @@ return (
                         }, {})
                       ).map(([cost, count], idx) => (
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: '8px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#dbeafe' }}>{Number(count)} Adult Cost</span>
+                            <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#dbeafe' }}>Cost Per Adult (Based on {Number(count)}) </span>
                             <span style={{ fontSize: '24px', fontWeight: '900', fontFamily: 'monospace' }}>
                                 {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(Number(cost))}
                             </span>
