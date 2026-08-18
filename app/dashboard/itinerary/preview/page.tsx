@@ -840,22 +840,69 @@ export default function PreviewPage() {
 
   // 👇 3. Master Share Button Logic
 
-  // 👇 3. Master Share Button Logic (UPDATED FOR RESEND & WEB VIEW)
+//   // 👇 3. Master Share Button Logic (UPDATED FOR RESEND & WEB VIEW)
+//   const handleShareEmail = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!shareForm.clientEmail) return alert("Client Email is required.");
+    
+//     setIsSharing(true);
+
+//     try {
+//         // NOTE: We no longer generate the PDF here! 
+//         // The client gets a secure token link to view the interactive web version.
+//         const res = await fetch('/api/share', {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({
+//                 // Pass the DB ID of the itinerary so the backend can link it
+//                 itineraryId: (itineraryData as any)._id, 
+//                 clientName: shareForm.clientName,
+//                 clientEmail: shareForm.clientEmail,
+//                 tripName: itineraryData.tripName || "Custom Itinerary",
+//             })
+//         });
+
+//         const data = await res.json();
+        
+//         if (data.success) {
+//             alert("Secure link generated and email sent successfully!"); 
+//             setIsShareModalOpen(false);
+//             setShareForm({ clientName: '', clientEmail: '', clientPhone: '', sendEmail: true, sendWhatsapp: false });
+//         } else { 
+//             alert("Failed to process: " + data.message); 
+//         }
+//     } catch (error) {
+//         console.error("Share API Error:", error);
+//         alert("An error occurred while sharing.");
+//     } finally {
+//         setIsSharing(false);
+//     }
+//   };
+
+
+
+// 👇 3. Master Share Button Logic (UPDATED FOR RESEND & WEB VIEW)
   const handleShareEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!shareForm.clientEmail) return alert("Client Email is required.");
     
+    // 🌟 FIX 1: Safely extract the ID by checking both common Mongoose/React properties
+    const currentItineraryId = (itineraryData as any)._id || (itineraryData as any).id;
+    
+    // 🌟 FIX 2: Guardrail - Prevent the API call entirely if the trip hasn't been saved
+    if (!currentItineraryId) {
+        return alert("Please click 'Quick Save' to save this itinerary to the database before sharing.");
+    }
+
     setIsSharing(true);
 
     try {
-        // NOTE: We no longer generate the PDF here! 
-        // The client gets a secure token link to view the interactive web version.
         const res = await fetch('/api/share', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                // Pass the DB ID of the itinerary so the backend can link it
-                itineraryId: (itineraryData as any)._id, 
+                // 🌟 FIX 3: Pass the safely extracted, guaranteed valid ID here
+                itineraryId: currentItineraryId, 
                 clientName: shareForm.clientName,
                 clientEmail: shareForm.clientEmail,
                 tripName: itineraryData.tripName || "Custom Itinerary",
@@ -878,7 +925,6 @@ export default function PreviewPage() {
         setIsSharing(false);
     }
   };
-
 
   if (loading) return <div>Loading Preview...</div>;
 

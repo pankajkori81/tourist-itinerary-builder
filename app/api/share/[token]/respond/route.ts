@@ -52,6 +52,229 @@ export const POST = async (
       );
     }
 
+// ══════════════════════════════════════════════════════════════
+// FILE: app/api/share/route.ts
+// PURPOSE:
+//   POST → Admin creates a share link + sends email via Resend
+//   GET  → Admin lists all share links for an itinerary
+// USES: ShareLink model, Itinerary model, User model, Resend, React Email
+// ══════════════════════════════════════════════════════════════
+
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession }          from "next-auth/next";
+import { authOptions }               from "@/app/api/auth/[...nextauth]/route";
+import { Resend }                    from "resend";
+import crypto                        from "crypto";
+import dbConnect                     from "@/app/lib/dbconnect";
+import ShareLink                     from "@/app/models/ShareLink";
+import Itinerary                     from "@/app/models/Itinerary";
+import ItineraryShareEmail           from "@/emails/ItineraryShareEmail"; 
+
+// Import so Mongoose knows about these models for .populate()
+import "@/app/models/User";
+
+// ── Resend client (uses your RESEND_API_KEY from .env) ────────
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// ── Helpers ───────────────────────────────────────────────────
+
+// Generate a secure random token for the URL
+const generateToken = (): string =>
+  crypto.randomBytes(32).toString("hex");
+
+// Calculate expiry date from days offset
+const getExpiryDate = (days: number): Date => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
+// ══════════════════════════════════════════════════════════════
+// POST: Admin creates a new share link + sends email to client
+// ══════════════════════════════════════════════════════════════
+export const POST = async (req: NextRequest) => {
+  await dbConnect();
+
+  try {
+    // ── 1. Auth check — must be logged in ────────────────────
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        { success: false, message: "Not authenticated" },
+        { status: 401 }
+      );
+    }
+
+    const adminId = (session.user as any).id;
+    const body    = await req.json();
+
+    // ── 2. Validate required fields ──────────────────────────
+    const { itineraryId, clientEmail, clientName, clientPhone, expiryDays } = body;
+
+    if (!itineraryId) {
+      return NextResponse.json(
+        { success: false, message: "Itinerary ID is required" },
+        { status: 400 }
+      );
+    }
+    if (!clientEmail) {
+      return NextResponse.json(
+        { success: false, message: "Client email is required" },
+        { status: 400 }
+      );
+    }
+
+    // ── 3. Fetch the itinerary to get trip details ────────────
+    const itinerary = await Itinerary.findById(itineraryId)
+      .select(
+        "tripName tripId selectedCountries routingData " +
+        "numberOfTravelers fixedDepartures packageType " +
+        "tripStyle dayWiseActivities"
+      )
+      .lean();
+
+    if (!itinerary) {
+      return NextResponse.json(
+        { success: false, message: "Itinerary not found" },
+        { status: 404 }
+      );
+    }
+
+    // ── 4. Generate unique token + expiry ─────────────────────
+    const token     = generateToken();
+    const days      = Number(expiryDays) || 30; 
+    const expiresAt = getExpiryDate(days);
+
+    // ── 5. Build the public URL ───────────────────────────────
+    const baseUrl   = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const shareUrl  = `${baseUrl}/view/${token}`;
+
+    // ── 6. Save ShareLink to MongoDB ─────────────────────────
+    const shareLink = await ShareLink.create({
+      itineraryId,
+      token,
+      clientName  : clientName  || "",
+      clientEmail : clientEmail.toLowerCase().trim(),
+      clientPhone : clientPhone || "",
+      expiresAt,
+      createdBy   : adminId,
+      isActive    : true,
+      status      : "pending",
+    });
+
+    // ── 7. Send email via Resend and React Email ──────────────
+    const tripName   = (itinerary as any).tripName    || "Your Itinerary";
+    const countries  = ((itinerary as any).selectedCountries || []).join(", ");
+    const nights     = ((itinerary as any).routingData?.routes || [])
+      .reduce((sum: number, r: any) => sum + (r.nights || 0), 0);
+    const totalDays  = nights + 1;
+    const fromEmail  = process.env.FROM_EMAIL || "onboarding@resend.dev";
+
+    const expiryFormatted = expiresAt.toLocaleDateString("en-US", {
+      month : "long",
+      day   : "numeric",
+      year  : "numeric",
+    });
+
+    const emailResult = await resend.emails.send({
+      from    : `Travdek <${fromEmail}>`,
+      to      : [clientEmail],
+      subject : `Your ${tripName} Itinerary is Ready 🌍`,
+      react   : ItineraryShareEmail({
+        clientName : clientName || "Valued Client",
+        tripName   : tripName,
+        countries  : countries,
+        days       : totalDays,
+        nights     : nights,
+        expiryDate : expiryFormatted,
+        shareUrl   : shareUrl,
+      }),
+    });
+
+    if (emailResult.error) {
+      console.error("Resend API Error:", emailResult.error);
+      return NextResponse.json(
+        { success: false, message: "Failed to send email. Check server logs." },
+        { status: 500 }
+      );
+    }
+
+    // ── 8. Update ShareLink with email sent timestamp ─────────
+    await ShareLink.findByIdAndUpdate(shareLink._id, {
+      emailSentAt: new Date(),
+    });
+
+    // ── 9. Return success with link details ───────────────────
+    return NextResponse.json({
+      success  : true,
+      message  : "Share link created and email sent successfully",
+      data     : {
+        shareUrl,
+        token,
+        expiresAt,
+        clientEmail,
+        emailId  : emailResult?.data?.id || null,
+      },
+    }, { status: 201 });
+
+  } catch (error: any) {
+    console.error("Share POST Error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Server Error" },
+      { status: 500 }
+    );
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
+// GET: Admin fetches all share links for a specific itinerary
+// ══════════════════════════════════════════════════════════════
+export const GET = async (req: NextRequest) => {
+  await dbConnect();
+
+  try {
+    // ── 1. Auth check ─────────────────────────────────────────
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        { success: false, message: "Not authenticated" },
+        { status: 401 }
+      );
+    }
+
+    // ── 2. Get itineraryId from query params ──────────────────
+    const { searchParams } = new URL(req.url);
+    const itineraryId      = searchParams.get("itineraryId");
+
+    if (!itineraryId) {
+      return NextResponse.json(
+        { success: false, message: "itineraryId query param required" },
+        { status: 400 }
+      );
+    }
+
+    // ── 3. Fetch all links for this itinerary ─────────────────
+    // Auto-mark expired links
+    const now   = new Date();
+    await ShareLink.updateMany(
+      { itineraryId, expiresAt: { $lt: now }, status: { $nin: ["approved","changes_requested","expired"] } },
+      { $set: { status: "expired" } }
+    );
+
+    const links = await ShareLink.find({ itineraryId })
+      .sort({ createdAt: -1 }) // newest first
+      .lean();
+
+    return NextResponse.json({ success: true, data: links });
+
+  } catch (error: any) {
+    console.error("Share GET Error:", error);
+    return NextResponse.json(
+      { success: false, message: "Server Error" },
+      { status: 500 }
+    );
+  }
+};
     // ── 4. Find the ShareLink ─────────────────────────────────
     const shareLink = await ShareLink.findOne({ token }).lean() as any;
 
