@@ -488,11 +488,17 @@ export function Sidebar() {
   });
 
   return (
+    // <aside 
+    //   className={`fixed left-0 top-0 h-full bg-[#0f172a] text-white transition-all duration-300 z-50 border-r border-gray-700 flex flex-col
+    //     ${isSidebarCollapsed ? 'w-16' : 'w-64'} 
+    //   `}
+    // >
+
     <aside 
-      className={`fixed left-0 top-0 h-full bg-[#0f172a] text-white transition-all duration-300 z-50 border-r border-gray-700 flex flex-col
-        ${isSidebarCollapsed ? 'w-16' : 'w-64'} 
-      `}
-    >
+  className={`fixed left-0 top-0 h-full bg-[#0f172a] text-white transition-all duration-300 z-50 border-r border-gray-700 flex flex-col
+    ${isSidebarCollapsed ? 'w-16' : 'w-52 min-[1700px]:w-64'} 
+  `}
+>
       {/* 1. Header Area: Logo + Toggle */}
       <div className="h-18 flex items-center justify-between px-4 border-b border-gray-700 shrink-0">
         

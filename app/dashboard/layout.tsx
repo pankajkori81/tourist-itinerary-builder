@@ -254,8 +254,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function MainContentWrapper({ children }: { children: React.ReactNode }) {
     const { isSidebarCollapsed } = useDashboardUI();
     return (
-        <div className={`flex-1 flex flex-col h-full transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
-            <div className="h-18 flex-shrink-0 z-40 relative shadow-sm">
+        // <div className={`flex-1 flex flex-col h-full transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
+          <div className={`flex-1 flex flex-col h-full transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'ml-16' : 'ml-52 min-[1700px]:ml-64'}`}>
+          <div className="h-18 flex-shrink-0 z-40 relative shadow-sm">
               <Topbar />
             </div>
             <main className="flex-1 relative overflow-y-auto">
