@@ -2364,25 +2364,27 @@ export default function CostingPage() {
                       {...provided.droppableProps}
                     >
                       <thead className="bg-gray-50 text-gray-500 border-b border-gray-400">
-                       
-<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase w-[60px] xl:w-[80px]">
+                        
+<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase w-[60px] min-[1700px]:w-[80px]">
   Type
 </th>
-<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase">
+<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase">
   Item Details
 </th>
-<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase w-[90px] xl:w-[120px] text-blue-600">
+<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase w-[90px] min-[1700px]:w-[120px] text-blue-600">
   Supplier
 </th>
-<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase w-[110px] xl:w-[150px]">
+<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase w-[110px] min-[1700px]:w-[150px]">
   Config
 </th>
-<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase text-right w-[110px] xl:w-[140px]">
+<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[110px] min-[1700px]:w-[140px]">
   Net Total
 </th>
-<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase text-right w-[80px] xl:w-[100px]">
+<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[80px] min-[1700px]:w-[100px]">
   PP Cost
 </th>
+                       
+
                       </thead>
 
                       {processedDayPlans.map((day, index) => (
