@@ -1177,7 +1177,7 @@ useEffect(() => {
           <div className="flex items-center">
              
              {/* Title container gets a fixed width to match the sidebar, pushing the button forward */}
-             <div className="w-[206px] shrink-0 ">
+            <div className="w-48 min-[1700px]:w-55 shrink-0 ">
                  <h2 className="text-white font-bold text-lg tracking-wide ml-3">
                    Itinerary <span className="text-blue-400">Builder</span>
                  </h2>
@@ -1256,7 +1256,9 @@ useEffect(() => {
         
         {/* Inner Sidebar (Tabs) with Locking Logic */}
         {!isFullWidthPage && (
-          <div className="w-55 bg-gradient-to-br from-[#0f172a]  to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
+          // <div className="w-55 bg-gradient-to-br from-[#0f172a]  to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
+        
+            <div className="w-48 min-[1700px]:w-55 bg-gradient-to-br from-[#0f172a] to-[#2b3747ff] backdrop-blur-md border-r border-gray-700 p-4 hidden md:flex flex-col overflow-y-auto shrink-0">
             <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/10">
               <h3 className="text-gray-200 text-sm font-bold mb-1 line-clamp-1">{itineraryData.tripName || 'Untitled Trip'}</h3>
               <p className="text-blue-300 text-xs font-mono mb-2">
