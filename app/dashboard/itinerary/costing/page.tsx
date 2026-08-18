@@ -2325,7 +2325,7 @@ export default function CostingPage() {
 
       <main className="max-w-[1600px] mx-auto p-6 flex flex-col xl:flex-row gap-6 items-start">
         {/* LEFT: LEDGER */}
-        <div className="flex-1 w-full space-y-6">
+        <div className="flex-1 w-full min-w-0 space-y-6">
           <div className="flex items-center justify-between">
             <div className="bg-white border border-gray-300 rounded-xl p-1.5 flex gap-1 shadow-sm overflow-x-auto flex-1 mr-4">
               {MONTHS.map((month) => (
