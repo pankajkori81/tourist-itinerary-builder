@@ -1293,7 +1293,8 @@ export default function DaywisePage() {
         <div className="flex-1 flex flex-col bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl overflow-hidden">
           
           {viewMode === 'list' ? (
-            <div className="flex flex-col h-full">
+            // <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full relative">
               
               {/* Toolbar Header */}
               <div className="bg-white/10 border-b border-white/10 p-6 flex justify-between items-end">
@@ -1348,7 +1349,9 @@ export default function DaywisePage() {
               </div>
 
               {/* Main List Area */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* <div className="flex-1 overflow-y-auto p-6 space-y-6"> */}
+
+              <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 pb-24">
               
                 {/* 🌟 FIX: Professional Empty State CTA (Luminous Canvas) */}
                 {displayItems.length === 0 && (
@@ -1731,6 +1734,76 @@ export default function DaywisePage() {
                   </div>
                   )
                 })}
+
+
+
+{/* 
+                {selectedDayIndex < dayPlans.length - 1 && (
+                
+                <div className="absolute bottom-6 right-8 z-50">
+                  <button
+                    onClick={() => {
+                      setSelectedDayIndex(selectedDayIndex + 1);
+                      setViewMode('list');
+                    }}
+                    className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-[0_8px_25px_rgba(37,99,235,0.4)] hover:shadow-[0_10px_30px_rgba(37,99,235,0.6)] hover:-translate-y-1 border border-blue-400/50 backdrop-blur-md"
+                  >
+                    Create: Day {dayPlans[selectedDayIndex + 1].dayNumber}
+                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                  </button>
+                </div>
+              )} */}
+
+
+
+              {/* ========================================== */}
+              {/* 🌟 NEW: FIXED NAVIGATION OVERLAY (BACK & NEXT) */}
+              {/* ========================================== */}
+              {(selectedDayIndex > 0 || selectedDayIndex < dayPlans.length - 1) && (
+                /* 🌟 FIX: "justify-between" splits them, and "pointer-events-none" prevents the invisible middle area from blocking clicks! */
+                <div className="absolute bottom-6 left-8 right-8 z-50 flex items-center justify-between pointer-events-none">
+                  
+                  {/* ⬅️ BACK BUTTON (Far Left) */}
+                  <div className="pointer-events-auto">
+                    {selectedDayIndex > 0 && (
+                      <button
+                        onClick={() => {
+                          setSelectedDayIndex(selectedDayIndex - 1);
+                          setViewMode('list');
+                        }}
+                        className="group flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-5 py-3 rounded-xl font-bold transition-all shadow-[0_8px_25px_rgba(0,0,0,0.2)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:-translate-y-1 border border-gray-500 backdrop-blur-md"
+                      >
+                        <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />
+                        Back: Day {dayPlans[selectedDayIndex - 1].dayNumber}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* ➡️ CREATE NEXT BUTTON (Far Right) */}
+                  <div className="pointer-events-auto ml-auto">
+                    {selectedDayIndex < dayPlans.length - 1 && (
+                      <button
+                        onClick={() => {
+                          setSelectedDayIndex(selectedDayIndex + 1);
+                          setViewMode('list');
+                        }}
+                        className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-xl font-bold transition-all shadow-[0_8px_25px_rgba(37,99,235,0.4)] hover:shadow-[0_10px_30px_rgba(37,99,235,0.6)] hover:-translate-y-1 border border-blue-400/50 backdrop-blur-md"
+                      >
+                        Create: Day {dayPlans[selectedDayIndex + 1].dayNumber}
+                        <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                      </button>
+                    )}
+                  </div>
+                  
+                </div>
+              )}
+              {/* ========================================== */}
+
+
+    
+
+          
+              
               </div>
 
             </div>
