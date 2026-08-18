@@ -3041,7 +3041,7 @@ export default function CostingPage() {
         </div>
 
         {/* RIGHT: CALCULATOR */}
-        <div className="w-full xl:w-[400px] shrink-0 sticky top-24 flex flex-col gap-4">
+        <div className="w-full xl:w-[clamp(300px,26vw,400px)] shrink-0 sticky top-24 flex flex-col gap-4">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-300 flex items-center justify-between">
             <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">
               Currency
