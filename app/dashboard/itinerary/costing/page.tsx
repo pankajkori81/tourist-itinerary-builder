@@ -2323,7 +2323,7 @@ export default function CostingPage() {
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto p-6 flex flex-col xl:flex-row gap-6 items-start">
+     <main className="max-w-[1600px] mx-auto p-4 xl:p-6 flex flex-col xl:flex-row gap-4 xl:gap-6 items-start">
         {/* LEFT: LEDGER */}
         <div className="flex-1 w-full min-w-0 space-y-6">
           <div className="flex items-center justify-between">
@@ -2364,26 +2364,25 @@ export default function CostingPage() {
                       {...provided.droppableProps}
                     >
                       <thead className="bg-gray-50 text-gray-500 border-b border-gray-400">
-                        <tr>
-                          <th className="py-3 px-4 text-xs font-bold uppercase w-[80px]">
-                            Type
-                          </th>
-                          <th className="py-3 px-4 text-xs font-bold uppercase">
-                            Item Details
-                          </th>
-                          <th className="py-3 px-4 text-xs font-bold uppercase w-[120px] text-blue-600">
-                            Supplier
-                          </th>
-                          <th className="py-3 px-4 text-xs font-bold uppercase w-[150px]">
-                            Config
-                          </th>
-                          <th className="py-3 px-4 text-xs font-bold uppercase text-right w-[140px]">
-                            Net Total
-                          </th>
-                          <th className="py-3 px-4 text-xs font-bold uppercase text-right w-[100px]">
-                            PP Cost
-                          </th>
-                        </tr>
+                       
+<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase w-[60px] xl:w-[80px]">
+  Type
+</th>
+<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase">
+  Item Details
+</th>
+<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase w-[90px] xl:w-[120px] text-blue-600">
+  Supplier
+</th>
+<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase w-[110px] xl:w-[150px]">
+  Config
+</th>
+<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase text-right w-[110px] xl:w-[140px]">
+  Net Total
+</th>
+<th className="py-3 px-2 xl:px-4 text-xs font-bold uppercase text-right w-[80px] xl:w-[100px]">
+  PP Cost
+</th>
                       </thead>
 
                       {processedDayPlans.map((day, index) => (
@@ -3041,7 +3040,7 @@ export default function CostingPage() {
         </div>
 
         {/* RIGHT: CALCULATOR */}
-        <div className="w-full xl:w-[clamp(300px,26vw,400px)] shrink-0 sticky top-24 flex flex-col gap-4">
+        <div className="w-full xl:w-[clamp(280px,24vw,400px)] shrink-0 sticky top-24 flex flex-col gap-4">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-300 flex items-center justify-between">
             <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">
               Currency
