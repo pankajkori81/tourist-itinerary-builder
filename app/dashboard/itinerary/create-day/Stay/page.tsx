@@ -565,7 +565,10 @@ import {
   X, Save, MapPin, Building2, PlusCircle, 
   Wallet, BedDouble, Star, 
   CheckCircle2, Ban, PlusSquare, Users, Image as ImageIcon,
-  Briefcase, Phone, Mail, CreditCard, DollarSign 
+  Briefcase, Phone, Mail, CreditCard, DollarSign, 
+  Utensils,
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { 
   Stay, HOTEL_CATEGORIES, HOTEL_TYPES 
@@ -605,53 +608,115 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
   }, [itineraryData, city]);
 
   // Initialize State
-  const [formData, setFormData] = useState<Stay>(initialData || {
-    id: Date.now(),
-    type: 'stay',
-    hotelName: '',
-    description: '',
+  // const [formData, setFormData] = useState<Stay>(initialData || {
+  //   id: Date.now(),
+  //   type: 'stay',
+  //   hotelName: '',
+  //   description: '',
 
-    // 🌟 SMART PULL: Fallback to the prop city automatically
-    address: city, 
-    // @ts-ignore
-    city: city, 
+  //   // 🌟 SMART PULL: Fallback to the prop city automatically
+  //   address: city, 
+  //   // @ts-ignore
+  //   city: city, 
     
-    // 🌟 SMART PULL: Grab the first country from the Create Page context
-    // @ts-ignore
-    country: itineraryData?.selectedCountries?.[0] || '',
+  //   // 🌟 SMART PULL: Grab the first country from the Create Page context
+  //   // @ts-ignore
+  //   country: itineraryData?.selectedCountries?.[0] || '',
    
-    rating: '4.5',
-    category: 'Hotel',
+  //   rating: '4.5',
+  //   category: 'Hotel',
     
-    // Smart Link: Uses global category from Create Page
-    stayType: itineraryData?.tripCategory || 'Luxury', 
+  //   // Smart Link: Uses global category from Create Page
+  //   stayType: itineraryData?.tripCategory || 'Luxury', 
 
 
-    // 🌟 NEW OTA DEFAULTS 🌟
-    // @ts-ignore
-    chainCode: '', brand: '', stateProvince: '', zipPostal: '', phone: '',
-    // @ts-ignore
-    propertyOverview: '', gdsLocation: '', totalUnits: 0, nonSmokingRooms: 0, floors: 1, latitude: 0, longitude: 0,
+  //   // 🌟 NEW OTA DEFAULTS 🌟
+  //   // @ts-ignore
+  //   chainCode: '', brand: '', stateProvince: '', zipPostal: '', phone: '',
+  //   // @ts-ignore
+  //   propertyOverview: '', gdsLocation: '', totalUnits: 0, nonSmokingRooms: 0, floors: 1, latitude: 0, longitude: 0,
     
-    roomCategory: 'Standard Room',
-    roomName: 'Standard Room',
-    inclusionType: 'included',
-    checkInDate: dayDate || '',
-    checkInTime: '14:00',
-    checkOutDate: '',     
-    checkOutTime: '11:00',
+  //   roomCategory: 'Standard Room',
+  //   roomName: 'Standard Room',
+  //   inclusionType: 'included',
+  //   checkInDate: dayDate || '',
+  //   checkInTime: '14:00',
+  //   checkOutDate: '',     
+  //   checkOutTime: '11:00',
     
-    // 🌟 STEP 2: Inject the dynamically calculated nights!
-    nights: defaultNights, 
+  //   // 🌟 STEP 2: Inject the dynamically calculated nights!
+  //   nights: defaultNights, 
     
-    costPerNight: 0, 
-    numRooms: 1,
-    roomOccupancy: [2], 
-    customImage: '',
-    // @ts-ignore 
-    linkedSupplierId: '' 
+  //   costPerNight: 0, 
+  //   numRooms: 1,
+  //   roomOccupancy: [2], 
+  //   customImage: '',
+  //   // @ts-ignore 
+  //   linkedSupplierId: '',
+    
+  //   // 🌟 NEW: Meal Details defaults
+  //   // @ts-ignore
+  //   mealType: 'Breakfast',
+  //   // @ts-ignore
+  //   menuStyle: 'Buffet',
+  //   // @ts-ignore
+  //   mealNotes: '',
+
+  // });
+
+
+    // Initialize State
+  const [formData, setFormData] = useState<Stay>(() => {
+    const defaults: any = {
+      id: Date.now(),
+      type: 'stay',
+      hotelName: '',
+      description: '',
+
+      // 🌟 SMART PULL: Fallback to the prop city automatically
+      address: city, 
+      city: city, 
+      
+      // 🌟 SMART PULL: Grab the first country from the Create Page context
+      country: itineraryData?.selectedCountries?.[0] || '',
+     
+      rating: '4.5',
+      category: 'Hotel',
+      
+      // Smart Link: Uses global category from Create Page
+      stayType: itineraryData?.tripCategory || 'Luxury', 
+
+      // 🌟 NEW OTA DEFAULTS 🌟
+      chainCode: '', brand: '', stateProvince: '', zipPostal: '', phone: '',
+      propertyOverview: '', gdsLocation: '', totalUnits: 0, nonSmokingRooms: 0, floors: 1, latitude: 0, longitude: 0,
+      
+      roomCategory: 'Standard Room',
+      roomName: 'Standard Room',
+      inclusionType: 'included',
+      checkInDate: dayDate || '',
+      checkInTime: '14:00',
+      checkOutDate: '',     
+      checkOutTime: '11:00',
+      
+      // 🌟 STEP 2: Inject the dynamically calculated nights!
+      nights: defaultNights, 
+      
+      costPerNight: 0, 
+      numRooms: 1,
+      roomOccupancy: [2], 
+      customImage: '',
+      linkedSupplierId: '',
+
+      // 🌟 Meal Details — blank means "not set", real explicit state now
+      mealType: '',
+      menuStyle: '',
+      mealNotes: '',
+    };
+
+    // Merge: initialData wins for any field it actually has;
+    // old records missing meal fields safely fall back to '' from defaults.
+    return initialData ? { ...defaults, ...initialData } : defaults;
   });
-
 
 
   const [showSidebar, setShowSidebar] = useState(true);
@@ -779,6 +844,35 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
     const newOccupancy = [...(formData.roomOccupancy || [])];
     newOccupancy[index] = value;
     setFormData(prev => ({ ...prev, roomOccupancy: newOccupancy }));
+  };
+
+
+
+    // --- MEAL DETAILS HANDLERS ---
+
+  const handleAddMealRow = () => {
+    // @ts-ignore
+    const currentMeals = formData.includedMeals || [];
+    setFormData(prev => ({
+      ...prev,
+      // @ts-ignore
+      includedMeals: [...currentMeals, { mealType: 'Breakfast', menuStyle: 'Buffet' }]
+    }));
+  };
+
+  const handleMealRowChange = (index: number, field: 'mealType' | 'menuStyle', value: string) => {
+    // @ts-ignore
+    const updatedMeals = [...(formData.includedMeals || [])];
+    updatedMeals[index] = { ...updatedMeals[index], [field]: value };
+    // @ts-ignore
+    setFormData(prev => ({ ...prev, includedMeals: updatedMeals }));
+  };
+
+  const handleRemoveMealRow = (index: number) => {
+    // @ts-ignore
+    const updatedMeals = (formData.includedMeals || []).filter((_: any, i: number) => i !== index);
+    // @ts-ignore
+    setFormData(prev => ({ ...prev, includedMeals: updatedMeals }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -979,6 +1073,124 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
                  </div>
               </div>
 
+
+
+            <section className="space-y-4">
+            <div className="flex items-center gap-2 text-orange-600 mb-2">
+              <BedDouble size={18} />
+              <span className="text-xs font-bold uppercase tracking-wider">Room Category</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+               <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Room Category Name</label>
+                  <input type="text" value={formData.roomCategory} onChange={(e) => handleChange('roomCategory', e.target.value)} placeholder="e.g. Standard Room" className="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none"/>
+               </div>
+            </div>
+          </section>
+
+          <hr className="border-gray-100 my-6" />
+
+           <section className="space-y-6">
+             <div className="flex items-center gap-2 text-green-600 mb-2">
+              <Wallet size={18} />
+              <span className="text-xs font-bold uppercase tracking-wider">Dates & Configuration</span>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-5">
+               {/* Packaging Status */}
+               <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Packaging Status</label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div onClick={() => handleChange('inclusionType', 'included')} className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-all ${formData.inclusionType === 'included' ? 'bg-green-50 border-green-500 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
+                    <CheckCircle2 size={20} className={formData.inclusionType === 'included' ? "text-green-600" : "text-gray-400"} />
+                    <span className={`text-xs font-bold ${formData.inclusionType === 'included' ? "text-green-700" : "text-gray-500"}`}>Included</span>
+                  </div>
+                  <div onClick={() => handleChange('inclusionType', 'excluded')} className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-all ${formData.inclusionType === 'excluded' ? 'bg-red-50 border-red-500 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
+                    <Ban size={20} className={formData.inclusionType === 'excluded' ? "text-red-600" : "text-gray-400"} />
+                    <span className={`text-xs font-bold ${formData.inclusionType === 'excluded' ? "text-red-700" : "text-gray-500"}`}>Excluded</span>
+                  </div>
+                   <div onClick={() => handleChange('inclusionType', 'optional')} className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-all ${formData.inclusionType === 'optional' ? 'bg-blue-50 border-blue-500 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
+                    <PlusSquare size={20} className={formData.inclusionType === 'optional' ? "text-blue-600" : "text-gray-400"} />
+                    <span className={`text-xs font-bold ${formData.inclusionType === 'optional' ? "text-blue-700" : "text-gray-500"}`}>Optional</span>
+                  </div>
+                </div>
+              </div>
+
+               {/* Date Row */}
+               <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-4">
+                     <label className="text-[10px] uppercase font-bold text-gray-500">Check-In</label>
+                     <input type="date" value={formData.checkInDate} onChange={(e) => handleChange('checkInDate', e.target.value)} className="w-full p-2 border rounded text-xs font-bold"/>
+                  </div>
+                  <div className="col-span-2">
+                     <label className="text-[10px] uppercase font-bold text-gray-500">Time</label>
+                     <input type="time" value={formData.checkInTime} onChange={(e) => handleChange('checkInTime', e.target.value)} className="w-full p-2 border rounded text-xs"/>
+                  </div>
+                  <div className="col-span-2">
+                     <label className="text-[10px] uppercase font-bold text-gray-500 text-center block">Nights</label>
+                     <input type="number" min="1" value={formData.nights} onChange={(e) => handleChange('nights', parseInt(e.target.value) || 1)} className="w-full p-2 border border-purple-300 bg-purple-50 text-purple-700 font-bold rounded text-xs text-center"/>
+                  </div>
+                  <div className="col-span-4">
+                     <label className="text-[10px] uppercase font-bold text-gray-500">Check-Out</label>
+                     <input type="date" value={formData.checkOutDate} readOnly className="w-full p-2 bg-gray-100 border rounded text-xs text-gray-500"/>
+                  </div>
+               </div>
+
+               {/* Room Quantity (No Price) */}
+               {formData.inclusionType !== 'excluded' && (
+                 <div className="space-y-3">
+                    <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-6">
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">Total Rooms</label>
+                            <input 
+                              type="number" 
+                              min="1" 
+                              value={formData.numRooms} 
+                              onChange={(e) => handleChange('numRooms', parseInt(e.target.value) || 1)} 
+                              className="w-full p-2 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-purple-500"
+                            />
+                        </div>
+                        {/* Cost Per Room input REMOVED */}
+                        {/* Total Cost Box REMOVED */}
+                    </div>
+
+                    {/* Room Breakdown List (Prices removed from list) */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-3">
+                        <div className="flex justify-between items-center mb-2">
+                           <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1">
+                              <Users size={12}/> Occupancy Breakdown
+                           </label>
+                           <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold">Total Pax: {totalPax}</span>
+                        </div>
+                        
+                        <div className="space-y-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                           {(formData.roomOccupancy || []).map((pax, index) => (
+                              <div key={index} className="flex items-center gap-3 text-sm">
+                                  <span className="text-xs font-bold text-gray-700 w-16">Room {index + 1}:</span>
+                                  <div className="flex items-center gap-2 flex-1">
+                                      <input 
+                                        type="number" 
+                                        min="1" 
+                                        max="4"
+                                        value={pax} 
+                                        onChange={(e) => handleRoomOccupancyChange(index, parseInt(e.target.value) || 1)}
+                                        className="w-16 p-1 text-center border border-gray-300 rounded text-xs font-bold"
+                                      />
+                                      <span className="text-xs text-gray-700">Person(s)</span>
+                                  </div>
+                                  {/* PP Cost Display REMOVED */}
+                              </div>
+                           ))}
+                        </div>
+                    </div>
+                 </div>
+               )}
+            </div>
+          </section>
+
+
+
+          <hr className="border-gray-100 my-6" />
               {/* 🌟 NEW OTA / GDS PROPERTY SPECS GRID 🌟 */}
               <div className="bg-purple-50/30 border border-purple-100/60 p-4 rounded-xl space-y-4 mt-2">
                  <h3 className="text-xs font-bold text-purple-900 uppercase tracking-wide border-b border-purple-100 pb-1">
@@ -1094,126 +1306,98 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
           </section>
 
 
+                        <hr className="border-gray-100 my-6" />
 
-        
+              {/* 🌟 NEW: MEAL DETAILS SECTION 🌟 */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-orange-600 mb-2">
+                  <Utensils size={18} />
+                  <span className="text-xs font-bold uppercase tracking-wider">Meal Details</span>
+                </div>
 
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Meal Type</label>
+                      <select
+                        // @ts-ignore
+                        value={formData.mealType || 'Breakfast'}
+                        onChange={(e) => handleChange('mealType' as any, e.target.value)}
+                        className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium outline-none"
+                      >
+                        <option value="Breakfast">Breakfast</option>
+                        <option value="Lunch">Lunch</option>
+                        <option value="Dinner">Dinner</option>
+                        <option value="High Tea">High Tea</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Menu Style</label>
+                      <select
+                        // @ts-ignore
+                        value={formData.menuStyle || 'Buffet'}
+                        onChange={(e) => handleChange('menuStyle' as any, e.target.value)}
+                        className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium outline-none"
+                      >
+                        <option value="Buffet">Buffet</option>
+                        <option value="Fixed Menu">Fixed Menu</option>
+                        <option value="A La Carte">A La Carte</option>
+                      </select>
+                    </div> */}
 
-          <hr className="border-gray-100" />
-
-          {/* SECTION B: ROOM CONFIG */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 text-orange-600 mb-2">
-              <BedDouble size={18} />
-              <span className="text-xs font-bold uppercase tracking-wider">Room Category</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-               <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Room Category Name</label>
-                  <input type="text" value={formData.roomCategory} onChange={(e) => handleChange('roomCategory', e.target.value)} placeholder="e.g. Standard Room" className="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none"/>
-               </div>
-            </div>
-          </section>
-
-          <hr className="border-gray-100" />
-
-          {/* SECTION C: DATES & CONFIG (COST REMOVED) */}
-          <section className="space-y-4">
-             <div className="flex items-center gap-2 text-green-600 mb-2">
-              <Wallet size={18} />
-              <span className="text-xs font-bold uppercase tracking-wider">Dates & Configuration</span>
-            </div>
-
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-5">
-               {/* Packaging Status */}
-               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Packaging Status</label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div onClick={() => handleChange('inclusionType', 'included')} className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-all ${formData.inclusionType === 'included' ? 'bg-green-50 border-green-500 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
-                    <CheckCircle2 size={20} className={formData.inclusionType === 'included' ? "text-green-600" : "text-gray-400"} />
-                    <span className={`text-xs font-bold ${formData.inclusionType === 'included' ? "text-green-700" : "text-gray-500"}`}>Included</span>
+                    <div>
+  <label className="block text-xs font-semibold text-gray-500 mb-1">Meal Type</label>
+  <select
+    // @ts-ignore
+    value={formData.mealType || ''}
+    onChange={(e) => handleChange('mealType' as any, e.target.value)}
+    className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium outline-none"
+  >
+    <option value="">— Not Set —</option>
+    <option value="Breakfast">Breakfast</option>
+    <option value="Lunch">Lunch</option>
+    <option value="Dinner">Dinner</option>
+    <option value="High Tea">High Tea</option>
+  </select>
+</div>
+<div>
+  <label className="block text-xs font-semibold text-gray-500 mb-1">Menu Style</label>
+  <select
+    // @ts-ignore
+    value={formData.menuStyle || ''}
+    onChange={(e) => handleChange('menuStyle' as any, e.target.value)}
+    className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium outline-none"
+  >
+    <option value="">— Not Set —</option>
+    <option value="Buffet">Buffet</option>
+    <option value="Fixed Menu">Fixed Menu</option>
+    <option value="A La Carte">A La Carte</option>
+  </select>
+</div>
                   </div>
-                  <div onClick={() => handleChange('inclusionType', 'excluded')} className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-all ${formData.inclusionType === 'excluded' ? 'bg-red-50 border-red-500 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
-                    <Ban size={20} className={formData.inclusionType === 'excluded' ? "text-red-600" : "text-gray-400"} />
-                    <span className={`text-xs font-bold ${formData.inclusionType === 'excluded' ? "text-red-700" : "text-gray-500"}`}>Excluded</span>
-                  </div>
-                   <div onClick={() => handleChange('inclusionType', 'optional')} className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-all ${formData.inclusionType === 'optional' ? 'bg-blue-50 border-blue-500 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
-                    <PlusSquare size={20} className={formData.inclusionType === 'optional' ? "text-blue-600" : "text-gray-400"} />
-                    <span className={`text-xs font-bold ${formData.inclusionType === 'optional' ? "text-blue-700" : "text-gray-500"}`}>Optional</span>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Meal Notes / Special Instructions</label>
+                    <textarea
+                      rows={2}
+                      // @ts-ignore
+                      value={formData.mealNotes || ''}
+                      onChange={(e) => handleChange('mealNotes' as any, e.target.value)}
+                      placeholder="e.g. Vegetarian breakfast required, dinner buffet only on Day 2..."
+                      className="w-full p-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 focus:border-orange-500 outline-none resize-none"
+                    />
                   </div>
                 </div>
-              </div>
+              </section>
+          
 
-               {/* Date Row */}
-               <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
-                     <label className="text-[10px] uppercase font-bold text-gray-500">Check-In</label>
-                     <input type="date" value={formData.checkInDate} onChange={(e) => handleChange('checkInDate', e.target.value)} className="w-full p-2 border rounded text-xs font-bold"/>
-                  </div>
-                  <div className="col-span-2">
-                     <label className="text-[10px] uppercase font-bold text-gray-500">Time</label>
-                     <input type="time" value={formData.checkInTime} onChange={(e) => handleChange('checkInTime', e.target.value)} className="w-full p-2 border rounded text-xs"/>
-                  </div>
-                  <div className="col-span-2">
-                     <label className="text-[10px] uppercase font-bold text-gray-500 text-center block">Nights</label>
-                     <input type="number" min="1" value={formData.nights} onChange={(e) => handleChange('nights', parseInt(e.target.value) || 1)} className="w-full p-2 border border-purple-300 bg-purple-50 text-purple-700 font-bold rounded text-xs text-center"/>
-                  </div>
-                  <div className="col-span-4">
-                     <label className="text-[10px] uppercase font-bold text-gray-500">Check-Out</label>
-                     <input type="date" value={formData.checkOutDate} readOnly className="w-full p-2 bg-gray-100 border rounded text-xs text-gray-500"/>
-                  </div>
-               </div>
+          <hr className="border-gray-100" />
 
-               {/* Room Quantity (No Price) */}
-               {formData.inclusionType !== 'excluded' && (
-                 <div className="space-y-3">
-                    <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-6">
-                            <label className="block text-xs font-semibold text-gray-700 mb-1">Total Rooms</label>
-                            <input 
-                              type="number" 
-                              min="1" 
-                              value={formData.numRooms} 
-                              onChange={(e) => handleChange('numRooms', parseInt(e.target.value) || 1)} 
-                              className="w-full p-2 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-purple-500"
-                            />
-                        </div>
-                        {/* Cost Per Room input REMOVED */}
-                        {/* Total Cost Box REMOVED */}
-                    </div>
+      
 
-                    {/* Room Breakdown List (Prices removed from list) */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-3">
-                        <div className="flex justify-between items-center mb-2">
-                           <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1">
-                              <Users size={12}/> Occupancy Breakdown
-                           </label>
-                           <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold">Total Pax: {totalPax}</span>
-                        </div>
-                        
-                        <div className="space-y-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
-                           {(formData.roomOccupancy || []).map((pax, index) => (
-                              <div key={index} className="flex items-center gap-3 text-sm">
-                                  <span className="text-xs font-bold text-gray-700 w-16">Room {index + 1}:</span>
-                                  <div className="flex items-center gap-2 flex-1">
-                                      <input 
-                                        type="number" 
-                                        min="1" 
-                                        max="4"
-                                        value={pax} 
-                                        onChange={(e) => handleRoomOccupancyChange(index, parseInt(e.target.value) || 1)}
-                                        className="w-16 p-1 text-center border border-gray-300 rounded text-xs font-bold"
-                                      />
-                                      <span className="text-xs text-gray-700">Person(s)</span>
-                                  </div>
-                                  {/* PP Cost Display REMOVED */}
-                              </div>
-                           ))}
-                        </div>
-                    </div>
-                 </div>
-               )}
-            </div>
-          </section>
+             
+
+        
         </div>
       </div>
 

@@ -7,6 +7,8 @@ const RoomCategorySchema = new mongoose.Schema({
   inclusions: [String]
 });
 
+
+
 const StaySchema = new mongoose.Schema({
   stayId: String,
   name: { type: String, required: true },
@@ -19,6 +21,10 @@ const StaySchema = new mongoose.Schema({
   description: String,
   images: [String],
   roomCategories: [RoomCategorySchema],
+
+mealType: { type: String, default: '' },     // Breakfast / Lunch / Dinner / High Tea
+menuStyle: { type: String, default: '' },    // Buffet / Fixed Menu / A La Carte
+mealNotes: { type: String, default: '' },
 
   // 🌟 NEW OTA / GDS PROPERTY SPECS 🌟
   chainCode: { type: String, default: '' },

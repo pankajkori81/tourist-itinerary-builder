@@ -810,7 +810,8 @@ import {
   Ban, CheckCircle2, PlusSquare, Briefcase, AlertTriangle, 
   Map,
   MapPin , GripVertical,
-  X
+  X,
+  StickyNote
 } from 'lucide-react';
 
 
@@ -1445,10 +1446,11 @@ export default function DaywisePage() {
                       </div>
                     )}
 
-                    {/* STAY CARD */}
+                 
+                          {/* STAY CARD */}
                     {item.type === 'stay' && (
                       <div className={`rounded-xl p-6 shadow-lg border-l-4 flex gap-5 group relative ${item.isContinued ? 'bg-gray-50 border-gray-400 opacity-90' : item.inclusionType === 'excluded' ? 'bg-white border-red-500' : 'bg-white border-purple-500'}`}>
-                          <div className="w-24 h-32 bg-gray-100 rounded-lg flex-shrink-0 relative overflow-hidden group-hover:shadow-md transition-all flex flex-col items-center justify-center">
+                          <div className="w-24  min-h-32 bg-gray-100 rounded-lg flex-shrink-0 relative overflow-hidden group-hover:shadow-md transition-all flex flex-col items-center justify-center">
                                <Hotel size={32} className={item.inclusionType === 'excluded' ? 'text-red-500' : 'text-purple-600'} />
                               <div className={`absolute top-0 left-0 text-white text-[10px] font-bold px-1 py-1 rounded-br-lg z-10 ${item.isContinued ? 'bg-gray-500' : (item.inclusionType === 'excluded' ? 'bg-red-500' : 'bg-purple-600')}`}>{item.isContinued ? 'CONTINUED' : 'STAY'}</div>
                           </div>
@@ -1456,7 +1458,6 @@ export default function DaywisePage() {
                               <div className="flex justify-between items-start">
                                   <div>
                                       <h4 className="font-bold text-xl text-gray-800 leading-tight">{item.hotelName}</h4>
-                                      {!item.isContinued && supplierName && <div className="mt-1 inline-flex items-center gap-1 bg-purple-50 text-purple-800 px-2 py-0.5 rounded text-[10px] border border-purple-100"><Briefcase size={10} /><span className="font-bold">By: {supplierName}</span></div>}
                                       <div className="flex gap-2 mt-1.5 items-center">
                                           {!item.isContinued && <StatusBadge status={item.inclusionType} />}
                                           <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-gray-900 px-2 py-0.5 rounded border border-purple-100">{item.category} • {item.stayType}</span>
@@ -1470,23 +1471,46 @@ export default function DaywisePage() {
                                     </div>
                                   )}
                               </div>
+
                               <div className="grid grid-cols-12 gap-3 mt-4">
-                                  <div className="col-span-4 bg-white border border-gray-200 rounded p-2">
+                                  <div className="col-span-3 bg-white border border-gray-100 rounded p-2">
                                       <div className="text-[10px] text-gray-500 uppercase font-bold mb-0.5">Room</div>
                                       <div className="text-xs font-bold text-gray-700 truncate" title={item.roomCategory}>{item.numRooms} x {item.roomCategory}</div>
                                   </div>
-                                  <div className="col-span-4 bg-white border border-gray-200 rounded p-2">
+                                  <div className="col-span-3 bg-white border border-gray-100 rounded p-2">
                                       <div className="text-[10px] text-gray-500 uppercase font-bold mb-0.5 flex items-center gap-1">Duration</div>
                                       <div className="text-xs font-bold text-gray-700 flex items-center gap-1"><Moon size={12} className="text-purple-400" /> {item.nights} Nights</div>
                                   </div>
-                                  <div className="col-span-4 bg-white border border-gray-200 rounded p-2">
+                                  <div className="col-span-3 bg-white border border-gray-100 rounded p-2">
                                       <div className="text-[10px] text-gray-500 uppercase font-bold mb-0.5">Schedule</div>
                                       <div className="text-xs font-bold text-gray-700 flex justify-between"><span>In: {item.checkInTime}</span><span className="text-gray-300">|</span><span>Out: {item.checkOutTime}</span></div>
                                   </div>
+                                  <div className="col-span-3 bg-white border border-gray-100 rounded p-2">
+                                      <div className="text-[10px] text-gray-500 uppercase font-bold mb-0.5 flex items-center gap-1"><Utensils size={10}/> Meal</div>
+                                      <div className="text-xs font-bold text-gray-700 truncate" title={`${item.mealType || ''} • ${item.menuStyle || ''}`}>
+                                        {item.mealType ? `${item.mealType} • ${item.menuStyle}` : 'Not Set'}
+                                      </div>
+                                  </div>
                               </div>
+
+                              {item.description && (
+                                <div className="mt-3 text-xs text-gray-500 leading-relaxed border-t border-gray-100 pt-3">
+                                  {item.description}
+                                </div>
+                              )}
+
+                              {item.mealNotes && (
+                                <div className="mt-3 flex items-start gap-2 bg-amber-50/60 border border-amber-100 rounded-lg p-2.5">
+                                  <StickyNote size={13} className="text-amber-600 mt-0.5 shrink-0" />
+                                  <div className="text-xs text-amber-800"><span className="font-bold">Meal Notes: </span>{item.mealNotes}</div>
+                                </div>
+                              )}
                           </div>
                       </div>
                     )}
+
+
+
 
             
                     {/* TRANSPORT CARD */}
