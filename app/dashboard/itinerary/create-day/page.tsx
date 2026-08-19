@@ -1761,25 +1761,6 @@ export default function DaywisePage() {
 
 
 
-{/* 
-                {selectedDayIndex < dayPlans.length - 1 && (
-                
-                <div className="absolute bottom-6 right-8 z-50">
-                  <button
-                    onClick={() => {
-                      setSelectedDayIndex(selectedDayIndex + 1);
-                      setViewMode('list');
-                    }}
-                    className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-[0_8px_25px_rgba(37,99,235,0.4)] hover:shadow-[0_10px_30px_rgba(37,99,235,0.6)] hover:-translate-y-1 border border-blue-400/50 backdrop-blur-md"
-                  >
-                    Create: Day {dayPlans[selectedDayIndex + 1].dayNumber}
-                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-                  </button>
-                </div>
-              )} */}
-
-
-
               {/* ========================================== */}
               {/* 🌟 NEW: FIXED NAVIGATION OVERLAY (BACK & NEXT) */}
               {/* ========================================== */}
@@ -1821,13 +1802,7 @@ export default function DaywisePage() {
                   
                 </div>
               )}
-              {/* ========================================== */}
-
-
-    
-
           
-              
               </div>
 
             </div>

@@ -1317,34 +1317,7 @@ export default function StayForm({ initialData, city, dayDate, onSave, onCancel 
 
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    {/* <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">Meal Type</label>
-                      <select
-                        // @ts-ignore
-                        value={formData.mealType || 'Breakfast'}
-                        onChange={(e) => handleChange('mealType' as any, e.target.value)}
-                        className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium outline-none"
-                      >
-                        <option value="Breakfast">Breakfast</option>
-                        <option value="Lunch">Lunch</option>
-                        <option value="Dinner">Dinner</option>
-                        <option value="High Tea">High Tea</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">Menu Style</label>
-                      <select
-                        // @ts-ignore
-                        value={formData.menuStyle || 'Buffet'}
-                        onChange={(e) => handleChange('menuStyle' as any, e.target.value)}
-                        className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium outline-none"
-                      >
-                        <option value="Buffet">Buffet</option>
-                        <option value="Fixed Menu">Fixed Menu</option>
-                        <option value="A La Carte">A La Carte</option>
-                      </select>
-                    </div> */}
-
+                
                     <div>
   <label className="block text-xs font-semibold text-gray-500 mb-1">Meal Type</label>
   <select
