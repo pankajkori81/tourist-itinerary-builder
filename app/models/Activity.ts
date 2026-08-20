@@ -15,6 +15,11 @@ const ActivitySchema = new mongoose.Schema({
   reviewsCount: { type: Number, default: 0 },
   providerLink: String,
   description: String,
+
+  mealType: { type: String, default: '' },     // Breakfast / Lunch / Dinner / High Tea
+  menuStyle: { type: String, default: '' },    // Buffet / Fixed Menu / A La Carte
+  mealNotes: { type: String, default: '' },
+
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
   linkedSupplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' } // RELATIONAL LINK
 }, { timestamps: true });

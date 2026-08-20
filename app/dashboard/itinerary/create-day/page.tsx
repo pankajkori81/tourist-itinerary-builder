@@ -1384,7 +1384,7 @@ export default function DaywisePage() {
                   <div key={`${item.type}-${item.id}`} className="relative group">
                     
                     {/* ACTIVITY CARD */}
-                    {item.type === 'activity' && (
+                    {/* {item.type === 'activity' && (
                       <div className={`bg-white rounded-xl p-5 shadow-lg border-l-4 ${item.inclusionType === 'excluded' ? 'border-red-500 opacity-90' : 'border-blue-500'} flex gap-5`}>
                          <div className={`w-24 rounded-lg flex-shrink-0 flex flex-col items-center justify-center border ${item.inclusionType === 'excluded' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                              <Camera size={32} />
@@ -1405,7 +1405,7 @@ export default function DaywisePage() {
                                    </div>
                                </div>
 
-                               {/* EDIT/DELETE ALWAYS VISIBLE */}
+                            
                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button onClick={() => openEdit(item, 'add_activity')} className="text-green-600 hover:bg-green-50 p-1.5 rounded-md"><Edit size={16}/></button>
                                     <button onClick={() => handleDeleteItem('activity', item.id)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16}/></button>
@@ -1416,8 +1416,76 @@ export default function DaywisePage() {
 
 
                             <div className="mt-4 grid grid-cols-12 gap-3">
-                               {/* Combined Pickup & Drop-off Block */}
+                         
                                <div className="col-span-8 bg-gray-50 p-3 rounded-lg border border-gray-100 flex justify-between gap-4">
+                                  <div className="flex-1 overflow-hidden">
+                                     <div className="text-[10px] text-gray-500 uppercase font-bold flex items-center gap-1 mb-1"><MapPin size={10} /> Pickup</div>
+                                     <div className="text-xs font-bold text-gray-700 truncate" title={item.pickupLocation}>{item.pickupLocation || 'Not Set'}</div>
+                                     <div className="text-[10px] font-bold text-blue-600 mt-1">{item.pickupTime || '--:--'}</div>
+                                  </div>
+                                  
+                                  <div className="w-px bg-gray-200"></div> 
+                                  
+                                  <div className="flex-1 overflow-hidden">
+                                     <div className="text-[10px] text-gray-500 uppercase font-bold flex items-center gap-1 mb-1"><MapPin size={10} /> Drop-off</div>
+                                     <div className="text-xs font-bold text-gray-700 truncate" title={item.dropoffLocation}>{item.dropoffLocation || 'Not Set'}</div>
+                                     <div className="text-[10px] font-bold text-blue-600 mt-1">{item.dropoffTime || '--:--'}</div>
+                                  </div>
+                               </div>
+                             
+                           
+                               <div className="col-span-4 bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col justify-center">
+                                  <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1"><User size={10} /> Guide Option</div>
+                                  <div className="text-xs font-bold text-gray-700 capitalize mt-1">{item.guideType === 'guided' ? 'Guided Tour' : 'Self Guided'}</div>
+                               </div>
+                            </div>
+
+
+
+                         </div>
+                      </div>
+                    )} */}
+
+
+
+
+                   {/* ACTIVITY CARD */}
+
+                   
+                    {item.type === 'activity' && (
+                      <div className={`bg-white rounded-xl p-5 shadow-lg border-l-4 ${item.inclusionType === 'excluded' ? 'border-red-500 opacity-90' : 'border-blue-500'} flex gap-5`}>
+                         <div className={`w-24 min-h-32 rounded-lg flex-shrink-0 flex flex-col items-center justify-center border ${item.inclusionType === 'excluded' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                             <Camera size={32} />
+                         </div>
+                         <div className="flex-1">
+                            <div className="flex justify-between items-start">
+                               <div>
+                                 <div className="flex items-center gap-3">
+                                     <h4 className="font-bold text-xl text-gray-800 flex items-center gap-2">{item.heading}</h4>
+                                     <StatusBadge status={item.inclusionType} />
+                                 </div>
+                                 {supplierName && <div className="mt-1 inline-flex items-center gap-1 bg-blue-50 text-blue-800 px-2 py-0.5 rounded text-[10px] border border-blue-100"><Briefcase size={10} /><span className="font-bold">By: {supplierName}</span></div>}
+                                 <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>
+                                    <div className="text-[10px] font-bold uppercase tracking-wider mt-3 mb-1 opacity-70 flex gap-4">
+                                      <span>Slot: {item.slot || 'Activity'}</span>
+                                      {item.startTime && <span>Start: {item.startTime}</span>}
+                                      <span>Duration: {item.duration || 'N/A'}</span> 
+                                   </div>
+                               </div>
+
+                            
+                               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => openEdit(item, 'add_activity')} className="text-green-600 hover:bg-green-50 p-1.5 rounded-md"><Edit size={16}/></button>
+                                    <button onClick={() => handleDeleteItem('activity', item.id)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16}/></button>
+                               </div>
+                            </div>
+
+
+
+
+                              <div className="mt-4 grid grid-cols-12 gap-3">
+                               {/* Combined Pickup & Drop-off Block */}
+                               <div className="col-span-6 bg-gray-50 p-2 rounded-lg border border-gray-100 flex justify-between gap-4">
                                   <div className="flex-1 overflow-hidden">
                                      <div className="text-[10px] text-gray-500 uppercase font-bold flex items-center gap-1 mb-1"><MapPin size={10} /> Pickup</div>
                                      <div className="text-xs font-bold text-gray-700 truncate" title={item.pickupLocation}>{item.pickupLocation || 'Not Set'}</div>
@@ -1434,17 +1502,37 @@ export default function DaywisePage() {
                                </div>
                              
                                {/* Guide Option Block */}
-                               <div className="col-span-4 bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col justify-center">
+                               <div className="col-span-3 bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col justify-center">
                                   <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1"><User size={10} /> Guide Option</div>
                                   <div className="text-xs font-bold text-gray-700 capitalize mt-1">{item.guideType === 'guided' ? 'Guided Tour' : 'Self Guided'}</div>
                                </div>
+
+                               {/* Meal Block */}
+                               <div className="col-span-3 bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col justify-center">
+                                  <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1"><Utensils size={10} /> Meal</div>
+                                  {/* @ts-ignore */}
+                                  <div className="text-xs font-bold text-gray-700 truncate" title={`${item.mealType || ''} • ${item.menuStyle || ''}`}>
+                                    {/* @ts-ignore */}
+                                    {item.mealType ? `${item.mealType} • ${item.menuStyle}` : 'Not Set'}
+                                  </div>
+                               </div>
                             </div>
+                            
+                    
 
-
+                            {/* @ts-ignore */}
+                            {item.mealNotes && (
+                              <div className="mt-3 flex items-start gap-2 bg-amber-50/60 border border-amber-100 rounded-lg p-2.5">
+                                <StickyNote size={13} className="text-amber-600 mt-0.5 shrink-0" />
+                                {/* @ts-ignore */}
+                                <div className="text-xs text-amber-800"><span className="font-bold">Meal Notes: </span>{item.mealNotes}</div>
+                              </div>
+                            )}
 
                          </div>
                       </div>
                     )}
+
 
                  
                           {/* STAY CARD */}
