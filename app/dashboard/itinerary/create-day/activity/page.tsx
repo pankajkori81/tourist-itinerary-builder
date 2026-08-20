@@ -131,7 +131,7 @@ export default function ActivityForm({
     };
   });
 
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
 
   // Auto-select preferred supplier logic
   useEffect(() => {
