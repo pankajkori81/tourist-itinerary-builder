@@ -1610,11 +1610,55 @@ export default function DaywisePage() {
                             </div>
                             <div className="flex-1 flex flex-col justify-between">
                                 
+                                
+
+
                                 {/* Header Details */}
                                 <div className="flex justify-between items-start">
                                     <div>
+                                        {/* 🌟 NEW: Category headline computed from mode + subType (badge removed) */}
+                                        {(() => {
+                                            let headline = item.vehicleType || 'Transport'; // fallback
+                                            if (item.mode === 'flight') headline = 'Flight Transfer';
+                                            else if (item.mode === 'rail') headline = 'Rail Journey';
+                                            else if (item.mode === 'ferry') headline = 'Ferry Transfer';
+                                            else if (item.mode === 'bus') headline = 'Coach Transfer';
+                                            else headline = item.subType === 'transfer' ? 'Private Transfer' : 'Vehicle at Disposal';
+
+                                            return (
+                                                <div className="flex items-center gap-3">
+                                                    <h4 className="font-bold text-xl text-gray-800">
+                                                        {headline}
+                                                    </h4>
+                                                    <StatusBadge status={item.inclusionType} />
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* Specific name/class — moved here as a smaller secondary line, badge removed */}
+                                        <div className="text-sm font-semibold text-gray-500 mt-1 flex items-center gap-1">
+                                            {item.vehicleType || 'Transport'}
+                                            {item.mode !== 'vehicle' && item.flightNumber && (
+                                                <span className="text-blue-600"> • {item.flightNumber}</span>
+                                            )}
+                                        </div>
+
+                                        {/* {supplierName && (
+                                            <div className="inline-flex items-center gap-1 bg-green-50 text-green-800 px-2 py-0.5 rounded text-[10px] border border-green-100 mt-1.5">
+                                                <Briefcase size={10} /><span className="font-bold">By: {supplierName}</span>
+                                            </div>
+                                        )} */}
+                                    </div>
+
+                                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => openEdit(item, 'add_transport')} className="text-green-600 hover:bg-green-50 p-1.5 rounded-md"><Edit size={16}/></button>
+                                            <button onClick={() => handleDeleteItem('transport', item.id)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16}/></button>
+                                    </div>
+                                    </div>
+                                {/* <div className="flex justify-between items-start">
+                                    <div>
                                         <div className="flex items-center gap-3">
-                                            {/* 🌟 DYNAMIC TITLE: Attach Flight/Train Number */}
+                                           
                                             <h4 className="font-bold text-xl text-gray-800 flex items-center gap-2">
                                                 {item.vehicleType || 'Transport'}
                                                 {item.mode !== 'vehicle' && item.flightNumber && (
@@ -1638,7 +1682,7 @@ export default function DaywisePage() {
                                             <button onClick={() => openEdit(item, 'add_transport')} className="text-green-600 hover:bg-green-50 p-1.5 rounded-md"><Edit size={16}/></button>
                                             <button onClick={() => handleDeleteItem('transport', item.id)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16}/></button>
                                     </div>
-                                </div>
+                                </div> */}
 
                                 {/* Dynamic Logistics Block */}
                                 <div className="mt-4">

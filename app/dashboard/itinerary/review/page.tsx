@@ -2058,110 +2058,7 @@ export default function ReviewPage() {
                                       verticalAlign: "top",
                                     }}
                                   >
-                                    {/* --- ACTIVITY PDF BLOCK --- */}
-{/* 
-                                    {item.category === "Activity" && (
-                                      <div>
-                                        <div
-                                          style={{
-                                            fontWeight: "bold",
-                                            color: "#1f2937",
-                                            fontSize: "16px",
-                                          }}
-                                        >
-                                          {item.heading}
-                                        </div>
-
-                                        <div
-                                          style={{
-                                            color: "#292d33ff",
-                                            fontSize: "12px",
-                                            marginTop: "4px",
-                                            marginBottom: "8px",
-                                          }}
-                                        >
-                                          {item.description}
-                                        </div>
-
-                                        <div
-                                          style={{
-                                            display: "flex",
-                                            flexWrap: "wrap",
-                                            gap: "12px",
-                                            fontSize: "12px",
-                                            padding: "8px",
-                                          }}
-                                        >
-                                          <span
-                                            style={{
-                                              color: "#292d33ff",
-                                              display: "flex",
-                                              alignItems: "center",
-                                              gap: "4px",
-                                            }}
-                                          >
-                                            Slot: {item.slot}
-                                          </span>
-
-                                          <span
-                                            style={{
-                                              display: "flex",
-                                              alignItems: "center",
-                                              gap: "4px",
-                                              color: "#292d33ff",
-                                            }}
-                                          >
-                                            Duration: {item.duration}
-                                          </span>
-
-                                          {item.startTime && (
-                                            <span
-                                              style={{ color: "#292d33ff" }}
-                                            >
-                                              Start: {item.startTime}
-                                            </span>
-                                          )}
-
-                                          {(item as any).endTime && (
-                                            <span
-                                              style={{ color: "#292d33ff" }}
-                                            >
-                                              End: {(item as any).endTime}
-                                            </span>
-                                          )}
-
-                                          <span
-                                            style={{
-                                              display: "flex",
-                                              alignItems: "center",
-                                              gap: "4px",
-                                              color: "#292d33ff",
-                                            }}
-                                          >
-                                            Pickup:{" "}
-                                            {item.pickupLocation || "TBA"}
-                                          </span>
-
-                                          {(item as any).dropoffLocation && (
-                                            <span
-                                              style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "4px",
-                                                color: "#292d33ff",
-                                              }}
-                                            >
-                                              Drop:{" "}
-                                              {(item as any).dropoffLocation}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )} */}
-
-
-
-
+ 
                                      {/* --- ACTIVITY PDF BLOCK --- */}
 
                                     {item.category === "Activity" && (
@@ -2585,10 +2482,9 @@ export default function ReviewPage() {
 
                                     {/* --- TRANSPORT PDF BLOCK --- */}
 
-                                    {item.category === "Transport" && (
+                                    {/* {item.category === "Transport" && (
                                       <div>
-                                        {/* Title & Badge */}
-
+                                      
                                         <div
                                           style={{
                                             fontWeight: "bold",
@@ -2648,7 +2544,67 @@ export default function ReviewPage() {
                                               ? "Transit Ticket"
                                               : item.subType}
                                           </span>
-                                        </div>
+                                        </div> */}
+
+
+                                      {item.category === "Transport" && (
+                                      <div>
+                                        {/* 🌟 NEW: Headline logic — category-style title instead of raw vehicle/class name + badge */}
+                                        {(() => {
+                                          // Compute the new headline based on mode + subType
+                                          let headline = item.vehicleType; // fallback, shouldn't normally show
+                                          if (item.mode === "flight") {
+                                            headline = "Flight Transfer";
+                                          } else if (item.mode === "rail") {
+                                            headline = "Rail Journey";
+                                          } else if (item.mode === "ferry") {
+                                            headline = "Ferry Transfer";
+                                          } else if (item.mode === "bus") {
+                                            headline = "Coach Transfer";
+                                          } else {
+                                            // Vehicle mode (car/sedan/van/etc.)
+                                            headline =
+                                              item.subType === "transfer"
+                                                ? "Private Transfer"
+                                                : "Vehicle at Disposal";
+                                          }
+
+                                          return (
+                                            <>
+                                              {/* New bold category headline (badge removed entirely) */}
+                                              <div
+                                                style={{
+                                                  fontWeight: "bold",
+                                                  color: "#1f2937",
+                                                  fontSize: "16px",
+                                                }}
+                                              >
+                                                {headline}
+                                              </div>
+
+                                              {/* Specific name/class — moved here from the old headline, now a smaller secondary line */}
+                                              <div
+                                                style={{
+                                                  fontSize: "12px",
+                                                  color: "#555555",
+                                                  fontWeight: "bold",
+                                                  marginTop: "2px",
+                                                }}
+                                              >
+                                                {item.vehicleType}
+                                                {["flight", "rail", "ferry"].includes(
+                                                  item.mode,
+                                                ) &&
+                                                  item.flightNumber && (
+                                                    <span style={{ color: "#2563eb" }}>
+                                                      {" "}
+                                                      • {item.flightNumber}
+                                                    </span>
+                                                  )}
+                                              </div>
+                                            </>
+                                          );
+                                        })()}
 
                                         {/* Flight Layout */}
 
