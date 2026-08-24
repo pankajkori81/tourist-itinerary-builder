@@ -1612,7 +1612,6 @@ export default function DaywisePage() {
                                 
                                 
 
-
                                 {/* Header Details */}
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -1655,6 +1654,9 @@ export default function DaywisePage() {
                                             <button onClick={() => handleDeleteItem('transport', item.id)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16}/></button>
                                     </div>
                                     </div>
+
+
+                                    
                                 {/* <div className="flex justify-between items-start">
                                     <div>
                                         <div className="flex items-center gap-3">

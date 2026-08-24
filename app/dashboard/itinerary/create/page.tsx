@@ -499,7 +499,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Users, ArrowRight } from "lucide-react"; 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useItinerary } from "@/app/context/ItineraryContext";
@@ -540,6 +540,8 @@ export default function CreateItineraryPage() {
   const searchParams = useSearchParams();
   const { itineraryData, updateItineraryData, completeStep } = useItinerary();
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+   
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
 
   // Pre-fill data from CRM Magic Button
   useEffect(() => {
@@ -557,6 +559,21 @@ export default function CreateItineraryPage() {
          });
      }
   }, [searchParams]);
+
+
+    // 🌟 Click Outside Logic — closes the country dropdown when clicking anywhere else
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        countryDropdownRef.current &&
+        !countryDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowCountryDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // --- HANDLERS ---
   const updateField = (field: keyof typeof itineraryData, value: any) => {
@@ -698,7 +715,7 @@ export default function CreateItineraryPage() {
             </div>
 
             {/* Country Selector */}
-            <div className="md:col-span-8 relative">
+            <div className="md:col-span-8 relative" ref={countryDropdownRef} >
               <label className="block text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">
                 Destination Country <span className="text-red-400">*</span>
               </label>
