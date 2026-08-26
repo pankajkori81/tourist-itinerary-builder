@@ -704,7 +704,185 @@ const getCalculatedDate = (startStr: string, dayOffset: number) => {
   return ` | ${formatDisplayDate(d.toISOString())}`;
 };
 
+// 🌟 NEW: Determines whether an item is priced as a shared total (divide)
+// or a per-person amount (multiply), based purely on its existing type/mode —
+// no new data needs to be saved anywhere.
+const getPricingMode = (typeLabel: string, mode?: string): "per_room" | "per_vehicle" | "per_person" => {
+  if (typeLabel === "Stay") return "per_room";
+  if (typeLabel === "Transport") {
+    const isTicketMode = ["flight", "rail", "ferry"].includes((mode || "").toLowerCase());
+    return isTicketMode ? "per_person" : "per_vehicle";
+  }
+  // Activity and Meal are always per-person
+  return "per_person";
+};
+
 // --- SUB COMPONENT: LEDGER ROW ---
+// const LedgerRow = ({
+//   itemId,
+//   typeLabel,
+//   typeColor,
+//   details,
+//   inclusionType,
+//   config,
+//   manualNetTotal,
+//   onCostChange,
+//   divisor,
+//   currency,
+//   formatPrice,
+//   isGhost,
+//   vendorName,
+//   rowSpan = 1,
+//   isSubRow = false,
+//   isEmployeeView = false,
+//   isOptionalChecked = false,
+//   onToggleOptional = () => {},
+// }: any) => {
+//   // 🌟 FIX: We now allow BOTH 'included' and 'optional' to be priced!
+//   const isIncluded =!inclusionType || inclusionType.toLowerCase() === "included";
+//   const isOptional = inclusionType?.toLowerCase() === "optional";
+//   const isCostable = isIncluded || isOptional;
+
+//   // Calculate PP Cost for display/editing
+//   const ppCost = divisor > 0 && isCostable ? manualNetTotal / divisor : 0;
+
+//   let rowClass =
+//     "border-b border-gray-200 hover:bg-blue-50/30 transition-colors";
+//   if (isGhost) rowClass += " bg-gray-50/80 text-gray-400";
+//   else if (!isCostable) rowClass += " opacity-60 bg-red-50/20";
+//   else if (isOptional) rowClass += " bg-orange-50/30"; // Gives optional rows a slight orange tint
+
+//   function toggleOptional(arg0: any): void {
+//     throw new Error("Function not implemented.");
+//   }
+
+//   return (
+//     <tr className={rowClass}>
+//       {!isSubRow && (
+//         <td
+//           rowSpan={rowSpan}
+//           className="py-3 px-4 align-top w-[90px] border-r border-gray-300"
+//         >
+//           <span
+//             className={`text-[11px] font-bold uppercase tracking-wider ${typeColor || "text-gray-500"}`}
+//           >
+//             {typeLabel}
+//           </span>
+//         </td>
+//       )}
+
+//       {/* 🌟 UPGRADED: Added the Checkbox for Optional Items */}
+//       <td className="py-3 px-4 align-middle">
+//         <span className="font-medium text-sm flex items-center flex-wrap gap-2 text-gray-800">
+//           {details}
+//           {!isIncluded && (
+//             <span
+//               className={`text-[10px] uppercase font-bold ${isOptional ? "text-orange-500" : "text-red-500"}`}
+//             >
+//               ({inclusionType})
+//             </span>
+//           )}
+//           {isOptional && !isEmployeeView && (
+//             <label className="flex items-center gap-1 cursor-pointer bg-orange-100 hover:bg-orange-200 px-2 py-0.5 rounded text-[10px] font-bold text-orange-700 transition-colors shadow-sm ml-2">
+//               <input
+//                 type="checkbox"
+//                 checked={isOptionalChecked}
+//                 onChange={() => onToggleOptional(itemId.toString())}
+//                 className="accent-orange-600 cursor-pointer w-3 h-3"
+//               />
+//               Add to Quote
+//             </label>
+//           )}
+//         </span>
+//       </td>
+
+//       {!isEmployeeView && (
+//         <td className="py-3 px-4 align-middle">
+//           <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded truncate max-w-[100px] block">
+//             {vendorName}
+//           </span>
+//         </td>
+//       )}
+
+//       <td className="py-3 px-4 align-middle">
+//         <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-1 rounded inline-block whitespace-nowrap">
+//           {config}
+//         </span>
+//       </td>
+
+//       {isEmployeeView ? (
+//         <td className="py-3 px-4 align-middle text-right">
+//           <span
+//             className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${isOptional ? "text-orange-700 bg-orange-50 border-orange-200" : "text-green-700 bg-green-50 border-green-200"}`}
+//           >
+//             {isOptional ? "Optional" : "Included"}
+//           </span>
+//         </td>
+//       ) : (
+//         <>
+//           <td className="py-3 px-4 align-middle text-right">
+//             {!isGhost && isCostable ? (
+//               <div className="flex items-center justify-end gap-1">
+//                 <span className="text-xs font-bold text-gray-400">
+//                   {currency}
+//                 </span>
+//                 <input
+//                   type="number"
+//                   min="0"
+//                   value={manualNetTotal === 0 ? "" : manualNetTotal}
+//                   onChange={(e) =>
+//                     onCostChange(itemId, parseFloat(e.target.value) || 0, "net")
+//                   }
+//                   placeholder="0"
+//                   className="w-24 p-1.5 text-right font-bold text-gray-900 border border-blue-200 rounded focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white"
+//                 />
+//               </div>
+//             ) : (
+//               <span className="text-xs text-gray-400 italic">
+//                 {isGhost ? "Included" : "-"}
+//               </span>
+//             )}
+//           </td>
+
+//           <td className="py-3 px-4 align-middle text-right border-l border-gray-100 bg-gray-50/50">
+//             {!isGhost && isCostable && (
+//               <div className="flex flex-col items-end">
+//                 <div className="flex items-center justify-end gap-1">
+//                   <span className="text-xs font-bold text-gray-400">
+//                     {currency}
+//                   </span>
+//                   <input
+//                     type="number"
+//                     min="0"
+//                     value={
+//                       ppCost === 0
+//                         ? ""
+//                         : Number.isInteger(ppCost)
+//                           ? ppCost
+//                           : ppCost.toFixed(2)
+//                     }
+//                     onChange={(e) =>
+//                       onCostChange(
+//                         itemId,
+//                         (parseFloat(e.target.value) || 0) * divisor,
+//                         "pp",
+//                       )
+//                     }
+//                     placeholder="0"
+//                     className="w-20 p-1 text-right font-mono text-xs font-bold text-blue-600 border border-transparent hover:border-blue-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-all bg-transparent focus:bg-white"
+//                   />
+//                 </div>
+//                 <div className="text-[9px] text-gray-400 mr-1">/ person</div>
+//               </div>
+//             )}
+//           </td>
+//         </>
+//       )}
+//     </tr>
+//   );
+// };
+
+
 const LedgerRow = ({
   itemId,
   typeLabel,
@@ -724,12 +902,16 @@ const LedgerRow = ({
   isEmployeeView = false,
   isOptionalChecked = false,
   onToggleOptional = () => {},
+  pricingMode = "per_room", // 🌟 NEW: "per_room" | "per_vehicle" | "per_person"
 }: any) => {
   // 🌟 FIX: We now allow BOTH 'included' and 'optional' to be priced!
   const isIncluded =
     !inclusionType || inclusionType.toLowerCase() === "included";
   const isOptional = inclusionType?.toLowerCase() === "optional";
   const isCostable = isIncluded || isOptional;
+
+  // 🌟 NEW: for per-person items, PP Cost is the box the admin types into
+  const isPerPerson = pricingMode === "per_person";
 
   // Calculate PP Cost for display/editing
   const ppCost = divisor > 0 && isCostable ? manualNetTotal / divisor : 0;
@@ -739,10 +921,6 @@ const LedgerRow = ({
   if (isGhost) rowClass += " bg-gray-50/80 text-gray-400";
   else if (!isCostable) rowClass += " opacity-60 bg-red-50/20";
   else if (isOptional) rowClass += " bg-orange-50/30"; // Gives optional rows a slight orange tint
-
-  function toggleOptional(arg0: any): void {
-    throw new Error("Function not implemented.");
-  }
 
   return (
     <tr className={rowClass}>
@@ -784,7 +962,96 @@ const LedgerRow = ({
         </span>
       </td>
 
-      {!isEmployeeView && (
+
+       {!isEmployeeView && (
+        <td className="py-3 px-4 align-middle">
+          <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded truncate max-w-[100px] block">
+            {vendorName}
+          </span>
+        </td>
+      )}
+
+      <td className="py-3 px-4 align-middle">
+        <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-1 rounded inline-block whitespace-nowrap">
+          {config}
+        </span>
+      </td>
+
+            {isEmployeeView ? (
+        <td className="py-3 px-4 align-middle text-right">
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${isOptional ? "text-orange-700 bg-orange-50 border-orange-200" : "text-green-700 bg-green-50 border-green-200"}`}
+          >
+            {isOptional ? "Optional" : "Included"}
+          </span>
+        </td>
+      ) : (
+        <>
+          {/* UNIT PRICE — the ONE editable input, always in the same place */}
+          <td className="py-3 px-4 align-middle text-right border-l border-gray-100 bg-blue-50/30">
+            {!isGhost && isCostable ? (
+              <div className="flex flex-col items-end">
+                <div className="text-[9px] font-bold text-blue-600 uppercase tracking-wide mr-1">
+                  {isPerPerson ? "Per Pax" : "Total"}
+                </div>
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-xs font-bold text-gray-400">{currency}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={
+                      isPerPerson
+                        ? (ppCost === 0 ? "" : (Number.isInteger(ppCost) ? ppCost : ppCost.toFixed(2)))
+                        : (manualNetTotal === 0 ? "" : manualNetTotal)
+                    }
+                    onChange={(e) => {
+                      const typed = parseFloat(e.target.value) || 0;
+                      const newNetTotal = isPerPerson ? typed * divisor : typed;
+                      onCostChange(itemId, newNetTotal, "net");
+                    }}
+                    placeholder="0"
+                    className="w-20 p-1.5 text-right font-bold text-gray-900 border border-blue-300 rounded focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white"
+                  />
+                </div>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400 italic">{isGhost ? "Included" : "-"}</span>
+            )}
+          </td>
+
+          {/* NET TOTAL — always computed, always read-only */}
+          <td className="py-3 px-4 align-middle text-right border-l border-gray-100 bg-gray-50/50">
+            {!isGhost && isCostable && (
+              <div className="flex items-center justify-end gap-1">
+                <span className="text-xs font-bold text-gray-400">{currency}</span>
+                <span className="text-sm font-bold text-gray-800">
+                  {Number.isInteger(manualNetTotal) ? manualNetTotal : manualNetTotal.toFixed(2)}
+                </span>
+              </div>
+            )}
+          </td>
+
+          {/* PP COST — always computed, always read-only */}
+          <td className="py-3 px-4 align-middle text-right border-l border-gray-100 bg-gray-50/50">
+            {!isGhost && isCostable && (
+              <div className="flex flex-col items-end">
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-xs font-bold text-gray-400">{currency}</span>
+                  <span className="text-xs font-mono font-bold text-blue-600">
+                    {Number.isInteger(ppCost) ? ppCost : ppCost.toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-[9px] text-gray-400 mr-1">/ person</div>
+              </div>
+            )}
+          </td>
+        </>
+      )}
+    </tr>
+  );
+};
+
+      {/* {!isEmployeeView && (
         <td className="py-3 px-4 align-middle">
           <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded truncate max-w-[100px] block">
             {vendorName}
@@ -808,22 +1075,33 @@ const LedgerRow = ({
         </td>
       ) : (
         <>
-          <td className="py-3 px-4 align-middle text-right">
+         
+          <td className={`py-3 px-4 align-middle text-right ${isPerPerson ? "border-l border-gray-100 bg-gray-50/50" : ""}`}>
             {!isGhost && isCostable ? (
-              <div className="flex items-center justify-end gap-1">
-                <span className="text-xs font-bold text-gray-400">
-                  {currency}
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  value={manualNetTotal === 0 ? "" : manualNetTotal}
-                  onChange={(e) =>
-                    onCostChange(itemId, parseFloat(e.target.value) || 0, "net")
-                  }
-                  placeholder="0"
-                  className="w-24 p-1.5 text-right font-bold text-gray-900 border border-blue-200 rounded focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white"
-                />
+              <div className="flex flex-col items-end">
+                {!isPerPerson && (
+                  <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wide mr-1">Total</div>
+                )}
+                <div className="flex items-center justify-end gap-1">
+                  <span className={`text-xs font-bold ${isPerPerson ? "text-gray-400" : "text-gray-400"}`}>
+                    {currency}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={manualNetTotal === 0 ? "" : manualNetTotal}
+                    onChange={(e) =>
+                      onCostChange(itemId, parseFloat(e.target.value) || 0, "net")
+                    }
+                    placeholder="0"
+                    readOnly={isPerPerson}
+                    className={
+                      isPerPerson
+                        ? "w-20 p-1 text-right font-mono text-xs font-bold text-gray-600 border border-transparent rounded bg-transparent cursor-default"
+                        : "w-24 p-1.5 text-right font-bold text-gray-900 border border-blue-200 rounded focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white"
+                    }
+                  />
+                </div>
               </div>
             ) : (
               <span className="text-xs text-gray-400 italic">
@@ -832,9 +1110,13 @@ const LedgerRow = ({
             )}
           </td>
 
-          <td className="py-3 px-4 align-middle text-right border-l border-gray-100 bg-gray-50/50">
+        
+          <td className={`py-3 px-4 align-middle text-right ${!isPerPerson ? "border-l border-gray-100 bg-gray-50/50" : ""}`}>
             {!isGhost && isCostable && (
               <div className="flex flex-col items-end">
+                {isPerPerson && (
+                  <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wide mr-1">Per Pax</div>
+                )}
                 <div className="flex items-center justify-end gap-1">
                   <span className="text-xs font-bold text-gray-400">
                     {currency}
@@ -857,10 +1139,16 @@ const LedgerRow = ({
                       )
                     }
                     placeholder="0"
-                    className="w-20 p-1 text-right font-mono text-xs font-bold text-blue-600 border border-transparent hover:border-blue-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-all bg-transparent focus:bg-white"
+                    className={
+                      isPerPerson
+                        ? "w-24 p-1.5 text-right font-bold text-gray-900 border border-blue-200 rounded focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white"
+                        : "w-20 p-1 text-right font-mono text-xs font-bold text-blue-600 border border-transparent hover:border-blue-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-all bg-transparent focus:bg-white"
+                    }
                   />
                 </div>
-                <div className="text-[9px] text-gray-400 mr-1">/ person</div>
+                {!isPerPerson && (
+                  <div className="text-[9px] text-gray-400 mr-1">/ person</div>
+                )}
               </div>
             )}
           </td>
@@ -868,7 +1156,7 @@ const LedgerRow = ({
       )}
     </tr>
   );
-};
+}; */}
 
 export default function CostingPage() {
   const router = useRouter();
@@ -1669,7 +1957,7 @@ export default function CostingPage() {
     const formattedStart = seasonStart ? formatDisplayDate(seasonStart) : "TBA";
     const formattedEnd = seasonEnd ? formatDisplayDate(seasonEnd) : "TBA";
     const tripDateString = `${formattedStart} - ${formattedEnd}`;
-    // // --- 2. HEADER ---
+    
 
     const logoBase64 =
       "data:image/png;base64,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";
@@ -2377,7 +2665,10 @@ export default function CostingPage() {
 <th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase w-[110px] min-[1700px]:w-[150px]">
   Config
 </th>
-<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[110px] min-[1700px]:w-[140px]">
+<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[90px] min-[1700px]:w-[110px] text-blue-700">
+  Unit Price
+</th>
+<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[100px] min-[1700px]:w-[130px]">
   Net Total
 </th>
 <th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[80px] min-[1700px]:w-[100px]">
@@ -2461,10 +2752,11 @@ export default function CostingPage() {
                                       s.id.toString(),
                                     )}
                                     onToggleOptional={toggleOptional}
+                                    pricingMode="per_room"
                                   />
                                 ));
                               })}
-                              {(day.transports || []).map(
+                              {/* {(day.transports || []).map(
                                 (t: any, i: number) => {
                                   const divisor = t.paxCount || travelerCount;
                                   return (
@@ -2491,8 +2783,44 @@ export default function CostingPage() {
                                     />
                                   );
                                 },
+                              )} */}
+
+                                {(day.transports || []).map(
+                                (t: any, i: number) => {
+                                  const divisor = t.paxCount || travelerCount;
+                                  // 🌟 NEW: determine pricing mode + matching config text
+                                  const transportPricingMode = getPricingMode("Transport", t.mode);
+                                  const isTicketMode = transportPricingMode === "per_person";
+                                  const transportConfig = isTicketMode
+                                    ? `${divisor} Pax × ${t.vehicleCount || 1} Ticket${(t.vehicleCount || 1) > 1 ? "s" : ""}`
+                                    : `${t.vehicleCount} Veh / ${divisor} Pax`;
+                                  return (
+                                    <LedgerRow
+                                      key={`t-${i}`}
+                                      itemId={t.id}
+                                      typeLabel="Transport"
+                                      typeColor="text-gray-900"
+                                      details={t.vehicleType}
+                                      inclusionType={t.inclusionType}
+                                      config={transportConfig}
+                                      manualNetTotal={getCost(t.id)}
+                                      onCostChange={handleManualCostChange}
+                                      divisor={divisor}
+                                      currency={currency}
+                                      formatPrice={formatPrice}
+                                      vendorName={getVendorName(
+                                        t.linkedSupplierId,
+                                      )}
+                                      isOptionalChecked={includedOptionals.includes(
+                                        t.id.toString(),
+                                      )}
+                                      onToggleOptional={toggleOptional}
+                                      pricingMode={transportPricingMode}
+                                    />
+                                  );
+                                },
                               )}
-                              {(day.activities || []).map(
+                              {/* {(day.activities || []).map(
                                 (a: any, i: number) => {
                                   const pax = a.paxCount || travelerCount;
                                   return (
@@ -2519,6 +2847,36 @@ export default function CostingPage() {
                                     />
                                   );
                                 },
+                              )} */}
+
+                                {(day.activities || []).map(
+                                (a: any, i: number) => {
+                                  const pax = a.paxCount || travelerCount;
+                                  return (
+                                    <LedgerRow
+                                      key={`a-${i}`}
+                                      itemId={a.id}
+                                      typeLabel="Activity"
+                                      typeColor="text-gray-900"
+                                      details={a.heading}
+                                      inclusionType={a.inclusionType}
+                                      config={`${pax} Pax × 1 Entry`}
+                                      manualNetTotal={getCost(a.id)}
+                                      onCostChange={handleManualCostChange}
+                                      divisor={pax}
+                                      currency={currency}
+                                      formatPrice={formatPrice}
+                                      vendorName={getVendorName(
+                                        a.linkedSupplierId,
+                                      )}
+                                      isOptionalChecked={includedOptionals.includes(
+                                        a.id.toString(),
+                                      )}
+                                      onToggleOptional={toggleOptional}
+                                      pricingMode="per_person"
+                                    />
+                                  );
+                                },
                               )}
                               {(day.meals || []).map((m: any, i: number) => {
                                 return (
@@ -2542,6 +2900,7 @@ export default function CostingPage() {
                                       m.id.toString(),
                                     )}
                                     onToggleOptional={toggleOptional}
+                                     pricingMode="per_person"
                                   />
                                 );
                               })}
