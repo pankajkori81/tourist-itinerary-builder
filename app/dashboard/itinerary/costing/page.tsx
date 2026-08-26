@@ -963,13 +963,13 @@ const LedgerRow = ({
       </td>
 
 
-       {!isEmployeeView && (
+       {/* {!isEmployeeView && (
         <td className="py-3 px-4 align-middle">
           <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded truncate max-w-[100px] block">
             {vendorName}
           </span>
         </td>
-      )}
+      )} */}
 
       <td className="py-3 px-4 align-middle">
         <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-1 rounded inline-block whitespace-nowrap">
@@ -1157,6 +1157,7 @@ const LedgerRow = ({
     </tr>
   );
 }; */}
+
 
 export default function CostingPage() {
   const router = useRouter();
@@ -2651,31 +2652,32 @@ export default function CostingPage() {
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                     >
-                      <thead className="bg-gray-50 text-gray-500 border-b border-gray-400">
+                     
+
+                                            <thead className="bg-gray-50 text-gray-500 border-b border-gray-400">
                         
-<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase w-[60px] min-[1700px]:w-[80px]">
+<th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase w-[45px] min-[1700px]:w-[80px]">
   Type
 </th>
-<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase">
+<th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase">
   Item Details
 </th>
-<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase w-[90px] min-[1700px]:w-[120px] text-blue-600">
+{/* <th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase w-[65px] min-[1700px]:w-[120px] text-blue-600">
   Supplier
-</th>
-<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase w-[110px] min-[1700px]:w-[150px]">
+</th> */}
+<th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase w-[85px] min-[1700px]:w-[150px]">
   Config
 </th>
-<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[90px] min-[1700px]:w-[110px] text-blue-700">
+<th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[70px] min-[1700px]:w-[110px] text-blue-700">
   Unit Price
 </th>
-<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[100px] min-[1700px]:w-[130px]">
+<th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[75px] min-[1700px]:w-[130px]">
   Net Total
 </th>
-<th className="py-3 px-2 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[80px] min-[1700px]:w-[100px]">
+<th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase text-right w-[60px] min-[1700px]:w-[100px]">
   PP Cost
 </th>
                        
-
                       </thead>
 
                       {processedDayPlans.map((day, index) => (
@@ -2691,7 +2693,8 @@ export default function CostingPage() {
                               className={`text-sm transition-all duration-200 ${snapshot.isDragging ? "bg-blue-50 shadow-2xl relative z-50 ring-2 ring-blue-500" : "bg-white"}`}
                             >
                               <tr className="bg-gray-100 border-b border-gray-400">
-                                <td colSpan={6} className="py-2 px-4">
+                                {/* <td colSpan={6} className="py-2 px-4"> */}
+                                <td colSpan={5} className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4">
                                   <div className="flex items-center gap-2 text-gray-700 font-bold">
                                     {/* 🌟 THE DRAG HANDLE 🌟 */}
                                     <div
@@ -2756,35 +2759,8 @@ export default function CostingPage() {
                                   />
                                 ));
                               })}
-                              {/* {(day.transports || []).map(
-                                (t: any, i: number) => {
-                                  const divisor = t.paxCount || travelerCount;
-                                  return (
-                                    <LedgerRow
-                                      key={`t-${i}`}
-                                      itemId={t.id}
-                                      typeLabel="Transport"
-                                      typeColor="text-gray-900"
-                                      details={t.vehicleType}
-                                      inclusionType={t.inclusionType}
-                                      config={`${t.vehicleCount} Veh / ${divisor} Pax`}
-                                      manualNetTotal={getCost(t.id)}
-                                      onCostChange={handleManualCostChange}
-                                      divisor={divisor}
-                                      currency={currency}
-                                      formatPrice={formatPrice}
-                                      vendorName={getVendorName(
-                                        t.linkedSupplierId,
-                                      )}
-                                      isOptionalChecked={includedOptionals.includes(
-                                        t.id.toString(),
-                                      )}
-                                      onToggleOptional={toggleOptional}
-                                    />
-                                  );
-                                },
-                              )} */}
-
+                         
+                              
                                 {(day.transports || []).map(
                                 (t: any, i: number) => {
                                   const divisor = t.paxCount || travelerCount;
@@ -2820,34 +2796,7 @@ export default function CostingPage() {
                                   );
                                 },
                               )}
-                              {/* {(day.activities || []).map(
-                                (a: any, i: number) => {
-                                  const pax = a.paxCount || travelerCount;
-                                  return (
-                                    <LedgerRow
-                                      key={`a-${i}`}
-                                      itemId={a.id}
-                                      typeLabel="Activity"
-                                      typeColor="text-gray-900"
-                                      details={a.heading}
-                                      inclusionType={a.inclusionType}
-                                      config={`${pax} Pax`}
-                                      manualNetTotal={getCost(a.id)}
-                                      onCostChange={handleManualCostChange}
-                                      divisor={pax}
-                                      currency={currency}
-                                      formatPrice={formatPrice}
-                                      vendorName={getVendorName(
-                                        a.linkedSupplierId,
-                                      )}
-                                      isOptionalChecked={includedOptionals.includes(
-                                        a.id.toString(),
-                                      )}
-                                      onToggleOptional={toggleOptional}
-                                    />
-                                  );
-                                },
-                              )} */}
+                             
 
                                 {(day.activities || []).map(
                                 (a: any, i: number) => {
