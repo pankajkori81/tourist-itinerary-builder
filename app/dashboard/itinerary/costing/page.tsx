@@ -938,7 +938,7 @@ const LedgerRow = ({
       )}
 
       {/* 🌟 UPGRADED: Added the Checkbox for Optional Items */}
-      <td className="py-3 px-4 align-middle">
+      {/* <td className="py-3 px-3 align-middle">
         <span className="font-medium text-sm flex items-center flex-wrap gap-2 text-gray-800">
           {details}
           {!isIncluded && (
@@ -960,6 +960,39 @@ const LedgerRow = ({
             </label>
           )}
         </span>
+      </td> */}
+
+
+      {/* 🌟 FIX 1: Shrunk "Item Details" column and prevented massive stretching on Windows */}
+      <td className="py-3 px-3 align-middle w-[220px] lg:w-[280px] xl:w-[350px]">
+        <div className="flex flex-col gap-1.5">
+          {/* line-clamp-2 ensures long hotel names wrap nicely and don't make the row huge */}
+          <span className="font-medium text-sm text-gray-800 line-clamp-2 leading-tight" title={details}>
+            {details}
+          </span>
+          
+          {/* Badges moved to their own flex row to save horizontal space */}
+          {(!isIncluded || (isOptional && !isEmployeeView)) && (
+            <div className="flex items-center flex-wrap gap-2">
+              {!isIncluded && (
+                <span className={`text-[10px] uppercase font-bold ${isOptional ? "text-orange-500" : "text-red-500"}`}>
+                  ({inclusionType})
+                </span>
+              )}
+              {isOptional && !isEmployeeView && (
+                <label className="flex items-center gap-1 cursor-pointer bg-orange-100 hover:bg-orange-200 px-2 py-0.5 rounded text-[10px] font-bold text-orange-700 transition-colors shadow-sm w-max">
+                  <input
+                    type="checkbox"
+                    checked={isOptionalChecked}
+                    onChange={() => onToggleOptional(itemId.toString())}
+                    className="accent-orange-600 cursor-pointer w-3 h-3"
+                  />
+                  Add to Quote
+                </label>
+              )}
+            </div>
+          )}
+        </div>
       </td>
 
 
@@ -2659,7 +2692,12 @@ export default function CostingPage() {
 <th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase w-[45px] min-[1700px]:w-[80px]">
   Type
 </th>
-<th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase">
+{/* <th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase">
+  Item Details
+</th> */}
+
+{/* 🌟 FIX 2: Apply the exact same shrunk widths to the Table Header */}
+<th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase w-[220px] lg:w-[280px] xl:w-[350px]">
   Item Details
 </th>
 {/* <th className="py-2 px-1.5 min-[1700px]:py-3 min-[1700px]:px-4 text-xs font-bold uppercase w-[65px] min-[1700px]:w-[120px] text-blue-600">
