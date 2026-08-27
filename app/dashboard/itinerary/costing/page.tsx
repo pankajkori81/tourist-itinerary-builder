@@ -2805,9 +2805,10 @@ export default function CostingPage() {
                                   // 🌟 NEW: determine pricing mode + matching config text
                                   const transportPricingMode = getPricingMode("Transport", t.mode);
                                   const isTicketMode = transportPricingMode === "per_person";
+                                  
                                   const transportConfig = isTicketMode
-                                    ? `${divisor} Pax × ${t.vehicleCount || 1} Ticket${(t.vehicleCount || 1) > 1 ? "s" : ""}`
-                                    : `${t.vehicleCount} Veh / ${divisor} Pax`;
+  ? `${divisor} Ticket${divisor > 1 ? "s" : ""} (${divisor} Pax)`
+  : `${t.vehicleCount} Veh / ${divisor} Pax`;
                                   return (
                                     <LedgerRow
                                       key={`t-${i}`}
@@ -2847,7 +2848,8 @@ export default function CostingPage() {
                                       typeColor="text-gray-900"
                                       details={a.heading}
                                       inclusionType={a.inclusionType}
-                                      config={`${pax} Pax × 1 Entry`}
+                                      // config={`${pax} Pax × 1 Entry`}
+                                      config={`${pax} Entr${pax > 1 ? "ies" : "y"} (${pax} Pax)`}
                                       manualNetTotal={getCost(a.id)}
                                       onCostChange={handleManualCostChange}
                                       divisor={pax}
