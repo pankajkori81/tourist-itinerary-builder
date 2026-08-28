@@ -625,7 +625,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback , useRef } from 'react';
 import { saveItineraryToStorage, loadItineraryFromStorage, clearItineraryStorage, saveToLibrary, getItineraryById, StoredItineraryData, RoutingData } from '@/utils/itineraryStorage';
 
 export type ItineraryStatus = 'draft' | 'pending_costing' | 'approved' | 'reedit_requested' | 'active' | 'archived';
@@ -678,10 +678,36 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
 
-  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+  // const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+  //   setToastMessage({ message, type });
+  //   setTimeout(() => setToastMessage(null), 3000); 
+  // }, []);
+
+  // useEffect(() => {
+  //   const init = async () => {
+  //     const editingId = sessionStorage.getItem('editing_itinerary_id');
+  //     if (editingId) {
+  //       await loadItineraryForEdit(editingId);
+  //       sessionStorage.removeItem('editing_itinerary_id');
+  //     } else {
+  //       loadSavedItinerary();
+  //     }
+  //   };
+  //   init();
+  // }, []);
+
+
+    const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ message, type });
     setTimeout(() => setToastMessage(null), 3000); 
   }, []);
+
+  // 🔧 NEW: single-flight guard so two saves never race each other and
+  // create duplicate documents. autosaveTimerRef holds the debounce timer.
+  const isSavingRef = useRef(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingAutosaveRef = useRef(false);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     const init = async () => {
@@ -692,10 +718,48 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
       } else {
         loadSavedItinerary();
       }
+      // 🔧 NEW: allow autosave to start only AFTER the initial load finishes,
+      // so loading an existing trip for edit doesn't immediately re-trigger a save.
+      isInitialLoadRef.current = false;
     };
     init();
   }, []);
 
+  // 🔧 NEW: DEBOUNCED SILENT AUTOSAVE
+  // Fires ~2s after the user stops changing anything. Silent (no toast/spinner).
+  // Guards: skip during initial load, skip if there's nothing worth saving yet,
+  // and never run two saves concurrently (queues instead).
+  useEffect(() => {
+    if (isInitialLoadRef.current) return;
+    if (!itineraryData.tripName) return; // nothing meaningful to save yet
+
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+
+    autosaveTimerRef.current = setTimeout(async () => {
+      if (isSavingRef.current) {
+        // a save is already running — mark that another one is needed once it's done
+        pendingAutosaveRef.current = true;
+        return;
+      }
+      isSavingRef.current = true;
+      try {
+        await saveItinerary('quick');
+      } finally {
+        isSavingRef.current = false;
+        // if a change came in while we were saving, run one more save now
+        if (pendingAutosaveRef.current) {
+          pendingAutosaveRef.current = false;
+          isSavingRef.current = true;
+          try { await saveItinerary('quick'); } finally { isSavingRef.current = false; }
+        }
+      }
+    }, 2000);
+
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itineraryData]);
 
   // 🌟 INDUSTRY STANDARD: EMERGENCY BACKUP & TAB PROTECTION 🌟
   useEffect(() => {
@@ -968,7 +1032,69 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
 
 
 
-  const saveItinerary = async (type: 'quick' | 'full' | 'exit'): Promise<boolean> => {
+  // const saveItinerary = async (type: 'quick' | 'full' | 'exit'): Promise<boolean> => {
+  //   setIsSaving(true);
+  //   try {
+  //     let finalStatus = itineraryData.status;
+
+  //     // 👇 THE MAGIC STEP: If they click "Save & Exit" on a Master Template, 
+  //     // publish it so it moves out of Drafts and into the Master Templates tab!
+  //     if (type === 'exit' && itineraryData.isMasterItinerary && itineraryData.status === 'draft') {
+  //         finalStatus = 'active';
+  //     }
+
+  //     const dataToSave = { 
+  //         ...itineraryData, 
+  //         status: finalStatus, // Use the new status
+  //         selectedCurrency: itineraryData.selectedCurrency || 'USD' 
+  //     };
+      
+  //     // Save locally first so UI feels fast
+  //     saveItineraryToStorage(dataToSave);
+      
+  //     // Save to DB
+  //     if (type === 'exit' || itineraryData.id) {
+  //       await saveToLibrary(dataToSave);
+  //       // Sync ID if the DB created a new one
+  //       if (dataToSave.id && !itineraryData.id) {
+  //          setItineraryData(prev => ({ ...prev, id: dataToSave.id }));
+  //       }
+  //     }
+
+  //     if (type === 'exit') {
+  //         clearItineraryStorage();
+  //         localStorage.removeItem('emergency_itinerary_backup'); // Clear backup
+  //     }
+      
+  //     setSaveSuccess(true);
+  //     setTimeout(() => setSaveSuccess(false), 2000);
+  //     showToast("Itinerary saved successfully!", "success");
+  //     return true;
+  //   } catch (e) {
+  //     console.error(e);
+  //     showToast("Failed to save itinerary.", "error");
+  //     return false;
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
+
+
+
+    // const saveItinerary = async (type: 'quick' | 'full' | 'exit'): Promise<boolean> => {
+    // setIsSaving(true);
+    // try {
+    //   let finalStatus = itineraryData.status;
+
+
+      const saveItinerary = async (type: 'quick' | 'full' | 'exit'): Promise<boolean> => {
+    // 🔧 NEW: cancel any pending autosave timer the instant a manual save
+   
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
     setIsSaving(true);
     try {
       let finalStatus = itineraryData.status;
@@ -990,10 +1116,25 @@ export function ItineraryProvider({ children }: { children: React.ReactNode }) {
       
       // Save to DB
       if (type === 'exit' || itineraryData.id) {
-        await saveToLibrary(dataToSave);
-        // Sync ID if the DB created a new one
-        if (dataToSave.id && !itineraryData.id) {
-           setItineraryData(prev => ({ ...prev, id: dataToSave.id }));
+        // 🔧 CHANGED: saveToLibrary now returns { success, id } instead of boolean —
+        // capture the result so we can sync the REAL Mongo id back into React state.
+        const result = await saveToLibrary(dataToSave);
+
+        // 🔧 CHANGED: this is the actual bug fix — previously the real Mongo id
+        // returned from the backend was only ever written to `dataToSave` (a
+        // throwaway local copy) and localStorage, and NEVER pushed into the
+        // itineraryData state that the rest of the app (and the Library page)
+        // reads from. That's why the first save always looked "wrong" until a
+        // second save (via Edit) accidentally picked up the real id.
+        if (result.success && result.id) {
+           setItineraryData(prev => ({ ...prev, id: result.id }));
+           // keep the local draft copy consistent with the confirmed DB id too
+           saveItineraryToStorage({ ...dataToSave, id: result.id });
+        }
+
+        if (!result.success) {
+          showToast("Failed to save itinerary.", "error");
+          return false;
         }
       }
 

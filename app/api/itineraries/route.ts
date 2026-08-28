@@ -142,6 +142,32 @@ export async function GET(req: NextRequest) {
 
 
 // 🔵 POST: Create a brand new itinerary (Or Clone an existing one)
+// export async function POST(req: NextRequest) {
+//   await dbConnect();
+//   try {
+//     const body = await req.json();
+
+//     // 🌟 CRITICAL FIX 1: Remove existing MongoDB _id so it creates a fresh one
+//     delete body._id;
+    
+//     // 🌟 CRITICAL FIX 2: Generate unique IDs to prevent the E11000 duplicate key crash!
+//     const uniqueId = `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+//     body.tripId = uniqueId;
+    
+//     // This stops the EXACT error in your logs: "dup key: { itineraryCode: null }"
+//     body.itineraryCode = uniqueId; 
+
+//     const newItinerary = await Itinerary.create(body);
+//     return NextResponse.json({ success: true, data: newItinerary });
+    
+//   } catch (error: any) { 
+//     console.error("POST Itinerary Error:", error);
+//     return NextResponse.json({ success: false, message: "Failed to create itinerary" }, { status: 500 }); 
+//   }
+// }
+
+
+
 export async function POST(req: NextRequest) {
   await dbConnect();
   try {
@@ -150,12 +176,21 @@ export async function POST(req: NextRequest) {
     // 🌟 CRITICAL FIX 1: Remove existing MongoDB _id so it creates a fresh one
     delete body._id;
     
-    // 🌟 CRITICAL FIX 2: Generate unique IDs to prevent the E11000 duplicate key crash!
-    const uniqueId = `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    body.tripId = uniqueId;
+    // 🔧 CHANGED: only generate a fallback tripId if the client didn't already
+    // send a real one. Previously this line ran unconditionally and overwrote
+    // the correctly-computed smart ID (e.g. "1-AT50-2026") from the Intro page
+    // on every single create, which is why new trips always showed as
+    // "ID Pending..." in the Library until a second (PUT) save fixed it.
+    if (!body.tripId) {
+        const uniqueId = `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        body.tripId = uniqueId;
+    }
     
-    // This stops the EXACT error in your logs: "dup key: { itineraryCode: null }"
-    body.itineraryCode = uniqueId; 
+    // 🔧 CHANGED: same guard for itineraryCode — only fall back if missing,
+    // and reuse the real tripId when one exists instead of a second random value.
+    if (!body.itineraryCode) {
+        body.itineraryCode = body.tripId || `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    }
 
     const newItinerary = await Itinerary.create(body);
     return NextResponse.json({ success: true, data: newItinerary });
@@ -165,7 +200,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Failed to create itinerary" }, { status: 500 }); 
   }
 }
-
 
 
 // 🟠 PUT: Update an existing itinerary

@@ -1084,11 +1084,50 @@ export const getLibrary = async (): Promise<StoredItineraryData[]> => {
 
 
 
-export const saveToLibrary = async (data: StoredItineraryData): Promise<boolean> => {
+// export const saveToLibrary = async (data: StoredItineraryData): Promise<boolean> => {
+//   try {
+//     const payload = { ...data, _id: data.id }; // Map for backend
+    
+//     // 👇 FIX: Check if the ID is a legacy local-storage ID (not a 24-character Mongo ID)
+//     const isLegacyId = payload._id && payload._id.length !== 24;
+
+//     // If it's a legacy ID or missing entirely, strip it so Mongo treats it as a NEW entry
+//     if (!payload._id || isLegacyId) { 
+//         delete payload._id; 
+//     }
+
+//     // If it has a valid Mongo _id, we UPDATE (PUT). Otherwise, we CREATE (POST).
+//     const method = payload._id ? 'PUT' : 'POST';
+
+//     const res = await fetch('/api/itineraries', {
+//       method: method,
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify(payload)
+//     });
+    
+//     const json = await res.json();
+    
+//     // If successful, bind the true MongoDB ID back to our local draft
+//     if (json.success && json.data) {
+//        data.id = json.data._id;
+//        saveItineraryToStorage(data);
+//     }
+//     return json.success;
+//   } catch (error) { 
+//     console.error(error); 
+//     return false; 
+//   }
+// };
+
+
+// 🔧 CHANGED: return type now carries the real Mongo _id back to the caller,
+// instead of just true/false. This is what lets the ItineraryContext sync the
+// real id into React state right after saving.
+export const saveToLibrary = async (data: StoredItineraryData): Promise<{ success: boolean; id?: string }> => {
   try {
     const payload = { ...data, _id: data.id }; // Map for backend
     
-    // 👇 FIX: Check if the ID is a legacy local-storage ID (not a 24-character Mongo ID)
+    // Check if the ID is a legacy local-storage ID (not a 24-character Mongo ID)
     const isLegacyId = payload._id && payload._id.length !== 24;
 
     // If it's a legacy ID or missing entirely, strip it so Mongo treats it as a NEW entry
@@ -1111,11 +1150,14 @@ export const saveToLibrary = async (data: StoredItineraryData): Promise<boolean>
     if (json.success && json.data) {
        data.id = json.data._id;
        saveItineraryToStorage(data);
+       // 🔧 CHANGED: now also return the real id so the caller (context) can
+       // sync it into React state, not just localStorage.
+       return { success: true, id: json.data._id };
     }
-    return json.success;
+    return { success: json.success };
   } catch (error) { 
     console.error(error); 
-    return false; 
+    return { success: false }; 
   }
 };
 

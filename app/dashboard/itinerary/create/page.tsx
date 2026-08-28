@@ -595,17 +595,39 @@ export default function CreateItineraryPage() {
   };
 
   // 🌟 2. THE DRAFT AUTO-FIXER (Fixes bad IDs on load)
+  // useEffect(() => {
+  //     const autoFixId = async () => {
+  //         const currentId = itineraryData.tripId || '';
+  //         // If the DB forced a dummy 'TRIP-' ID, and we have a country selected, fix it instantly!
+  //         if (currentId.startsWith('TRIP-') && itineraryData.selectedCountries?.length > 0) {
+  //             const smartId = await generateSmartId(itineraryData.selectedCountries[0]);
+  //             updateItineraryData({ tripId: smartId });
+  //         }
+  //     };
+  //     autoFixId();
+  // }, [itineraryData.tripId, itineraryData.selectedCountries]);
+
+
+    // 🌟 2. THE DRAFT AUTO-FIXER (Fixes bad IDs on load)
   useEffect(() => {
       const autoFixId = async () => {
           const currentId = itineraryData.tripId || '';
-          // If the DB forced a dummy 'TRIP-' ID, and we have a country selected, fix it instantly!
-          if (currentId.startsWith('TRIP-') && itineraryData.selectedCountries?.length > 0) {
+          // 🔧 CHANGED: now also self-heals a BLANK tripId, not just one starting
+          // with 'TRIP-'. This covers the edge case where a record was saved to
+          // the DB before a country was selected (tripId === '') — previously
+          // that record would show "ID Pending..." forever on the Library page
+          // unless the user happened to re-select a country on the Edit screen.
+          const needsFix = (currentId.startsWith('TRIP-') || currentId === '') 
+                            && itineraryData.selectedCountries?.length > 0;
+
+          if (needsFix) {
               const smartId = await generateSmartId(itineraryData.selectedCountries[0]);
               updateItineraryData({ tripId: smartId });
           }
       };
       autoFixId();
   }, [itineraryData.tripId, itineraryData.selectedCountries]);
+
 
   // 🌟 3. THE UPDATED COUNTRY TOGGLE
   const toggleCountry = async (country: string) => {
@@ -662,12 +684,7 @@ export default function CreateItineraryPage() {
     router.push('/dashboard/itinerary/routing');
   };
 
-//   return (
-//     <div className="p-4 md:p-6 h-full overflow-y-auto pb-20">
-//       <div className="max-w-5xl mx-auto">
-       
-// <div className="group relative overflow-hidden bg-white/5 backdrop-blur-md rounded-lg shadow-lg border border-white/20 p-6 transition-all duration-500 ease-out hover:bg-white/5 hover:backdrop-blur-lg hover:border-white/40 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] hover:-translate-y-1">
-      
+
 
   return (
     // 🔧 CHANGED: p-4 md:p-6 → added min-[1700px] tier so only wide screens get the bigger padding
@@ -678,36 +695,7 @@ export default function CreateItineraryPage() {
 {/* 🔧 CHANGED: card padding p-6 → p-4 base, p-6 only at min-[1700px] */}
 <div className="group relative overflow-hidden bg-white/5 backdrop-blur-md rounded-lg shadow-lg border border-white/20 p-4 min-[1700px]:p-6 transition-all duration-500 ease-out hover:bg-white/5 hover:backdrop-blur-lg hover:border-white/40 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] hover:-translate-y-1">
           
-          {/* 1. MASTER ITINERARY TOGGLE */}
-          {/* <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-500/30">
-            <div className="flex items-center gap-4">
-              <label className="block text-base font-bold text-white tracking-wide">
-                Creating Master Itinerary?
-              </label>
-              <div className="flex gap-4 bg-black/20 p-1.5 rounded-lg">
-                <label className="flex items-center gap-2 cursor-pointer px-2">
-                  <input 
-                    type="radio" 
-                    checked={itineraryData.isMasterItinerary === true} 
-                    onChange={() => handleMasterItineraryChange(true)} 
-                    className="w-4 h-4 text-blue-500 accent-blue-500" 
-                  />
-                  <span className="text-white text-sm font-medium">YES</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer px-2">
-                  <input 
-                    type="radio" 
-                    checked={itineraryData.isMasterItinerary === false} 
-                    onChange={() => handleMasterItineraryChange(false)} 
-                    className="w-4 h-4 text-blue-500 accent-blue-500" 
-                  />
-                  <span className="text-white text-sm font-medium">NO</span>
-                </label>
-              </div>
-            </div>
-          </div> */}
-
-
+  
           {/* 1. MASTER ITINERARY TOGGLE */}
           {/* 🔧 CHANGED: mb-6 pb-4 → mb-4 pb-3 base, mb-6 pb-4 only at min-[1700px] */}
           <div className="flex items-center justify-between mb-4 pb-3 min-[1700px]:mb-6 min-[1700px]:pb-4 border-b border-gray-500/30">
@@ -741,40 +729,6 @@ export default function CreateItineraryPage() {
               </div>
             </div>
           </div>
-
-
-          {/* 2. IDENTIFIERS ROW */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
-            
-           
-            <div className="md:col-span-4">
-              <label className="block text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">
-                Trip ID
-              </label>
-              <input
-                type="text"
-                disabled
-                value={itineraryData.tripId || 'Pending Country...'} // 👈 Automatically shows the ID here!
-                className={`w-full px-3 py-2.5 bg-gray-800/50 border border-gray-600 rounded-lg font-mono text-sm cursor-not-allowed ${itineraryData.tripId ? 'text-green-400 font-bold' : 'text-gray-400'}`}
-              />
-            </div>
-
-           
-            <div className="md:col-span-8 relative" ref={countryDropdownRef} >
-              <label className="block text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">
-                Destination Country <span className="text-red-400">*</span>
-              </label>
-              <div
-                onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg cursor-pointer flex justify-between items-center hover:border-blue-500 transition-colors"
-              >
-                <span className={`text-sm ${itineraryData.selectedCountries?.length > 0 ? "text-gray-900 font-medium" : "text-gray-400"}`}>
-                  {itineraryData.selectedCountries?.length > 0 
-                    ? itineraryData.selectedCountries.join(", ") 
-                    : "Select Destination Countries"}
-                </span>
-                <span className="text-gray-400 text-xs">▼</span>
-              </div> */}
 
 
                         {/* 2. IDENTIFIERS ROW */}
@@ -842,38 +796,6 @@ export default function CreateItineraryPage() {
             </div>
           </div> 
 
-          {/* 3. TRIP NAME & TRAVELERS */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
-            <div className="md:col-span-8">
-              <label className="block text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">
-                Trip Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                value={itineraryData.tripName || ''}
-                onChange={(e) => updateField("tripName", e.target.value)}
-                placeholder="e.g. Royal Rajasthan Heritage Tour 2026"
-                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 text-sm font-medium"
-              />
-            </div>
-
-            <div className="md:col-span-4">
-              <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">
-                 No. of Travelers <Users size={12} className="text-blue-400" />
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min="1"
-                  value={itineraryData.numberOfTravelers || 1}
-                  onChange={(e) => updateField("numberOfTravelers", parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2.5 pl-4 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 text-sm font-bold"
-                />
-                <span className="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">Pax</span>
-              </div>
-            </div>
-          </div> */}
-
 
           {/* 3. TRIP NAME & TRAVELERS */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 min-[1700px]:gap-6 min-[1700px]:mb-6">
@@ -913,32 +835,6 @@ export default function CreateItineraryPage() {
 
 
 
-          {/* 4. TRIP DETAILS */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">Trip Category</label>
-              <select value={itineraryData.tripCategory || ''} onChange={(e) => updateField("tripCategory", e.target.value)} className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-900">
-                <option value="">Select Category</option>
-                {TRIP_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">Trip Style</label>
-              <select value={itineraryData.tripStyle || ''} onChange={(e) => updateField("tripStyle", e.target.value)} className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-900">
-                <option value="">Select Style</option>
-                {TRIP_STYLES.map((style) => <option key={style} value={style}>{style}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">Trip Experiences</label>
-              <select value={itineraryData.tripExperience || ''} onChange={(e) => updateField("tripExperience", e.target.value)} className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-900">
-                <option value="">Select Experience</option>
-                {TRIP_EXPERIENCES.map((exp) => <option key={exp} value={exp}>{exp}</option>)}
-              </select>
-            </div>
-          </div> */}
-
-
                     {/* 4. TRIP DETAILS */}
           {/* 🔧 CHANGED: gap-6 mb-6 → gap-4 mb-4 base, gap-6 mb-6 at min-[1700px] */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 min-[1700px]:gap-6 min-[1700px]:mb-6">
@@ -967,40 +863,6 @@ export default function CreateItineraryPage() {
             </div>
           </div>
 
-          {/* 5. PACKAGE TYPE & CREATING FOR */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">Package Type</label>
-              <div className="flex gap-3">
-                <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-all ${itineraryData.packageType === "land" ? "bg-blue-50 border-blue-500 ring-1 ring-blue-500" : "bg-white border-gray-300 hover:bg-gray-50"}`}>
-                  <input type="radio" value="land" checked={itineraryData.packageType === "land"} onChange={(e) => updateField("packageType", e.target.value)} className="hidden" />
-                  <span className={`text-sm font-medium ${itineraryData.packageType === "land" ? "text-blue-700" : "text-gray-600"}`}>Land Only</span>
-                </label>
-                <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-all ${itineraryData.packageType === "flight" ? "bg-blue-50 border-blue-500 ring-1 ring-blue-500" : "bg-white border-gray-300"} ${itineraryData.isMasterItinerary ? "opacity-50 cursor-not-allowed bg-gray-100" : "cursor-pointer hover:bg-gray-50"}`}>
-                  <input type="radio" value="flight" checked={itineraryData.packageType === "flight"} onChange={(e) => updateField("packageType", e.target.value)} disabled={itineraryData.isMasterItinerary} className="hidden"/>
-                  <span className={`text-sm font-medium ${itineraryData.packageType === "flight" ? "text-blue-700" : "text-gray-600"}`}>With Flight</span>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">Creating For</label>
-              <div className="flex gap-2">
-                {['Library', 'agent', 'guest'].map((type) => {
-                  const isLibrary = type === 'Library';
-                  const isDisabled = itineraryData.isMasterItinerary && !isLibrary;
-                  const isSelected = itineraryData.creatingFor === type;
-
-                  return (
-                    <label key={type} className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg border transition-all ${isSelected ? "bg-green-50 border-green-500 ring-1 ring-green-500" : "bg-white border-gray-300"} ${isDisabled ? "bg-gray-100 border-gray-300 cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-gray-50"}`}>
-                      <input type="radio" value={type} checked={isSelected} onChange={(e) => updateItineraryData({ creatingFor: e.target.value, showTravelerDetails: e.target.value !== 'Library' })} disabled={isDisabled} className="hidden" />
-                      <span className={`text-sm capitalize font-medium ${isSelected ? "text-green-800" : "text-gray-600"}`}>{type === 'agent' ? 'Agent' : type}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          </div> */}
 
 
                     {/* 5. PACKAGE TYPE & CREATING FOR */}
@@ -1061,10 +923,7 @@ export default function CreateItineraryPage() {
               }
             `}</style>
 
-            {/* <button
-              onClick={handleNextStep}
-              className="group relative overflow-hidden flex items-center justify-center gap-2.5 px-8 py-2 bg-blue-600 text-white font-bold text-[15px] rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.2)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
-            > */}
+          
                <button
               onClick={handleNextStep}
               className="group relative overflow-hidden flex items-center justify-center gap-2.5 px-6 py-1.5 min-[1700px]:px-8 min-[1700px]:py-2 bg-blue-600 text-white font-bold text-[15px] rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.2)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
