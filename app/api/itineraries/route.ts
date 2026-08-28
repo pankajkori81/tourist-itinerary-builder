@@ -168,36 +168,99 @@ export async function GET(req: NextRequest) {
 
 
 
+// export async function POST(req: NextRequest) {
+//   await dbConnect();
+//   try {
+//     const body = await req.json();
+
+//     // 🌟 CRITICAL FIX 1: Remove existing MongoDB _id so it creates a fresh one
+//     delete body._id;
+    
+//     // 🔧 CHANGED: only generate a fallback tripId if the client didn't already
+//     // send a real one. Previously this line ran unconditionally and overwrote
+//     // the correctly-computed smart ID (e.g. "1-AT50-2026") from the Intro page
+//     // on every single create, which is why new trips always showed as
+//     // "ID Pending..." in the Library until a second (PUT) save fixed it.
+//     if (!body.tripId) {
+//         const uniqueId = `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+//         body.tripId = uniqueId;
+//     }
+    
+//     // 🔧 CHANGED: same guard for itineraryCode — only fall back if missing,
+//     // and reuse the real tripId when one exists instead of a second random value.
+//     if (!body.itineraryCode) {
+//         body.itineraryCode = body.tripId || `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+//     }
+
+//     const newItinerary = await Itinerary.create(body);
+//     return NextResponse.json({ success: true, data: newItinerary });
+    
+//   } catch (error: any) { 
+//     console.error("POST Itinerary Error:", error);
+//     return NextResponse.json({ success: false, message: "Failed to create itinerary" }, { status: 500 }); 
+//   }
+// }
+
+
+
 export async function POST(req: NextRequest) {
   await dbConnect();
+  let parsedBody: any = null; // captured outside try so the catch block can safely reuse it
+
   try {
     const body = await req.json();
+    parsedBody = body;
 
-    // 🌟 CRITICAL FIX 1: Remove existing MongoDB _id so it creates a fresh one
+    // Remove existing MongoDB _id so it creates a fresh one
     delete body._id;
-    
-    // 🔧 CHANGED: only generate a fallback tripId if the client didn't already
-    // send a real one. Previously this line ran unconditionally and overwrote
-    // the correctly-computed smart ID (e.g. "1-AT50-2026") from the Intro page
-    // on every single create, which is why new trips always showed as
-    // "ID Pending..." in the Library until a second (PUT) save fixed it.
+
+    // Only generate a fallback tripId if the client didn't already send one —
+    // this is what makes the correctly-computed smart ID (e.g. "3-ZA50-2026")
+    // from the Intro page actually get saved, instead of being overwritten.
     if (!body.tripId) {
         const uniqueId = `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         body.tripId = uniqueId;
     }
-    
-    // 🔧 CHANGED: same guard for itineraryCode — only fall back if missing,
-    // and reuse the real tripId when one exists instead of a second random value.
+
     if (!body.itineraryCode) {
         body.itineraryCode = body.tripId || `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     }
 
     const newItinerary = await Itinerary.create(body);
     return NextResponse.json({ success: true, data: newItinerary });
-    
-  } catch (error: any) { 
+
+  } catch (error: any) {
     console.error("POST Itinerary Error:", error);
-    return NextResponse.json({ success: false, message: "Failed to create itinerary" }, { status: 500 }); 
+
+    // 🔧 SAFETY NET: if this exact tripId/itineraryCode already exists
+    // (e.g. a leftover record from earlier testing, or a genuine rare
+    // collision), don't throw a hard 500 at the employee. Instead, look up
+    // the existing document and return it as a success — the frontend
+    // still gets a valid real _id to work with, and the user just sees
+    // their save go through normally.
+    if (error?.code === 11000) {
+      const conflictTripId = error?.keyValue?.itineraryCode || error?.keyValue?.tripId || parsedBody?.tripId;
+
+      if (conflictTripId) {
+        try {
+          const existing = await Itinerary.findOne({
+            $or: [{ tripId: conflictTripId }, { itineraryCode: conflictTripId }]
+          });
+          if (existing) {
+            return NextResponse.json({ success: true, data: existing });
+          }
+        } catch (lookupError) {
+          console.error("E11000 recovery lookup failed:", lookupError);
+        }
+      }
+
+      return NextResponse.json(
+        { success: false, message: "A trip with this ID already exists. Please refresh the page and try again." },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({ success: false, message: "Failed to create itinerary" }, { status: 500 });
   }
 }
 

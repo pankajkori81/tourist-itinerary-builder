@@ -582,17 +582,41 @@ export default function CreateItineraryPage() {
 
 
   // 🌟 1. THE SMART ID GENERATOR HELPER
+  // const generateSmartId = async (primaryCountry: string) => {
+  //     const year = new Date().getFullYear();
+  //     const code = COUNTRY_CODES[primaryCountry] || "XX";
+  //     const library = await getLibrary(); 
+  //     const existingCount = library.filter((t: any) =>
+  //         t.selectedCountries?.[0] === primaryCountry &&
+  //         t.tripId?.includes(year.toString()) &&
+  //         t.id !== itineraryData.id 
+  //     ).length;
+  //     return `${existingCount + 1}-${code}50-${year}`;
+  // };
+
+
   const generateSmartId = async (primaryCountry: string) => {
-      const year = new Date().getFullYear();
-      const code = COUNTRY_CODES[primaryCountry] || "XX";
-      const library = await getLibrary(); 
-      const existingCount = library.filter((t: any) =>
-          t.selectedCountries?.[0] === primaryCountry &&
-          t.tripId?.includes(year.toString()) &&
-          t.id !== itineraryData.id 
-      ).length;
-      return `${existingCount + 1}-${code}50-${year}`;
-  };
+    const year = new Date().getFullYear();
+    const code = COUNTRY_CODES[primaryCountry] || "XX";
+    const library = await getLibrary();
+
+    const relevant = library.filter((t: any) =>
+        t.selectedCountries?.[0] === primaryCountry &&
+        t.tripId?.includes(year.toString()) &&
+        t.id !== itineraryData.id
+    );
+
+    // Find the highest number actually in use (e.g. "3-ZA50-2026" → 3),
+    // instead of counting how many records currently exist. This is
+    // immune to gaps caused by deleted/leftover records.
+    const highestNumber = relevant.reduce((max: number, t: any) => {
+        const match = t.tripId?.match(/^(\d+)-/);
+        const num = match ? parseInt(match[1], 10) : 0;
+        return num > max ? num : max;
+    }, 0);
+
+    return `${highestNumber + 1}-${code}50-${year}`;
+};
 
   // 🌟 2. THE DRAFT AUTO-FIXER (Fixes bad IDs on load)
   // useEffect(() => {
