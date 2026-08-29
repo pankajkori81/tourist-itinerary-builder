@@ -713,7 +713,9 @@ export default function CreateItineraryPage() {
   return (
     // 🔧 CHANGED: p-4 md:p-6 → added min-[1700px] tier so only wide screens get the bigger padding
     <div className="p-3 md:p-4 min-[1700px]:p-6 h-full overflow-y-auto pb-20">
-      <div className="max-w-5xl mx-auto">
+      {/* <div className="max-w-5xl mx-auto"> */}
+
+       <div className="max-w-4xl min-[1700px]:max-w-5xl mx-auto">
         
         {/* <div className="bg-white/5 backdrop-blur-md rounded-lg shadow-lg border border-white/20 p-6"> */}
 {/* 🔧 CHANGED: card padding p-6 → p-4 base, p-6 only at min-[1700px] */}
