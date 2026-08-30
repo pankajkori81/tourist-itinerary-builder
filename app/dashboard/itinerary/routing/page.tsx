@@ -538,8 +538,9 @@ const CitySelect = ({
             setIsOpen(true);
             setSearch(value || ''); // Ensure they see what they are editing
         }} 
-        className={`w-full px-4 py-3 border bg-white rounded-lg text-sm flex items-center justify-between cursor-pointer transition-all ${
-          isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-400'
+        // className={`w-full px-4 py-3 border bg-white rounded-lg text-sm flex items-center justify-between cursor-pointer transition-all ${
+         className={`w-full px-3 min-[1700px]:px-4 py-2 min-[1700px]:py-3 border bg-white rounded-lg text-sm flex items-center justify-between cursor-pointer transition-all ${ 
+        isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-400'
         }`}
       >
         <span className={value && !isOpen ? "text-gray-900 font-bold" : "text-gray-400"}>
@@ -557,7 +558,8 @@ const CitySelect = ({
             <input 
               type="text" 
               placeholder="Start typing (e.g. Rome)..." 
-              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-900" 
+              // className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-900" 
+               className="w-full px-3 py-2 min-[1700px]:py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-900"
               value={search} 
               onChange={(e) => setSearch(e.target.value)} 
               onKeyDown={handleKeyDown}
@@ -624,130 +626,7 @@ const CitySelect = ({
   );
 };
 
-// const CitySelect = ({ 
-//   value, 
-//   onChange 
-// }: { 
-//   value: string, 
-//   onChange: (name: string, type: 'city' | 'airport') => void 
-// }) => {
-//   const [isOpen, setIsOpen] = useState(false);
-//   const [search, setSearch] = useState('');
-//   const [results, setResults] = useState<any[]>([]);
-//   const [isLoading, setIsLoading] = useState(false);
-//   const { itineraryData } = useItinerary();
-//   const wrapperRef = useRef<HTMLDivElement>(null);
 
-//   // Close dropdown on outside click
-//   useEffect(() => {
-//     function handleClickOutside(event: MouseEvent) {
-//       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) setIsOpen(false);
-//     }
-//     document.addEventListener("mousedown", handleClickOutside);
-//     return () => document.removeEventListener("mousedown", handleClickOutside);
-//   }, []);
-
-//   // --- THE SEARCH ENGINE (DEBOUNCED) ---
-//   useEffect(() => {
-//     // Only search if user types at least 2 characters
-//     if (search.length < 2) {
-//       setResults([]);
-//       return;
-//     }
-
-//     const delayDebounceFn = setTimeout(async () => {
-//       setIsLoading(true);
-//       try {
-//         const countries = itineraryData.selectedCountries?.join(',') || '';
-//         const response = await fetch(`/api/locations/search?q=${encodeURIComponent(search)}&countries=${encodeURIComponent(countries)}`);
-//         const json = await response.json();
-        
-//         if (json.success) {
-//           setResults(json.data);
-//         }
-//       } catch (error) {
-//         console.error("Search API Error:", error);
-//       } finally {
-//         setIsLoading(false);
-//       }
-//     }, 300); // 300ms delay
-
-//     return () => clearTimeout(delayDebounceFn);
-//   }, [search, itineraryData.selectedCountries]);
-
-//   return (
-//     <div className={`relative w-full ${isOpen ? 'z-50' : 'z-auto'}`} ref={wrapperRef}>
-//       <div 
-//         onClick={() => setIsOpen(!isOpen)} 
-//         className={`w-full px-4 py-3 border bg-white rounded-lg text-sm flex items-center justify-between cursor-pointer transition-all ${
-//           isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-400'
-//         }`}
-//       >
-//         <span className={value ? "text-gray-900 font-bold" : "text-gray-400"}>
-//           {value || "Search City or Airport..."}
-//         </span>
-//         <Search size={14} className="text-gray-400" />
-//       </div>
-      
-//       {isOpen && (
-//         <div className="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden left-0 animate-in fade-in zoom-in duration-150">
-          
-//           <div className="p-3 bg-gray-50 border-b shrink-0" onClick={(e) => e.stopPropagation()}>
-//             <input 
-//               type="text" 
-//               placeholder="Start typing (e.g. Rome)..." 
-//               className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium" 
-//               value={search} 
-//               onChange={(e) => setSearch(e.target.value)} 
-//               autoFocus 
-//             />
-//           </div>
-          
-//           <div className="max-h-[250px] overflow-y-auto">
-//             {isLoading && (
-//                <div className="px-4 py-6 text-center text-sm text-blue-500 font-medium animate-pulse italic">
-//                  Searching database...
-//                </div>
-//             )}
-
-//             {!isLoading && results.map((opt, idx) => (
-//                <div 
-//                  key={idx} 
-//                  onClick={() => { 
-//                    onChange(opt.name, opt.type); 
-//                    setIsOpen(false); 
-//                    setSearch(''); 
-//                  }} 
-//                  className="flex flex-col gap-0.5 px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 group"
-//                >
-//                  <div className="flex items-center gap-2">
-//                    {opt.type === 'city' ? <Building2 size={14} className="text-gray-400"/> : <Plane size={14} className="text-blue-500"/>}
-//                    <span className="font-bold text-gray-800 group-hover:text-blue-700">{opt.name}</span>
-//                  </div>
-//                  <div className="text-[10px] text-gray-400 ml-5 font-medium uppercase tracking-wider">
-//                    {opt.stateName ? `${opt.stateName}, ` : ''}{opt.countryName}
-//                  </div>
-//                </div>
-//             ))}
-
-//             {!isLoading && search.length >= 2 && results.length === 0 && (
-//                <div className="px-3 py-8 text-center text-sm text-gray-400 italic">
-//                  No matches found in your selected countries.
-//                </div>
-//             )}
-            
-//             {search.length < 2 && !isLoading && (
-//               <div className="px-3 py-8 text-center text-xs text-gray-400 uppercase tracking-widest font-bold">
-//                 Type 2+ characters to search
-//               </div>
-//             )}
-//           </div>
-
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
 
 
 export default function RoutingPage() {
@@ -959,17 +838,24 @@ export default function RoutingPage() {
   if (!isHydrated) return <div className="p-10 text-center text-gray-500">Loading Itinerary...</div>;
 
   return (
-    <div className="p-4 md:p-6 pb-40 min-h-screen"> 
+    // <div className="p-4 md:p-6 pb-40 min-h-screen"> 
+       <div className="p-3 md:p-4 min-[1700px]:p-6 pb-40 min-h-screen">
       
       {/* 1. TOP BAR */}
-      <div className="bg-[#1f2544] rounded-t-xl shadow-lg p-5 border-b border-gray-700 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
+      {/* <div className="bg-[#1f2544] rounded-t-xl shadow-lg p-5 border-b border-gray-700 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
           <div className="flex items-center gap-4 flex-wrap">
+             <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Set Total Cities</span>
+             <div className="flex flex-wrap gap-2"> */}
+                   {/* 🔧 CHANGED: p-5 gap-6 → p-3 gap-4 base, restored at min-[1700px] */}
+      <div className="bg-[#1f2544] rounded-t-xl shadow-lg p-3 min-[1700px]:p-5 border-b border-gray-700 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 min-[1700px]:gap-6">
+          <div className="flex items-center gap-3 min-[1700px]:gap-4 flex-wrap">
              <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Set Total Cities</span>
              <div className="flex flex-wrap gap-2">
                {/* 🌟 FIX: Tabs now only highlight the currently active count, and display "+X Cities" */}
                {[2, 3, 4, 5, 6].map(num => (
                   <button key={num} onClick={() => handleSetTotalCities(num)}
-                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all border ${
+                    // className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all border ${
+                     className={`px-3 py-1 min-[1700px]:px-4 min-[1700px]:py-1.5 rounded-md text-xs font-bold transition-all border ${
                         routes.length === num 
                         ? 'bg-blue-600 text-white border-blue-500 shadow-md' 
                         : 'bg-[#3b4358] text-gray-200 hover:bg-blue-500 hover:text-white border-gray-600 hover:border-blue-400'
@@ -980,26 +866,38 @@ export default function RoutingPage() {
              </div>
           </div>
 
-          <div className="flex items-center gap-4 flex-wrap">
+          {/* <div className="flex items-center gap-4 flex-wrap">
+             {saveSuccess && <span className="text-green-400 text-xs font-bold animate-pulse">Saved!</span>}
+             {isSaving && <span className="text-blue-400 text-xs font-bold">Saving...</span>}
+            
+
+           
+             <div className="flex items-center bg-gray-200 p-1 rounded-xl border border-gray-400 shadow-inner">
+                 */}
+
+
+                    <div className="flex items-center gap-3 min-[1700px]:gap-4 flex-wrap">
              {saveSuccess && <span className="text-green-400 text-xs font-bold animate-pulse">Saved!</span>}
              {isSaving && <span className="text-blue-400 text-xs font-bold">Saving...</span>}
             
 
             {/* 🌟 FIX: Locked American Format (MM/DD/YYYY) with Custom Overlay */}
              <div className="flex items-center bg-gray-200 p-1 rounded-xl border border-gray-400 shadow-inner">
-                
+              
+                 
                 {/* START DATE */}
                 <div className="relative flex items-center">
-                    {/* This span holds our forced American format */}
+                   
                     <span className="absolute left-3 text-gray-800 text-sm font-bold pointer-events-none z-10">
                         {startDate ? formatAmericanDate(startDate) : "MM/DD/YYYY"}
                     </span>
-                    {/* The native input is made transparent so it just acts as a clickable trigger */}
+                    
                     <input 
                         type="date" 
                         value={startDate} 
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="pl-5 pr-2 py-2 bg-transparent text-sm focus:outline-none cursor-pointer w-[140px] relative z-20" 
+                        // className="pl-5 pr-2 py-2 bg-transparent text-sm focus:outline-none cursor-pointer w-[140px] relative z-20" 
+                         className="pl-5 pr-2 py-1.5 min-[1700px]:py-2 bg-transparent text-sm focus:outline-none cursor-pointer w-[140px] relative z-20" 
                         style={{ color: 'transparent' }} 
                     />
                 </div>
@@ -1016,7 +914,7 @@ export default function RoutingPage() {
                         type="date" 
                         value={endDate} 
                         disabled 
-                        className="pl-9 pr-2 py-2 bg-transparent text-sm focus:outline-none cursor-not-allowed w-[150px] relative z-20" 
+                        className="pl-9 pr-2 py-1.5 min-[1700px]:py-2 bg-transparent text-sm focus:outline-none cursor-not-allowed w-[150px] relative z-20" 
                         style={{ color: 'transparent' }}
                     />
                 </div>
@@ -1027,8 +925,12 @@ export default function RoutingPage() {
 
       {/* 2. MAIN TABLE */}
       <div className="bg-white/10 rounded-b-xl shadow-xl border border-gray-800 overflow-visible min-h-[500px]">
-         <div className="px-6 py-4 border-b border-gray-100 bg-[#1f2544] flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-red-500 font-bold text-lg">
+         {/* <div className="px-6 py-4 border-b border-gray-100 bg-[#1f2544] flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-red-500 font-bold text-lg"> */}
+
+                     {/* 🔧 CHANGED: px-6 py-4 → px-4 py-3 base, restored at min-[1700px] */}
+         <div className="px-4 py-3 min-[1700px]:px-6 min-[1700px]:py-4 border-b border-gray-100 bg-[#1f2544] flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-red-500 font-bold text-base min-[1700px]:text-lg">
                <Clock className="text-red-500" size={18} />
                <span>Total Duration: <span className="text-gray-100">{totalNights} Nights</span> / <span className="text-gray-100">{totalDays} Days</span></span>
             </h3>
@@ -1036,7 +938,7 @@ export default function RoutingPage() {
 
          <div className="overflow-x-auto pb-48">
             <table className="w-full min-w-[900px] table-auto">
-              <thead className="bg-white border-b border-gray-200">
+              {/* <thead className="bg-white border-b border-gray-200">
                 <tr>
                    <th className="w-12 py-4"></th>
                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase w-24">Day</th>
@@ -1046,31 +948,91 @@ export default function RoutingPage() {
                    <th className="px-9 py-4 text-left text-xs font-bold text-gray-700 uppercase w-48">Remove City </th>
                    <th className="w-16 py-4"></th>
                 </tr>
+              </thead> */}
+
+                            {/* 🔧 CHANGED: py-4/px-6/px-9 → py-3/px-4/px-6 base, restored at min-[1700px] */}
+              <thead className="bg-white border-b border-gray-200">
+                <tr>
+                   <th className="w-12 py-3 min-[1700px]:py-4"></th>
+                   <th className="px-4 min-[1700px]:px-6 py-3 min-[1700px]:py-4 text-left text-xs font-bold text-gray-700 uppercase w-24">Day</th>
+                   <th className="px-4 min-[1700px]:px-6 py-3 min-[1700px]:py-4 text-left text-xs font-bold text-gray-700 uppercase w-48">Date / Sequence</th>
+                   <th className="px-4 min-[1700px]:px-6 py-3 min-[1700px]:py-4 text-left text-xs font-bold text-gray-700 uppercase w-32">Nights</th>
+                   <th className="px-4 min-[1700px]:px-6 py-3 min-[1700px]:py-4 text-left text-xs font-bold text-gray-700 uppercase">Cities / Airports</th>
+                   <th className="px-6 min-[1700px]:px-9 py-3 min-[1700px]:py-4 text-left text-xs font-bold text-gray-700 uppercase w-48">Remove City </th>
+                   <th className="w-16 py-3 min-[1700px]:py-4"></th>
+                </tr>
               </thead>
               
               <tbody className="divide-y divide-gray-200">
                 {routes.map((route) => (
+                  // <tr key={route.id} className="hover:bg transition-colors group">
+                  //   <td className="px-2 py-6 align-top text-center"><button className="text-gray-300 hover:text-gray-500 cursor-grab mt-3"><GripVertical size={20} /></button></td>
+                  //   <td className="px-6 py-6 align-top"><div className="mt-1 w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 font-bold rounded-lg text-sm border border-blue-100">{route.dayNumber}</div></td>
+                    
+                  
+                  //   <td className="px-6 py-6 align-top">
+                  //       <div className={`mt-3 text-[13px] font-medium px-3 py-1.5 rounded-md inline-block shadow-sm ${route.date ? 'bg-blue-50 text-blue-800 border border-blue-100' : 'text-gray-300 bg-white/5 border border-transparent'}`}>
+                  //           {route.date ? formatTableDate(route.date) : `Day ${route.dayNumber}`}
+                  //       </div>
+                  //   </td>
+
+                  //   <td className="px-6 py-6 align-top">
+                  //     <div className="relative">
+                  //       <select value={route.nights} onChange={(e) => updateRouteField(route.id, 'nights', parseInt(e.target.value))} 
+                  //         className="w-full appearance-none px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 focus:border-blue-500 outline-none hover:border-gray-300">
+                  //         {[0,1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
+                  //       </select>
+                  //       <div className="absolute right-3 top-3.5 pointer-events-none text-gray-400 text-xs">▼</div>
+                  //     </div>
+                  //   </td>
+                  //   <td className="px-6 py-6 align-top">
+                  //       <div className="space-y-3">
+                  //            {route.cities.map((city: any, cityIndex: number) => (
+                  //            <div key={cityIndex} className="flex items-center gap-2">
+                  //               <CitySelect 
+                  //                 value={city.name} 
+                  //                 onChange={(name, type) => updateCity(route.id, cityIndex, 'name', name)} 
+                  //               />
+                  //               {route.cities.length > 1 && (
+                  //                   <button onClick={() => removeCitySlot(route.id, cityIndex)} className="text-gray-300 hover:text-red-500 "><X size={16}/></button>
+                  //               )}
+                  //             </div>
+                  //            ))}
+                  //       </div>
+                  //   </td>
+                
+                  //   <td className="px-5 py-6 align-top text-center ">
+                  //     <button onClick={() => removeDay(route.id)} disabled={routes.length === 1}
+                  //       className={`p-2 rounded-lg transition-all bg-gray-600 mt-1 ${routes.length === 1 ? 'text-gray-100 cursor-not-allowed' : 'text-gray-200 hover:bg-red-50 hover:text-red-500'}`}>
+                  //       <Trash2 size={19} />
+                  //     </button>
+                  //   </td>
+                  // </tr>
+
+                  // 🔧 CHANGED: every td py-6 → py-4 base, py-6 at min-[1700px] (main height driver)
                   <tr key={route.id} className="hover:bg transition-colors group">
-                    <td className="px-2 py-6 align-top text-center"><button className="text-gray-300 hover:text-gray-500 cursor-grab mt-3"><GripVertical size={20} /></button></td>
-                    <td className="px-6 py-6 align-top"><div className="mt-1 w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 font-bold rounded-lg text-sm border border-blue-100">{route.dayNumber}</div></td>
+                    <td className="px-2 py-4 min-[1700px]:py-6 align-top text-center"><button className="text-gray-300 hover:text-gray-500 cursor-grab mt-3"><GripVertical size={20} /></button></td>
+                    {/* 🔧 CHANGED: w-10 h-10 → w-8 h-8 base, restored at min-[1700px] */}
+                    <td className="px-4 min-[1700px]:px-6 py-4 min-[1700px]:py-6 align-top"><div className="mt-1 w-8 h-8 min-[1700px]:w-10 min-[1700px]:h-10 flex items-center justify-center bg-blue-50 text-blue-600 font-bold rounded-lg text-sm border border-blue-100">{route.dayNumber}</div></td>
                     
                     {/* 🌟 FIX: Formatted Table Date Logic ("March 15, 2026") */}
-                    <td className="px-6 py-6 align-top">
+                    <td className="px-4 min-[1700px]:px-6 py-4 min-[1700px]:py-6 align-top">
                         <div className={`mt-3 text-[13px] font-medium px-3 py-1.5 rounded-md inline-block shadow-sm ${route.date ? 'bg-blue-50 text-blue-800 border border-blue-100' : 'text-gray-300 bg-white/5 border border-transparent'}`}>
                             {route.date ? formatTableDate(route.date) : `Day ${route.dayNumber}`}
                         </div>
                     </td>
 
-                    <td className="px-6 py-6 align-top">
+                    <td className="px-4 min-[1700px]:px-6 py-4 min-[1700px]:py-6 align-top">
                       <div className="relative">
+                        {/* 🔧 CHANGED: px-4 py-3 → px-3 py-2 base, restored at min-[1700px] */}
                         <select value={route.nights} onChange={(e) => updateRouteField(route.id, 'nights', parseInt(e.target.value))} 
-                          className="w-full appearance-none px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 focus:border-blue-500 outline-none hover:border-gray-300">
+                          className="w-full appearance-none px-3 min-[1700px]:px-4 py-2 min-[1700px]:py-3 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 focus:border-blue-500 outline-none hover:border-gray-300">
                           {[0,1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
-                        <div className="absolute right-3 top-3.5 pointer-events-none text-gray-400 text-xs">▼</div>
+                        <div className="absolute right-3 top-2.5 min-[1700px]:top-3.5 pointer-events-none text-gray-400 text-xs">▼</div>
                       </div>
                     </td>
-                    <td className="px-6 py-6 align-top">
+                    <td className="px-4 min-[1700px]:px-6 py-4 min-[1700px]:py-6 align-top">
                         <div className="space-y-3">
                              {route.cities.map((city: any, cityIndex: number) => (
                              <div key={cityIndex} className="flex items-center gap-2">
@@ -1086,7 +1048,7 @@ export default function RoutingPage() {
                         </div>
                     </td>
                 
-                    <td className="px-5 py-6 align-top text-center ">
+                    <td className="px-4 min-[1700px]:px-5 py-4 min-[1700px]:py-6 align-top text-center ">
                       <button onClick={() => removeDay(route.id)} disabled={routes.length === 1}
                         className={`p-2 rounded-lg transition-all bg-gray-600 mt-1 ${routes.length === 1 ? 'text-gray-100 cursor-not-allowed' : 'text-gray-200 hover:bg-red-50 hover:text-red-500'}`}>
                         <Trash2 size={19} />
@@ -1096,23 +1058,17 @@ export default function RoutingPage() {
                 ))}
               </tbody>
             </table>
-            <div className="p-6 bg border-t border-gray-100 flex justify-end rounded-b-xl">
+            {/* <div className="p-6 bg border-t border-gray-100 flex justify-end rounded-b-xl">
                <button onClick={handleAddSingleCity} className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-sm text-sm"><Plus size={16} /> Add City</button>
+            </div> */}
+            {/* 🔧 CHANGED: p-6 px-8 py-3 → p-4 px-6 py-2 base, restored at min-[1700px] */}
+            <div className="p-4 min-[1700px]:p-6 bg border-t border-gray-100 flex justify-end rounded-b-xl">
+               <button onClick={handleAddSingleCity} className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 min-[1700px]:px-8 py-2 min-[1700px]:py-3 rounded-full font-bold shadow-sm text-sm"><Plus size={16} /> Add City</button>
             </div>
          </div>
       </div>
 
-      {/* 3. NAVIGATION BUTTONS */}
-      {/* <div className="flex justify-between items-center mt-8">
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-400 hover:text-white px-6 py-3 rounded-lg font-medium hover:bg-white/5"><ArrowLeft size={18} /> Back</button>
-        <button onClick={handleNext} className="group flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-full font-semibold shadow-lg shadow-blue-900/20 transition-all transform hover:scale-[1.02]">
-            Next Step: Create Day <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-        </button>
-      </div> */}
-
-
-      {/* 3. NAVIGATION BUTTONS */}
-
+ 
       {/* 3. NAVIGATION BUTTONS */}
       <div className="flex justify-between items-center mt-8 relative">
         
@@ -1128,9 +1084,14 @@ export default function RoutingPage() {
         </svg>
 
         {/* 🌟 2. ANIMATED BACK BUTTON (Gooey Glass Effect) */}
-        <button 
+        {/* <button 
           onClick={() => router.back()} 
           className="group relative z-10 inline-flex items-center px-6 py-2 text-gray-400 font-medium uppercase tracking-wide bg-white/5 backdrop-blur-sm border border-gray-600 rounded-lg overflow-hidden transition-colors duration-700 ease-in-out hover:text-white hover:border-gray-400 shadow-sm"
+        > */}
+                {/* 🔧 CHANGED: px-6 py-2 → px-5 py-1.5 base, restored at min-[1700px] */}
+        <button 
+          onClick={() => router.back()} 
+          className="group relative z-10 inline-flex items-center px-5 min-[1700px]:px-6 py-1.5 min-[1700px]:py-2 text-gray-400 font-medium uppercase tracking-wide bg-white/5 backdrop-blur-sm border border-gray-600 rounded-lg overflow-hidden transition-colors duration-700 ease-in-out hover:text-white hover:border-gray-400 shadow-sm"
         >
           {/* Button Content (Placed above the blobs) */}
           <span className="relative z-20 flex items-center gap-2">
@@ -1164,9 +1125,15 @@ export default function RoutingPage() {
           }
         `}</style>
 
-        <button 
+        {/* <button 
           onClick={handleNext} 
           className="group relative overflow-hidden flex items-center justify-center gap-2.5 px-8 py-2 bg-blue-600 text-white font-bold text-[15px] rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.2)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
+        > */}
+
+                {/* 🔧 CHANGED: px-8 py-2 → px-6 py-1.5 base, restored at min-[1700px] */}
+        <button 
+          onClick={handleNext} 
+          className="group relative overflow-hidden flex items-center justify-center gap-2.5 px-6 min-[1700px]:px-8 py-1.5 min-[1700px]:py-2 bg-blue-600 text-white font-bold text-[15px] rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.2)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
         >
           {/* The Shine Effect Element */}
           <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
@@ -1180,48 +1147,9 @@ export default function RoutingPage() {
         </button>
 
       </div>
-      {/* <div className="flex justify-between items-center mt-8">
-        
-
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-400 hover:text-white px-6 py-3 rounded-lg font-medium hover:bg-white/5">
-          <ArrowLeft size={18} /> Back
-        </button>
-
-   
-        <style>{`
-          @keyframes shine {
-            0% { left: -100px; }
-            60% { left: 100%; }
-            100% { left: 100%; }
-          }
-          .group:hover .shine-effect {
-            animation: shine 1.5s ease-out infinite;
-          }
-        `}</style>
-
-
-        <button 
-          onClick={handleNext} 
-          className="group relative overflow-hidden flex items-center justify-center gap-2.5 px-8 py-3 bg-blue-600 text-white font-bold text-[15px] rounded-full border-[3px] border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.2)] outline-none cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:border-white/60"
-        >
-      
-          <div className="shine-effect absolute top-0 -left-[100px] w-[100px] h-full opacity-60 pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent z-0" />
-          
-   
-          <span className="relative z-10">Next Step: Create Day</span>
-          
      
-          <ArrowRight 
-            size={20} 
-            className="relative z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-1" 
-          />
-        </button>
-
-      </div> */}
-
-
-      
-
     </div>
   );
 }
+
+
