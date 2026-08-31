@@ -1219,7 +1219,7 @@ return (
                                              
 
                                                              {/* --- ACTIVITY PDF BLOCK --- */}
-                                                        {item.category === 'Activity' && (
+                                                        {/* {item.category === 'Activity' && (
                                                             <div>
                                                                 <div style={{ fontWeight: 'bold', color: '#1f2937', fontSize: '16px' }}>{item.heading}</div>
                                                                 <div style={{ color: '#292d33ff', fontSize: '12px', marginTop: '4px', marginBottom: '8px' }}>{item.description}</div>
@@ -1232,12 +1232,143 @@ return (
                                                                     {(item as any).dropoffLocation && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#292d33ff' }}>Drop: {(item as any).dropoffLocation}</span>}
                                                                 </div>
                                                             </div>
-                                                        )}
+                                                        )} */}
+
+
+
+                                                           {item.category === "Activity" && (
+                                      <div>
+                                        <div
+                                          style={{
+                                            fontWeight: "bold",
+                                            color: "#1f2937",
+                                            fontSize: "16px",
+                                          }}
+                                        >
+                                          {item.heading}
+                                        </div>
+
+                                        <div
+                                          style={{
+                                            color: "#292d33ff",
+                                            fontSize: "12px",
+                                            marginTop: "4px",
+                                            marginBottom: "8px",
+                                          }}
+                                        >
+                                          {item.description}
+                                        </div>
+
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            flexWrap: "wrap",
+                                            gap: "12px",
+                                            fontSize: "12px",
+                                            padding: "8px",
+                                          }}
+                                        >
+                                          <span
+                                            style={{
+                                              color: "#292d33ff",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: "4px",
+                                            }}
+                                          >
+                                            Slot: {item.slot}
+                                          </span>
+
+                                          <span
+                                            style={{
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: "4px",
+                                              color: "#292d33ff",
+                                            }}
+                                          >
+                                            Duration: {item.duration}
+                                          </span>
+
+                                          {item.startTime && (
+                                            <span
+                                              style={{ color: "#292d33ff" }}
+                                            >
+                                              Start: {item.startTime}
+                                            </span>
+                                          )}
+
+                                          {(item as any).endTime && (
+                                            <span
+                                              style={{ color: "#292d33ff" }}
+                                            >
+                                              End: {(item as any).endTime}
+                                            </span>
+                                          )}
+
+                                          <span
+                                            style={{
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: "4px",
+                                              color: "#292d33ff",
+                                            }}
+                                          >
+                                            Pickup:{" "}
+                                            {item.pickupLocation || "TBA"}
+                                          </span>
+
+                                          {(item as any).dropoffLocation && (
+                                            <span
+                                              style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                color: "#292d33ff",
+                                              }}
+                                            >
+                                              Drop:{" "}
+                                              {(item as any).dropoffLocation}
+                                            </span>
+                                          )}
+
+                                          {/* @ts-ignore */}
+                                          {item.mealType && (
+                                            <span
+                                              style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                color: "#292d33ff",
+                                              }}
+                                            >
+                                              {/* @ts-ignore */}
+                                              Meal: {item.mealType} • {item.menuStyle}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {/* @ts-ignore */}
+                                        {item.mealNotes && (
+                                          <div
+                                            style={{
+                                              fontSize: "11px",
+                                              color: "#6b7280",
+                                              fontStyle: "italic",
+                                              marginTop: "6px",
+                                            }}
+                                          >
+                                            {/* @ts-ignore */}
+                                            Meal Notes: {item.mealNotes}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
 
                                         
 
                                                         {/* --- STAY PDF BLOCK --- */}
-                                                        {item.category === 'Stay' && (
+                                                        {/* {item.category === 'Stay' && (
                                                             <div style={{ 
                                                                 opacity: item.status === 'Residence' ? 0.8 : 1, 
                                                                 display: 'grid', 
@@ -1248,37 +1379,205 @@ return (
                                                                 
                                                                 {item.status === 'Check-in' ? (
                                                                     <>
-                                                                        {/* Left Side: Hotel Name & Rating */}
+                                                                        
                                                                         <div style={{ fontWeight: 'bold', color: '#22252bff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                             {item.hotelName}
                                                                             <span style={{ fontSize: '12px', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', backgroundColor: '#fff' }}>⭐ {item.rating}</span>
                                                                         </div>
                                                                         
-                                                                        {/* Right Side: Room Category */}
+                                                                        
                                                                         <div style={{ color: '#555555', fontSize: '12px', fontWeight: 'bold' }}>
                                                                             Room: {item.roomCategory}
                                                                         </div>
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        {/* Left Side: Continuing Text */}
+                                                                        
                                                                         <div style={{ fontSize: '13px', color: '#292d33ff', fontStyle: 'italic', fontWeight: 'bold' }}>
                                                                             Continuing stay at {item.hotelName}. 
                                                                         </div>
                                                                         
-                                                                        {/* Right Side: Room Category */}
+                                                                       
                                                                         <div style={{ color: '#555555', fontSize: '12px', fontWeight: 'bold' }}>
                                                                             Room: {item.roomCategory}
                                                                         </div>
                                                                     </>
                                                                 )}
                                                             </div>
-                                                        )}
+                                                        )} */}
+
+
+
+
+                                                                {item.category === "Stay" && (
+                                      <div
+                                        style={{
+                                          opacity:
+                                            item.status === "Residence"
+                                              ? 0.8
+                                              : 1,
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            fontWeight: "bold",
+                                            color: "#22252bff",
+                                            fontSize: "16px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "8px",
+                                          }}
+                                        >
+                                          {item.hotelName}
+
+                                          <span
+                                            style={{
+                                              fontSize: "10px",
+                                              padding: "2px 6px",
+                                              borderRadius: "4px",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: "2px",
+                                              backgroundColor: "#fff",
+                                            }}
+                                          >
+                                            ⭐ {item.rating}
+                                          </span>
+                                        </div>
+
+
+                                            {item.description && (
+                                          <div
+                                            style={{
+                                              color: "#292d33ff",
+                                              fontSize: "12px",
+                                              marginTop: "4px",
+                                              marginBottom: "8px",
+                                            }}
+                                          >
+                                            {item.description}
+                                          </div>
+                                        )}
+
+                                        <div
+                                          style={{
+                                            marginTop: "2px",
+                                            display: "grid",
+                                            gridTemplateColumns: "1fr 1fr",
+                                            gap: "8px",
+                                            fontSize: "12px",
+                                          }}
+                                        >
+                                          {item.status === "Check-in" ? (
+                                            <>
+                                              <div
+                                                style={{
+                                                  color: "#292d33ff",
+                                                  padding: "2px",
+                                                  fontWeight: "bold",
+                                                }}
+                                              >
+                                                Type: {item.stayType} (Stay)
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  color: "#292d33ff",
+                                                  padding: "2px",
+                                                  fontWeight: "bold",
+                                                }}
+                                              >
+                                                Room: {item.roomCategory}
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  color: "#292d33ff",
+                                                  padding: "2px",
+                                                }}
+                                              >
+                                                {item.nights} Nights Stay
+                                              </div>
+
+                                              {/* @ts-ignore */}
+                                              {item.mealType && (
+                                                <div
+                                                  style={{
+                                                    color: "#292d33ff",
+                                                    padding: "2px",
+                                                    fontWeight: "bold",
+                                                  }}
+                                                >
+                                                  {/* @ts-ignore */}
+                                                  Meal: {item.mealType} • {item.menuStyle}
+                                                </div>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <>
+                                              <div
+                                                style={{
+                                                  gridColumn: "span 2",
+                                                  fontSize: "12px",
+                                                  color: "#292d33ff",
+                                                  fontStyle: "italic",
+                                                  marginTop: "2px",
+                                                }}
+                                              >
+                                                Continuing stay at{" "}
+                                                {item.hotelName}.{" "}
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  color: "#292d33ff",
+                                                  padding: "2px",
+                                                  borderRadius: "4px",
+                                                  fontWeight: "bold",
+                                                }}
+                                              >
+                                                Type: {item.stayType} (Stay)
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  color: "#292d33ff",
+                                                  padding: "2px",
+                                                  borderRadius: "4px",
+                                                  fontWeight: "bold",
+                                                }}
+                                              >
+                                                Room: {item.roomCategory}
+                                              </div>
+                                            </>
+                                          )}
+                                        </div>
+
+                                        {/* @ts-ignore */}
+                                        {item.mealNotes && (
+                                          <div
+                                            style={{
+                                              fontSize: "11px",
+                                              color: "#6b7280",
+                                              fontStyle: "italic",
+                                              marginTop: "6px",
+                                            }}
+                                          >
+                                            {/* @ts-ignore */}
+                                            Meal Notes: {item.mealNotes}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+
+
+
 
                                                           {/* --- TRANSPORT PDF BLOCK --- */}
-                                                         {item.category === 'Transport' && (
+                                                         {/* {item.category === 'Transport' && (
                                                             <div>
-                                                                {/* Title & Badge */}
+                                                               
                                                                 <div style={{ fontWeight: 'bold', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px' }}>
                                                                     {item.vehicleType}
                                                                     {['flight', 'rail', 'ferry'].includes(item.mode) && item.flightNumber && (
@@ -1286,19 +1585,17 @@ return (
                                                                     )}
                                                                     
                                                                 </div>
-
-                            
-
-                                                                {/* Flight Layout */}
+                        
+                                    
                                                                 {item.mode === 'flight' ? (
                                                                     <div style={{ marginTop: '12px', padding: '12px'}}>
                                                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', alignItems: 'center', gap: '16px' }}>
-                                                                            {/* Dep */}
+                                                                            
                                                                             <div>
                                                                                 <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>{item.pickupTime || '--:--'}</div>
                                                                                 <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555555', textTransform: 'uppercase' }}>{item.pickupLocation || 'Not Set'}</div>
                                                                             </div>
-                                                                            {/* Middle */}
+                                                                            
                                                                             <div style={{ textAlign: 'center' }}>
                                                                                 <div style={{ fontSize: '10px', color: '#555555', fontWeight: 'bold', marginBottom: '4px' }}>DURATION: {item.duration || '--'}</div>
                                                                                 <div style={{ position: 'relative', width: '100%', height: '2px', backgroundColor: '#6b6b6b', margin: '8px 0' }}>
@@ -1312,7 +1609,7 @@ return (
                                                                                     {item.flightStops && item.flightStops !== 'Direct' ? `${item.flightStops} ${item.layoverInfo ? `• ${item.layoverInfo}` : ''}` : 'Direct Flight'}
                                                                                 </div>
                                                                             </div>
-                                                                            {/* Arr */}
+                                                                            
                                                                             <div style={{ textAlign: 'right' }}>
                                                                                 <div style={{ fontSize: '14px', fontWeight: '900', color: '#555555' }}>
                                                                                     {item.dropoffTime || '--:--'}
@@ -1350,17 +1647,17 @@ return (
                                                                         </div>
                                                                     </div>
                                                                 ) : (
-                                                                    /* Vehicle Mode */
+                                                                   
 <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: item.subType === 'transfer' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: '12px', padding: '12px',  }}>
                                                                         
-                                                                        {/* Col 1: Pickup */}
+                                                                       
                                                                         <div>
                                                                             <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Pickup</div>
                                                                             <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555' }}>{item.pickupLocation || 'Not Set'}</div>
                                                                             <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555555', marginTop: '2px' }}>{item.pickupTime || '--:--'}</div>
                                                                         </div>
 
-                                                                        {/* Col 2: Drop-off (Only for Transfers) */}
+                                                                       
                                                                         {item.subType === 'transfer' && (
                                                                             <div>
                                                                                 <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Drop-off</div>
@@ -1369,13 +1666,13 @@ return (
                                                                             </div>
                                                                         )}
 
-                                                                        {/* Col 3: Duration (Always Visible) */}
+                                                                      
                                                                         <div>
                                                                             <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Duration</div>
                                                                             <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#555555', display: 'inline-block', padding: '2px 6px', borderRadius: '4px' }}>{item.duration || '--'}</div>
                                                                         </div>
 
-                                                                        {/* Col 4: Journey Info */}
+                                                                      
                                                                         <div>
                                                                             <div style={{ fontSize: '10px',  fontWeight: 'bold', color: '#656565', textTransform: 'uppercase', marginBottom: '4px' }}>Journey Info</div>
                                                                             <div style={{ fontSize: '11px', color: '#555555'  }}>{item.serviceDescription || '--'}</div>
@@ -1384,7 +1681,544 @@ return (
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                        )}
+                                                        )} */}
+
+
+                                                          {item.category === "Transport" && (
+                                      <div>
+                                        {/* 🌟 NEW: Headline logic — category-style title instead of raw vehicle/class name + badge */}
+                                        {(() => {
+                                          // Compute the new headline based on mode + subType
+                                          let headline = item.vehicleType; // fallback, shouldn't normally show
+                                          if (item.mode === "flight") {
+                                            headline = "Flight Transfer";
+                                          } else if (item.mode === "rail") {
+                                            headline = "Rail Journey";
+                                          } else if (item.mode === "ferry") {
+                                            headline = "Ferry Transfer";
+                                          } else if (item.mode === "bus") {
+                                            headline = "Coach Transfer";
+                                          } else {
+                                            // Vehicle mode (car/sedan/van/etc.)
+                                            headline =
+                                              item.subType === "transfer"
+                                                ? "Private Transfer"
+                                                : "Vehicle at Disposal";
+                                          }
+
+                                          return (
+                                            <>
+                                              {/* New bold category headline (badge removed entirely) */}
+                                              <div
+                                                style={{
+                                                  fontWeight: "bold",
+                                                  color: "#1f2937",
+                                                  fontSize: "16px",
+                                                }}
+                                              >
+                                                {headline}
+                                              </div>
+
+                                              {/* Specific name/class — moved here from the old headline, now a smaller secondary line */}
+                                              <div
+                                                style={{
+                                                  fontSize: "12px",
+                                                  color: "#555555",
+                                                  fontWeight: "bold",
+                                                  marginTop: "2px",
+                                                }}
+                                              >
+                                                {item.vehicleType}
+                                                {["flight", "rail", "ferry"].includes(
+                                                  item.mode,
+                                                ) &&
+                                                  item.flightNumber && (
+                                                    <span style={{ color: "#2563eb" }}>
+                                                      {" "}
+                                                      • {item.flightNumber}
+                                                    </span>
+                                                  )}
+                                              </div>
+                                            </>
+                                          );
+                                        })()}
+
+                                        {/* Flight Layout */}
+
+                                        {item.mode === "flight" ? (
+                                          <div
+                                            style={{
+                                              marginTop: "12px",
+                                              padding: "12px",
+                                            }}
+                                          >
+                                            <div
+                                              style={{
+                                                display: "grid",
+                                                gridTemplateColumns:
+                                                  "1fr 2fr 1fr",
+                                                alignItems: "center",
+                                                gap: "16px",
+                                              }}
+                                            >
+                                              {/* Dep */}
+
+                                              <div>
+                                                <div
+                                                  style={{
+                                                    fontSize: "14px",
+                                                    fontWeight: "900",
+                                                    color: "#555555",
+                                                  }}
+                                                >
+                                                  {item.pickupTime || "--:--"}
+                                                </div>
+
+                                                <div
+                                                  style={{
+                                                    fontSize: "10px",
+                                                    fontWeight: "bold",
+                                                    color: "#555555",
+                                                    textTransform: "uppercase",
+                                                  }}
+                                                >
+                                                  {item.pickupLocation ||
+                                                    "Not Set"}
+                                                </div>
+                                              </div>
+
+                                              {/* Middle */}
+
+                                              <div
+                                                style={{ textAlign: "center" }}
+                                              >
+                                                <div
+                                                  style={{
+                                                    fontSize: "10px",
+                                                    color: "#555555",
+                                                    fontWeight: "bold",
+                                                    marginBottom: "4px",
+                                                  }}
+                                                >
+                                                  DURATION:{" "}
+                                                  {item.duration || "--"}
+                                                </div>
+
+                                                <div
+                                                  style={{
+                                                    position: "relative",
+                                                    width: "100%",
+                                                    height: "2px",
+                                                    backgroundColor: "#6b6b6b",
+                                                    margin: "8px 0",
+                                                  }}
+                                                >
+                                                  {item.flightStops &&
+                                                  item.flightStops !==
+                                                    "Direct" ? (
+                                                    <div
+                                                      style={{
+                                                        position: "absolute",
+                                                        top: "50%",
+                                                        left: "50%",
+                                                        transform:
+                                                          "translate(-50%, -50%)",
+                                                        width: "8px",
+                                                        height: "8px",
+                                                        backgroundColor:
+                                                          "#2563eb",
+                                                        borderRadius: "50%",
+                                                        border: "#6b6b6b",
+                                                      }}
+                                                    ></div>
+                                                  ) : (
+                                                    <div
+                                                      style={{
+                                                        position: "absolute",
+                                                        top: "50%",
+                                                        left: "50%",
+                                                        transform:
+                                                          "translate(-50%, -50%)",
+                                                        fontSize: "14px",
+                                                      }}
+                                                    >
+                                                      ✈️
+                                                    </div>
+                                                  )}
+                                                </div>
+
+                                                <div
+                                                  style={{
+                                                    fontSize: "10px",
+                                                    fontWeight: "bold",
+                                                    color:
+                                                      item.flightStops &&
+                                                      item.flightStops !==
+                                                        "Direct"
+                                                        ? "#2563eb"
+                                                        : "#16a34a",
+                                                  }}
+                                                >
+                                                  {item.flightStops &&
+                                                  item.flightStops !== "Direct"
+                                                    ? `${item.flightStops} ${item.layoverInfo ? `• ${item.layoverInfo}` : ""}`
+                                                    : "Direct Flight"}
+                                                </div>
+                                              </div>
+
+                                              {/* Arr */}
+
+                                              <div
+                                                style={{ textAlign: "right" }}
+                                              >
+                                                <div
+                                                  style={{
+                                                    fontSize: "14px",
+                                                    fontWeight: "900",
+                                                    color: "#555555",
+                                                  }}
+                                                >
+                                                  {item.dropoffTime || "--:--"}
+
+                                                  {(item as any)
+                                                    .arrivalDayOffset ===
+                                                    "+1" && (
+                                                    <sup
+                                                      style={{
+                                                        fontSize: "10px",
+                                                        color: "#ef4444",
+                                                        marginLeft: "2px",
+                                                      }}
+                                                    >
+                                                      +1
+                                                    </sup>
+                                                  )}
+                                                </div>
+
+                                                <div
+                                                  style={{
+                                                    fontSize: "10px",
+                                                    fontWeight: "bold",
+                                                    color: "#555555",
+                                                    textTransform: "uppercase",
+                                                  }}
+                                                >
+                                                  {item.dropoffLocation ||
+                                                    "Not Set"}
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            {item.serviceDescription && (
+                                              <div
+                                                style={{
+                                                  marginTop: "12px",
+                                                  paddingTop: "8px",
+                                                  borderTop:
+                                                    "1px solid #e5e7eb",
+                                                  fontSize: "11px",
+                                                  fontWeight: "bold",
+                                                  color: "#555555",
+                                                }}
+                                              >
+                                                <strong>Cabin:</strong>{" "}
+                                                {item.serviceDescription}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : ["rail", "ferry"].includes(
+                                            item.mode,
+                                          ) ? (
+                                          <div
+                                            style={{
+                                              marginTop: "12px",
+                                              display: "grid",
+                                              gridTemplateColumns:
+                                                "1fr 1fr 1fr 1fr",
+                                              gap: "12px",
+                                              padding: "12px",
+                                            }}
+                                          >
+                                            <div>
+                                              <div
+                                                style={{
+                                                  fontSize: "10px",
+                                                  fontWeight: "bold",
+                                                  color: "#656565",
+                                                  textTransform: "uppercase",
+                                                  marginBottom: "4px",
+                                                }}
+                                              >
+                                                Schedule
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  fontSize: "12px",
+                                                  fontWeight: "bold",
+                                                  color: "#555555",
+                                                }}
+                                              >
+                                                {item.pickupTime || "--:--"}{" "}
+                                                <span
+                                                  style={{
+                                                    color: "555555",
+                                                    fontWeight: "normal",
+                                                  }}
+                                                >
+                                                  to
+                                                </span>{" "}
+                                                {item.dropoffTime || "--:--"}
+                                                {(item as any)
+                                                  .arrivalDayOffset ===
+                                                  "+1" && (
+                                                  <sup
+                                                    style={{
+                                                      fontSize: "9px",
+                                                      color: "#ef4444",
+                                                      marginLeft: "2px",
+                                                    }}
+                                                  >
+                                                    +1
+                                                  </sup>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            <div>
+                                              <div
+                                                style={{
+                                                  fontSize: "10px",
+                                                  fontWeight: "bold",
+                                                  color: "#656565",
+                                                  textTransform: "uppercase",
+                                                  marginBottom: "4px",
+                                                }}
+                                              >
+                                                {item.mode === "ferry"
+                                                  ? "Ports"
+                                                  : "Route"}
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  fontSize: "12px",
+                                                  fontWeight: "bold",
+                                                  color: "#555555",
+                                                }}
+                                              >
+                                                {item.pickupLocation ||
+                                                  "Not Set"}{" "}
+                                                →{" "}
+                                                {item.dropoffLocation ||
+                                                  "Not Set"}
+                                              </div>
+                                            </div>
+
+                                            <div>
+                                              <div
+                                                style={{
+                                                  fontSize: "10px",
+                                                  fontWeight: "bold",
+                                                  color: "#656565",
+                                                  textTransform: "uppercase",
+                                                  marginBottom: "4px",
+                                                }}
+                                              >
+                                                Duration
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  fontSize: "12px",
+                                                  fontWeight: "bold",
+                                                  color: "#555555",
+                                                  display: "inline-block",
+                                                  padding: "2px 6px",
+                                                  borderRadius: "4px",
+                                                }}
+                                              >
+                                                {item.duration || "--"}
+                                              </div>
+                                            </div>
+
+                                            <div>
+                                              <div
+                                                style={{
+                                                  fontSize: "10px",
+                                                  fontWeight: "bold",
+                                                  color: "#656565",
+                                                  textTransform: "uppercase",
+                                                  marginBottom: "4px",
+                                                }}
+                                              >
+                                                {item.mode === "ferry"
+                                                  ? "Deck Info"
+                                                  : "Travel Info"}
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  fontSize: "12px",
+                                                  color: "#555555",
+                                                }}
+                                              >
+                                                {item.serviceDescription ||
+                                                  "--"}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          /* Vehicle Mode */
+
+                                          <div
+                                            style={{
+                                              marginTop: "12px",
+                                              display: "grid",
+                                              gridTemplateColumns:
+                                                item.subType === "transfer"
+                                                  ? "1fr 1fr 1fr 1fr"
+                                                  : "1fr 1fr 1fr",
+                                              gap: "12px",
+                                              padding: "12px",
+                                            }}
+                                          >
+                                            {/* Col 1: Pickup */}
+
+                                            <div>
+                                              <div
+                                                style={{
+                                                  fontSize: "10px",
+                                                  fontWeight: "bold",
+                                                  color: "#656565",
+                                                  textTransform: "uppercase",
+                                                  marginBottom: "4px",
+                                                }}
+                                              >
+                                                Pickup
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  fontSize: "12px",
+                                                  fontWeight: "bold",
+                                                  color: "#555555",
+                                                }}
+                                              >
+                                                {item.pickupLocation ||
+                                                  "Not Set"}
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  fontSize: "11px",
+                                                  fontWeight: "bold",
+                                                  color: "#555555",
+                                                  marginTop: "2px",
+                                                }}
+                                              >
+                                                {item.pickupTime || "--:--"}
+                                              </div>
+                                            </div>
+
+                                            {/* Col 2: Drop-off (Only for Transfers) */}
+
+                                            {item.subType === "transfer" && (
+                                              <div>
+                                                <div
+                                                  style={{
+                                                    fontSize: "10px",
+                                                    fontWeight: "bold",
+                                                    color: "#656565",
+                                                    textTransform: "uppercase",
+                                                    marginBottom: "4px",
+                                                  }}
+                                                >
+                                                  Drop-off
+                                                </div>
+
+                                                <div
+                                                  style={{
+                                                    fontSize: "12px",
+                                                    fontWeight: "bold",
+                                                    color: "#555555",
+                                                  }}
+                                                >
+                                                  {item.dropoffLocation ||
+                                                    "Not Set"}
+                                                </div>
+
+                                                <div
+                                                  style={{
+                                                    fontSize: "11px",
+                                                    fontWeight: "bold",
+                                                    color: "#555555",
+                                                    marginTop: "2px",
+                                                  }}
+                                                >
+                                                  {item.dropoffTime || "--:--"}
+                                                </div>
+                                              </div>
+                                            )}
+
+                                            {/* Col 3: Duration (Always Visible) */}
+
+                                            <div>
+                                              <div
+                                                style={{
+                                                  fontSize: "10px",
+                                                  fontWeight: "bold",
+                                                  color: "#656565",
+                                                  textTransform: "uppercase",
+                                                  marginBottom: "4px",
+                                                }}
+                                              >
+                                                Duration
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  fontSize: "12px",
+                                                  fontWeight: "bold",
+                                                  color: "#555555",
+                                                  display: "inline-block",
+                                                  padding: "2px 6px",
+                                                  borderRadius: "4px",
+                                                }}
+                                              >
+                                                {item.duration || "--"}
+                                              </div>
+                                            </div>
+
+                                            {/* Col 4: Journey Info */}
+
+                                            <div>
+                                              <div
+                                                style={{
+                                                  fontSize: "10px",
+                                                  fontWeight: "bold",
+                                                  color: "##656565",
+                                                  textTransform: "uppercase",
+                                                  marginBottom: "4px",
+                                                }}
+                                              >
+                                                Journey Info
+                                              </div>
+
+                                              <div
+                                                style={{
+                                                  fontSize: "11px",
+                                                  color: "#555555",
+                                                }}
+                                              >
+                                                {item.serviceDescription ||
+                                                  "--"}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
 
 
                                                         {/* --- MEAL PDF BLOCK --- */}
