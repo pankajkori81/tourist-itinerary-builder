@@ -1407,9 +1407,9 @@ return (
                                                         )} */}
 
 
+                                       {/* --- STAY PDF BLOCK --- */}
 
-
-                                                                {item.category === "Stay" && (
+                                    {item.category === "Stay" && (
                                       <div
                                         style={{
                                           opacity:
@@ -1514,14 +1514,17 @@ return (
                                               )}
                                             </>
                                           ) : (
-                                            <>
+                                  
+                                          <>
+                                              {/* 🔧 CHANGED: "Continuing stay..." no longer
+                                                  spans both columns — it now sits in column 1,
+                                                  with Room in column 2 on the SAME row. */}
                                               <div
                                                 style={{
-                                                  gridColumn: "span 2",
-                                                  fontSize: "12px",
                                                   color: "#292d33ff",
                                                   fontStyle: "italic",
-                                                  marginTop: "2px",
+                                                  fontSize: "12px",
+                                                  padding: "2px",
                                                 }}
                                               >
                                                 Continuing stay at{" "}
@@ -1536,9 +1539,12 @@ return (
                                                   fontWeight: "bold",
                                                 }}
                                               >
-                                                Type: {item.stayType} (Stay)
+                                                Room: {item.roomCategory}
                                               </div>
 
+                                              {/* 🔧 CHANGED: Type moves to row 2, column 1 —
+                                                  Meal now sits beside it in column 2, same row,
+                                                  instead of spanning full width below. */}
                                               <div
                                                 style={{
                                                   color: "#292d33ff",
@@ -1547,12 +1553,28 @@ return (
                                                   fontWeight: "bold",
                                                 }}
                                               >
-                                                Room: {item.roomCategory}
+                                                Type: {item.stayType} (Stay)
                                               </div>
+
+                                              {/* @ts-ignore */}
+                                              {item.mealType && (
+                                                <div
+                                                  style={{
+                                                    color: "#292d33ff",
+                                                    padding: "2px",
+                                                    fontWeight: "bold",
+                                                  }}
+                                                >
+                                                  {/* @ts-ignore */}
+                                                  Meal: {item.mealType} • {item.menuStyle}
+                                                </div>
+                                              )}
                                             </>
                                           )}
                                         </div>
-
+                                         
+                                      
+                          
                                         {/* @ts-ignore */}
                                         {item.mealNotes && (
                                           <div
@@ -1571,6 +1593,10 @@ return (
                                     )}
 
 
+
+
+
+                                        
 
 
 
