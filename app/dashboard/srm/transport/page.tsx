@@ -960,17 +960,29 @@ export default function TransportSRMPage() {
     return <Car size={20} />;
   };
 
-    function updateStop(id: any, arg1: string, value: string): void {
-        throw new Error('Function not implemented.');
-    }
 
-    function removeStop(id: any): void {
-        throw new Error('Function not implemented.');
-    }
+  const addStop = () => {
+    setFormData((prev: any) => ({
+      ...prev,
+      routeStops: [...(prev.routeStops || []), { id: Date.now(), stopName: '', duration: '' }]
+    }));
+  };
 
-    function addStop(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
-        throw new Error('Function not implemented.');
-    }
+  const updateStop = (id: number, field: string, value: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      routeStops: (prev.routeStops || []).map((stop: any) => 
+        stop.id === id ? { ...stop, [field]: value } : stop
+      )
+    }));
+  };
+
+  const removeStop = (id: number) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      routeStops: (prev.routeStops || []).filter((stop: any) => stop.id !== id)
+    }));
+  };
 
   return (
    <div className="h-full w-full flex flex-col relative overflow-hidden">
