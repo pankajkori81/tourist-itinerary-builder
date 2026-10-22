@@ -773,12 +773,12 @@ export interface MealData {
   _id?: string;
   restaurantName: string;
   cuisine: string;
-  type: 'Standard' | 'Premium' | 'Luxury';
+  // type: 'Standard' | 'Premium' | 'Luxury';
   city: string;
   country: string;
   address?: string;
   images: string[];
-  description?: string;
+  // description?: string;
   status: 'Active' | 'Inactive';
   linkedSupplierId?: string;
   createdAt?: string;

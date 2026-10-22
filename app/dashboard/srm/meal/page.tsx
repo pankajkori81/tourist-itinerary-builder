@@ -1079,12 +1079,12 @@ export default function MealSRMPage() {
     id: '', 
     restaurantName: '', 
     cuisine: 'Multi-Cuisine', 
-    type: 'Standard', 
+    // type: 'Standard', 
     city: '', 
     country: '', 
     address: '',
     images: [], 
-    description: '',
+    // description: '',
     status: 'Active', 
     linkedSupplierId: '' 
   };
@@ -1448,7 +1448,7 @@ export default function MealSRMPage() {
                               <div><label className="text-xs font-bold text-gray-600 mb-1 block">Country *</label><input type="text" value={formData.country} onChange={e => setFormData({...formData, country: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg" placeholder="Country"/></div>
                           </div>
                           <div><label className="text-xs font-bold text-gray-600 mb-1 block">Full Address</label><input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg" placeholder="Street, Landmark..."/></div>
-                          <div><label className="text-xs font-bold text-gray-600 mb-1 block">Description</label><textarea rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg text-sm" placeholder="Short description of the restaurant..."/></div>
+                          {/* <div><label className="text-xs font-bold text-gray-600 mb-1 block">Description</label><textarea rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg text-sm" placeholder="Short description of the restaurant..."/></div> */}
                       </div>
                   </div>
               </div>

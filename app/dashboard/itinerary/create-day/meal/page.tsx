@@ -40,6 +40,40 @@ export default function MealForm({ initialData, city, dayDate, onSave, onCancel 
     );
   }, [meals, city]);
 
+  // // Initialize State
+  // const [formData, setFormData] = useState<Meal>(() => {
+  //   if (initialData) {
+  //     return {
+  //       ...initialData,
+  //       paxAdult: typeof initialData.paxAdult === 'number' ? initialData.paxAdult : globalAdults,
+  //       paxChild: typeof initialData.paxChild === 'number' ? initialData.paxChild : globalChildren,
+  //       // @ts-ignore
+  //       linkedSupplierId: initialData.linkedSupplierId || '' 
+  //     }; 
+  //   }  else {
+  //     return {
+  //       id: Date.now(),
+  //       type: 'meal',
+  //       restaurantName: '',
+  //       cuisine: '',
+  //       address: city,
+  //       mealType: 'Lunch',
+  //       mealTime: '13:00',
+  //       inclusionType: 'included',
+  //       adultCost: 0, // Kept in data, input removed
+  //       childCost: 0, // Kept in data, input removed
+  //       paxAdult: globalAdults,
+  //       paxChild: globalChildren,
+  //       requiresTransfer: false,
+  //       pickupLocation: '',
+  //       dropoffLocation: '',
+  //       // @ts-ignore
+  //       linkedSupplierId: '' 
+  //     };
+  //   }
+  // });
+
+
   // Initialize State
   const [formData, setFormData] = useState<Meal>(() => {
     if (initialData) {
@@ -49,30 +83,27 @@ export default function MealForm({ initialData, city, dayDate, onSave, onCancel 
         paxChild: typeof initialData.paxChild === 'number' ? initialData.paxChild : globalChildren,
         // @ts-ignore
         linkedSupplierId: initialData.linkedSupplierId || '' 
-      };
+      } as Meal; // 🌟 FIX: Added "as Meal" here
     } else {
       return {
         id: Date.now(),
         type: 'meal',
         restaurantName: '',
         cuisine: '',
-        rating: '4.0',
         address: city,
         mealType: 'Lunch',
-        menuType: 'Buffet',
         mealTime: '13:00',
         inclusionType: 'included',
-        adultCost: 0, // Kept in data, input removed
-        childCost: 0, // Kept in data, input removed
+        adultCost: 0, 
+        childCost: 0, 
         paxAdult: globalAdults,
         paxChild: globalChildren,
-        description: '',
         requiresTransfer: false,
         pickupLocation: '',
         dropoffLocation: '',
         // @ts-ignore
         linkedSupplierId: '' 
-      };
+      } as unknown as Meal; // 🌟 FIX: Added "as unknown as Meal" here
     }
   });
 
@@ -110,11 +141,11 @@ export default function MealForm({ initialData, city, dayDate, onSave, onCancel 
       ...prev,
       restaurantName: srmItem.restaurantName,
       cuisine: srmItem.cuisine,
-      rating: srmItem.rating,
+      // rating: srmItem.rating,
       address: srmItem.address || srmItem.city,
-      menuType: srmItem.menuType,
+      // menuType: srmItem.menuType,
       // Costs are left as is (0) since they are handled in Costing Sheet
-      description: srmItem.inclusions ? `Inclusions: ${srmItem.inclusions}` : prev.description
+      // description: srmItem.inclusions ? `Inclusions: ${srmItem.inclusions}` : prev.description
     }));
 
     if (window.innerWidth < 768) setShowSidebar(false);
@@ -343,7 +374,7 @@ export default function MealForm({ initialData, city, dayDate, onSave, onCancel 
                         <div className="flex justify-between items-start">
                             <div className="font-bold text-gray-800 text-sm group-hover:text-orange-600 truncate">{item.restaurantName}</div>
                             <div className="flex items-center gap-1 text-[10px] font-bold bg-yellow-50 text-yellow-700 px-1.5 rounded border border-yellow-200 shrink-0">
-                                <Star size={8} className="fill-current"/> {item.rating}
+                                {/* <Star size={8} className="fill-current"/> {item.rating} */}
                             </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-1 truncate">{item.cuisine}</p>
