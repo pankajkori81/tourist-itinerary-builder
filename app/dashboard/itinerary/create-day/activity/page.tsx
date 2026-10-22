@@ -573,7 +573,7 @@ export default function ActivityForm({
                                 </div>
                             )}
                             <div className="absolute top-2 right-2 bg-white/90 px-1.5 py-0.5 rounded text-[10px] font-bold shadow">{item.type}</div>
-                            {item.rating > 0 && <div className="absolute bottom-2 left-2 flex gap-1"><span className="text-[10px] bg-black/70 text-white px-2 py-0.5 rounded flex items-center gap-1"><Star size={8} className="fill-yellow-400 text-yellow-400"/> {item.rating} ({item.reviewsCount || 0})</span></div>}
+                            {/* {item.rating > 0 && <div className="absolute bottom-2 left-2 flex gap-1"><span className="text-[10px] bg-black/70 text-white px-2 py-0.5 rounded flex items-center gap-1"><Star size={8} className="fill-yellow-400 text-yellow-400"/> {item.rating} ({item.reviewsCount || 0})</span></div>} */}
                         </div>
                         
                         <div className="p-3">
