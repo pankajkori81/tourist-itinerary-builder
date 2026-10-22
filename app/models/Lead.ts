@@ -27,7 +27,10 @@ const LeadSchema = new mongoose.Schema({
   agentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
 // 🌟 NEW: If this lead is converted, store the ID of the resulting Itinerary
-  convertedTripId: { type: String, default: null }
+  convertedTripId: { type: String, default: null },
+
+  quotedValue: { type: Number, default: 0 },          // total price of the latest quote
+  quotedItineraryId: { type: String, default: null }  // Mongo _id of the latest quote (used by "Build Trip")
   
 }, { timestamps: true });
 

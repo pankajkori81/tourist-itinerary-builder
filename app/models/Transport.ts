@@ -3,7 +3,9 @@ import mongoose from "mongoose";
 const TransportSchema = new mongoose.Schema({
   transportMode: { type: String, enum: ['Vehicle', 'Rail', 'Flight', 'Ferry'], default: 'Vehicle' },
   vehicleType: { type: String, required: true },
-  serviceType: { type: String, enum: ['Transfer', 'Disposal'], default: 'Transfer' },
+  serviceType: { type: String, enum: ['Transfer', 'Disposal', 'Multi-Stop'], default: 'Transfer' },
+  routeName: String,
+  routeStops: Array, // Stores the individual stops
   city: { type: String, required: true },
   country: String,
   maxGuests: Number,
@@ -12,8 +14,6 @@ const TransportSchema = new mongoose.Schema({
   defaultPickup: String,
   defaultDropoff: String,
   defaultDuration: String,
-
-  
   operator: String, 
   transportClass: String,
   referenceNo: String,

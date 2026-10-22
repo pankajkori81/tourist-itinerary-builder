@@ -751,13 +751,6 @@
 
 
 
-
-
-
-
-
-
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -784,6 +777,8 @@ interface Lead {
   travelDates: string;
   numberOfTravelers: number;
   budget: number;
+  quotedValue?: number;               // 🆕 total of the lead's latest quote
+  quotedItineraryId?: string | null;  // 🆕 _id of the lead's latest quote
   status: 'New' | 'Contacted' | 'Quoted' | 'Won' | 'Lost';
   createdAt: string;
 }
@@ -810,6 +805,9 @@ const COLUMNS = [
 const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
 
+// 💰 Show the quote's value once a quote exists; before that, the inquiry budget
+const getLeadValue = (lead: Lead) =>
+  lead.quotedValue && lead.quotedValue > 0 ? lead.quotedValue : (lead.budget || 0);
 export default function LeadsDashboard() {
   const router = useRouter();
   const { user } = useUser();
@@ -947,14 +945,37 @@ const [selectedClient, setSelectedClient] = useState<any>(null);
     }
   };
 
-  const convertToItinerary = (lead: Lead) => {
-     const params = new URLSearchParams({
-        clientName: lead.customerName,
-        dest: lead.destination,
-        pax: String(lead.numberOfTravelers)
-     });
-     router.push(`/dashboard/itinerary/create?${params.toString()}`);
-  };
+  // const convertToItinerary = (lead: Lead) => {
+  //    const params = new URLSearchParams({
+  //       clientName: lead.customerName,
+  //       dest: lead.destination,
+  //       pax: String(lead.numberOfTravelers),
+  //       leadId: lead._id
+
+  //    });
+  //    router.push(`/dashboard/itinerary/create?${params.toString()}`);
+  // };
+
+
+
+  // File: app/dashboard/leads/page.tsx  (replaces the old convertToItinerary)
+const convertToItinerary = (lead: Lead) => {
+   // 🔗 Lead already has a quote → open THAT quote
+   if (lead.quotedItineraryId) {
+      router.push(`/dashboard/itinerary/create?editId=${lead.quotedItineraryId}`);
+      return;
+   }
+
+   // No quote yet → start a fresh one for this lead
+   const params = new URLSearchParams({
+      clientName: lead.customerName,
+      dest: lead.destination,
+      pax: String(lead.numberOfTravelers),
+      leadId: lead._id,
+      new: '1'   // 🆕 tells the Intro page to ignore any stale local draft (Step 10)
+   });
+   router.push(`/dashboard/itinerary/create?${params.toString()}`);
+};
 
   // --- Search & Grouping Logic ---
   const filteredLeads = useMemo(() => {
@@ -1096,8 +1117,8 @@ const [selectedClient, setSelectedClient] = useState<any>(null);
                           <div className="flex gap-4 pb-4">
                               {COLUMNS.map(col => {
                                   const columnLeads = groupItems.filter(l => l.status === col.id);
-                                  const columnTotal = columnLeads.reduce((sum, lead) => sum + (lead.budget || 0), 0);
-                                  
+                                  // const columnTotal = columnLeads.reduce((sum, lead) => sum + (lead.budget || 0), 0);
+                                  const columnTotal = columnLeads.reduce((sum, lead) => sum + getLeadValue(lead), 0);
                                   return (
                                   <div key={col.id} className="w-[300px] flex flex-col shrink-0">
                                       
@@ -1169,7 +1190,8 @@ const [selectedClient, setSelectedClient] = useState<any>(null);
                                                       {/* Card Details: Dates & Price */}
                                                       <div className="flex items-center justify-between text-xs mb-4">
                                                           <span className="text-gray-500 flex items-center gap-1.5 font-medium"><Calendar size={12}/> {lead.travelDates}</span>
-                                                          <span className="font-black text-green-600 text-sm">{formatCurrency(lead.budget)}</span>
+                                                          {/* <span className="font-black text-green-600 text-sm">{formatCurrency(lead.budget)}</span> */}
+                                                          <span className="font-black text-green-600 text-sm" title={lead.quotedValue && lead.quotedValue > 0 ? 'Quoted price' : 'Estimated budget'}>{formatCurrency(getLeadValue(lead))}</span>
                                                       </div>
 
                                                       {/* Card Footer: Status & Action */}

@@ -4,19 +4,35 @@ import { cookies } from "next/headers";
 import dbConnect from "@/app/lib/dbconnect";
 import Client from "@/app/models/Client";
 
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getServerSession } from "next-auth/next";
+
+
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
 
 // Helper to get logged-in user securely
+// async function getUser() {
+//   const cookieStore = await cookies();
+//   const token = cookieStore.get("token")?.value;
+//   if (!token) return null;
+//   try {
+//     const { payload } = await jwtVerify(token, SECRET);
+//     return payload; // Returns { userId, role }
+//   } catch (error) {
+//     return null;
+//   }
+// }
+
+
+// 🌟 PERMANENT FIX: Pure NextAuth Helper
 async function getUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-  if (!token) return null;
-  try {
-    const { payload } = await jwtVerify(token, SECRET);
-    return payload; // Returns { userId, role }
-  } catch (error) {
-    return null;
-  }
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return null;
+  
+  return { 
+    userId: (session.user as any).id, 
+    role: (session.user as any).role || 'admin' 
+  };
 }
 
 // 1. GET: Fetch all Clients (or one specific Client by ID)

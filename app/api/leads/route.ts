@@ -114,20 +114,36 @@ import dbConnect from "@/app/lib/dbconnect";
 import Lead from "@/app/models/Lead";
 import Client from "@/app/models/Client";
 import { LeadSchema } from "@/app/lib/validations";
+// import { getServerSession } from "next-auth";
+// import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getServerSession } from "next-auth/next";
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
+// const SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
 
-// Helper to get logged-in user
+// // Helper to get logged-in user
+// async function getUser() {
+//   const cookieStore = await cookies();
+//   const token = cookieStore.get("token")?.value;
+//   if (!token) return null;
+//   try {
+//     const { payload } = await jwtVerify(token, SECRET);
+//     return payload; // { userId, role }
+//   } catch (error) {
+//     return null;
+//   }
+// }
+
+
+// 🌟 PERMANENT FIX: Pure NextAuth Helper
 async function getUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-  if (!token) return null;
-  try {
-    const { payload } = await jwtVerify(token, SECRET);
-    return payload; // { userId, role }
-  } catch (error) {
-    return null;
-  }
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return null;
+  
+  return { 
+    userId: (session.user as any).id, 
+    role: (session.user as any).role || 'admin' 
+  };
 }
 
 // 1. GET: Fetch Leads (All or Single)
@@ -216,6 +232,31 @@ export const POST = async (req: NextRequest) => {
 
 
 // 3. PUT: Update Lead (Status or Full Edit)
+// export const PUT = async (req: NextRequest) => {
+//     await dbConnect();
+//     try {
+//         const user = await getUser();
+//         if (!user) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+
+//         const body = await req.json();
+//         const { leadId, ...updateData } = body; 
+        
+//         const query: any = { _id: leadId };
+//         if (user.role === 'agent') query.agentId = user.userId; 
+
+//         // This will now update WHATEVER data you send it (Status, Name, Budget, etc)
+//         const updatedLead = await Lead.findOneAndUpdate(query, updateData, { new: true });
+//         if (!updatedLead) return NextResponse.json({ success: false, message: "Lead not found or unauthorized" }, { status: 404 });
+
+//         return NextResponse.json({ success: true, data: updatedLead });
+
+//     } catch (error) {
+//         return NextResponse.json({ success: false, message: "Server Error" }, { status: 500 });
+//     }
+// }
+
+
+// 3. PUT: Update Lead (Status or Full Edit)
 export const PUT = async (req: NextRequest) => {
     await dbConnect();
     try {
@@ -228,6 +269,27 @@ export const PUT = async (req: NextRequest) => {
         const query: any = { _id: leadId };
         if (user.role === 'agent') query.agentId = user.userId; 
 
+        // 🛡️ AUTO-UPDATE FROM A SAVED QUOTE (always carries quotedItineraryId):
+        // Manual changes (status dropdown, edit modal) don't send quotedItineraryId, so they are never blocked.
+        if (updateData.status === 'Quoted' && updateData.quotedItineraryId) {
+            const current = await Lead.findOne(query);
+            if (!current) {
+                return NextResponse.json({ success: false, message: "Lead not found or unauthorized" }, { status: 404 });
+            }
+            if (current.status === 'Won') {
+                // Keep the Won lead pointing at its confirmed trip
+                delete updateData.status;
+                delete updateData.quotedValue;
+                delete updateData.quotedItineraryId;
+                delete updateData.convertedTripId;
+
+                // Nothing left to change → return the lead as it is
+                if (Object.keys(updateData).length === 0) {
+                    return NextResponse.json({ success: true, data: current });
+                }
+            }
+        }
+
         // This will now update WHATEVER data you send it (Status, Name, Budget, etc)
         const updatedLead = await Lead.findOneAndUpdate(query, updateData, { new: true });
         if (!updatedLead) return NextResponse.json({ success: false, message: "Lead not found or unauthorized" }, { status: 404 });
@@ -238,6 +300,8 @@ export const PUT = async (req: NextRequest) => {
         return NextResponse.json({ success: false, message: "Server Error" }, { status: 500 });
     }
 }
+
+
 
 // 4. DELETE: Remove Lead (You were missing this!)
 export const DELETE = async (req: NextRequest) => {

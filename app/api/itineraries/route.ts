@@ -113,6 +113,7 @@ import mongoose from "mongoose";
 import User from "@/app/models/User";
 import { TravelOperation } from "@/app/models/TravelOperation";
 import { Commission } from "@/app/models/Commission";
+import Lead from "@/app/models/Lead"; 
 
 // 🟢 GET: Fetch all itineraries (or one specific ID)
 export async function GET(req: NextRequest) {
@@ -138,68 +139,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-
-
-
-// 🔵 POST: Create a brand new itinerary (Or Clone an existing one)
-// export async function POST(req: NextRequest) {
-//   await dbConnect();
-//   try {
-//     const body = await req.json();
-
-//     // 🌟 CRITICAL FIX 1: Remove existing MongoDB _id so it creates a fresh one
-//     delete body._id;
-    
-//     // 🌟 CRITICAL FIX 2: Generate unique IDs to prevent the E11000 duplicate key crash!
-//     const uniqueId = `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-//     body.tripId = uniqueId;
-    
-//     // This stops the EXACT error in your logs: "dup key: { itineraryCode: null }"
-//     body.itineraryCode = uniqueId; 
-
-//     const newItinerary = await Itinerary.create(body);
-//     return NextResponse.json({ success: true, data: newItinerary });
-    
-//   } catch (error: any) { 
-//     console.error("POST Itinerary Error:", error);
-//     return NextResponse.json({ success: false, message: "Failed to create itinerary" }, { status: 500 }); 
-//   }
-// }
-
-
-
-// export async function POST(req: NextRequest) {
-//   await dbConnect();
-//   try {
-//     const body = await req.json();
-
-//     // 🌟 CRITICAL FIX 1: Remove existing MongoDB _id so it creates a fresh one
-//     delete body._id;
-    
-//     // 🔧 CHANGED: only generate a fallback tripId if the client didn't already
-//     // send a real one. Previously this line ran unconditionally and overwrote
-//     // the correctly-computed smart ID (e.g. "1-AT50-2026") from the Intro page
-//     // on every single create, which is why new trips always showed as
-//     // "ID Pending..." in the Library until a second (PUT) save fixed it.
-//     if (!body.tripId) {
-//         const uniqueId = `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-//         body.tripId = uniqueId;
-//     }
-    
-//     // 🔧 CHANGED: same guard for itineraryCode — only fall back if missing,
-//     // and reuse the real tripId when one exists instead of a second random value.
-//     if (!body.itineraryCode) {
-//         body.itineraryCode = body.tripId || `TRIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-//     }
-
-//     const newItinerary = await Itinerary.create(body);
-//     return NextResponse.json({ success: true, data: newItinerary });
-    
-//   } catch (error: any) { 
-//     console.error("POST Itinerary Error:", error);
-//     return NextResponse.json({ success: false, message: "Failed to create itinerary" }, { status: 500 }); 
-//   }
-// }
 
 
 
@@ -265,6 +204,91 @@ export async function POST(req: NextRequest) {
 }
 
 
+// // 🟠 PUT: Update an existing itinerary
+// export async function PUT(req: NextRequest) {
+//   await dbConnect();
+//   try {
+//     const body = await req.json();
+//     const { _id, bookingStatus, ...updateData } = body;
+    
+//     // Safety check from your original code
+//     if (!_id || !mongoose.Types.ObjectId.isValid(_id)) {
+//         return NextResponse.json({ success: false, message: "Missing or Invalid document _id" }, { status: 400 });
+//     }
+
+//     // 1. Update the Itinerary
+//     const updatedItinerary = await Itinerary.findByIdAndUpdate(
+//       _id, 
+//       { $set: { bookingStatus, ...updateData } }, 
+//       { new: true }
+//     );
+
+//     if (!updatedItinerary) {
+//         return NextResponse.json({ success: false, message: "Itinerary not found" }, { status: 404 });
+//     }
+
+//     // 2. 🚨 THE COMMISSION TRIGGER 🚨
+//     // BACK TO SECURE MODE: Only triggers when a trip is actually finalized
+//     const currentStatus = bookingStatus || updatedItinerary.bookingStatus;
+//     if (
+//       (currentStatus === 'confirmed' || currentStatus === 'completed') && 
+//       updatedItinerary.assignedAgentId
+//     ) {
+//       await generateCommissionRecord(updatedItinerary._id);
+//     }
+
+//     return NextResponse.json({ success: true, data: updatedItinerary });
+//   } catch (error: any) { 
+//     console.error("PUT Itinerary Error:", error);
+//     return NextResponse.json({ success: false, message: "Failed to update itinerary" }, { status: 500 }); 
+//   }
+// }
+
+
+
+// // 🟠 PUT: Update an existing itinerary
+// export async function PUT(req: NextRequest) {
+//   await dbConnect();
+//   try {
+//     const body = await req.json();
+//     const { _id, bookingStatus, ...updateData } = body;
+    
+//     // Safety check from your original code
+//     if (!_id || !mongoose.Types.ObjectId.isValid(_id)) {
+//         return NextResponse.json({ success: false, message: "Missing or Invalid document _id" }, { status: 400 });
+//     }
+
+//     // 🌟 FIX: Added `upsert: true`. This instantly solves the empty/new DB issue 
+//     // by creating the document if the old local storage ID isn't found.
+//     const updatedItinerary = await Itinerary.findByIdAndUpdate(
+//       _id, 
+//       { $set: { bookingStatus, ...updateData } }, 
+//       { new: true, upsert: true } 
+//     );
+
+//     if (!updatedItinerary) {
+//         return NextResponse.json({ success: false, message: "Itinerary not found" }, { status: 404 });
+//     }
+
+//     // 2. 🚨 THE COMMISSION TRIGGER 🚨
+//     const currentStatus = bookingStatus || updatedItinerary.bookingStatus;
+//     if (
+//       (currentStatus === 'confirmed' || currentStatus === 'completed') && 
+//       updatedItinerary.assignedAgentId
+//     ) {
+//       await generateCommissionRecord(updatedItinerary._id);
+//     }
+
+//     return NextResponse.json({ success: true, data: updatedItinerary });
+//   } catch (error: any) { 
+//     console.error("PUT Itinerary Error:", error);
+//     return NextResponse.json({ success: false, message: "Failed to update itinerary" }, { status: 500 }); 
+//   }
+// }
+
+
+
+// File: app/api/itineraries/route.ts  (replaces your current PUT function)
 // 🟠 PUT: Update an existing itinerary
 export async function PUT(req: NextRequest) {
   await dbConnect();
@@ -277,25 +301,79 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ success: false, message: "Missing or Invalid document _id" }, { status: 400 });
     }
 
+    // 0. 📸 Snapshot BEFORE the update, so we can detect real status changes.
+    // `before` can be null on a fresh/new database (old local-storage id) — that is allowed, see upsert below.
+    const before = await Itinerary.findById(_id).select('bookingStatus routingData isMasterItinerary linkedLeadId');
+
+    const isConfirming = !!before && bookingStatus === 'confirmed' && before.bookingStatus !== 'confirmed';
+    const isCancelling = !!before && bookingStatus === 'cancelled' && before.bookingStatus !== 'cancelled';
+
+    // 🛑 Confirm rules
+    if (isConfirming) {
+        if (before.isMasterItinerary) {
+            return NextResponse.json(
+                { success: false, message: "A Master Template cannot be confirmed. Use it to create a quote first." },
+                { status: 400 }
+            );
+        }
+        const startDate = updateData.routingData?.startDate ?? before.routingData?.startDate;
+        if (!startDate) {
+            return NextResponse.json(
+                { success: false, message: "Cannot confirm: the trip start date is missing. Set the dates first." },
+                { status: 400 }
+            );
+        }
+    }
+
     // 1. Update the Itinerary
+    // 🌟 upsert: true → if the id isn't in the (new) database, create the document instead of failing
     const updatedItinerary = await Itinerary.findByIdAndUpdate(
       _id, 
       { $set: { bookingStatus, ...updateData } }, 
-      { new: true }
+      { new: true, upsert: true } 
     );
 
     if (!updatedItinerary) {
         return NextResponse.json({ success: false, message: "Itinerary not found" }, { status: 404 });
     }
 
-    // 2. 🚨 THE COMMISSION TRIGGER 🚨
-    // BACK TO SECURE MODE: Only triggers when a trip is actually finalized
+    // 2. 🚨 THE COMMISSION TRIGGER 🚨 (unchanged)
+    // Only triggers when a trip is actually finalized
     const currentStatus = bookingStatus || updatedItinerary.bookingStatus;
     if (
       (currentStatus === 'confirmed' || currentStatus === 'completed') && 
       updatedItinerary.assignedAgentId
     ) {
       await generateCommissionRecord(updatedItinerary._id);
+    }
+
+    // 3. 🔗 CRM SYNC (only on a real status change; never blocks the save)
+    if (updatedItinerary.linkedLeadId && (isConfirming || isCancelling)) {
+      try {
+        const itineraryIdStr = String(updatedItinerary._id);
+
+        if (isConfirming) {
+          const total = Number(updatedItinerary.finalSellPrice) || 0;
+          await Lead.findByIdAndUpdate(updatedItinerary.linkedLeadId, {
+            $set: {
+              status: 'Won',
+              quotedItineraryId: itineraryIdStr,
+              convertedTripId: itineraryIdStr,
+              ...(total > 0 ? { quotedValue: total } : {})
+            }
+          });
+        }
+
+        if (isCancelling) {
+          // Only mark the lead Lost if THIS itinerary is the lead's current quote
+          await Lead.updateOne(
+            { _id: updatedItinerary.linkedLeadId, quotedItineraryId: itineraryIdStr },
+            { $set: { status: 'Lost' } }
+          );
+        }
+      } catch (leadError) {
+        console.error("Lead sync failed (itinerary saved fine):", leadError);
+      }
     }
 
     return NextResponse.json({ success: true, data: updatedItinerary });

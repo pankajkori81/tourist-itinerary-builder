@@ -346,7 +346,8 @@ import {
   Home, Map, Users, Settings, ChevronLeft, Menu, 
   RouteIcon, BarChart3, Plane, CreditCard, User, 
   Settings2, HelpCircle, Calendar, Briefcase, 
-  Landmark , ShieldAlert
+  Landmark , ShieldAlert,
+  Library
 } from 'lucide-react';
 import { useDashboardUI } from '@/app/context/DashboardUIContext';
 import { useUser } from '@/app/context/UserContext'; // <--- Import User Context
@@ -378,6 +379,7 @@ export function Sidebar() {
       roles: ['admin', 'agent'] 
     },
 
+
     // 3. Core Trips & Itinerary (Everyone)
     { 
       label: "Trips", 
@@ -390,6 +392,13 @@ export function Sidebar() {
       path: '/dashboard/itinerary/create', // Restored your original path
       icon: Map,
       roles: ['admin', 'employee', 'agent']
+    },
+
+      { 
+      label: 'Library', 
+      path: '/dashboard/itinerary/library', 
+      icon: Library,
+      roles: ['admin', 'employee', 'agent']   // change here to restrict, e.g. ['admin', 'employee']
     },
 
     // 4. SRM / Suppliers (Admins & Employees)

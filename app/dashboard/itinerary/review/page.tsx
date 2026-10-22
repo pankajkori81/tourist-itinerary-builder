@@ -2306,46 +2306,7 @@ export default function ReviewPage() {
                                               )}
                                             </>
                                           ) : (
-                                        //     <>
-                                        //       <div
-                                        //         style={{
-                                        //           gridColumn: "span 2",
-                                        //           fontSize: "12px",
-                                        //           color: "#292d33ff",
-                                        //           fontStyle: "italic",
-                                        //           marginTop: "2px",
-                                        //         }}
-                                        //       >
-                                        //         Continuing stay at{" "}
-                                        //         {item.hotelName}.{" "}
-                                        //       </div>
-
-                                        //       <div
-                                        //         style={{
-                                        //           color: "#292d33ff",
-                                        //           padding: "2px",
-                                        //           borderRadius: "4px",
-                                        //           fontWeight: "bold",
-                                        //         }}
-                                        //       >
-                                        //         Type: {item.stayType} (Stay)
-                                        //       </div>
-
-                                        //       <div
-                                        //         style={{
-                                        //           color: "#292d33ff",
-                                        //           padding: "2px",
-                                        //           borderRadius: "4px",
-                                        //           fontWeight: "bold",
-                                        //         }}
-                                        //       >
-                                        //         Room: {item.roomCategory}
-                                        //       </div>
-                                        //     </>
-                                        //   )}
-                                        // </div>
-
-
+                                  
                                           <>
                                               {/* 🔧 CHANGED: "Continuing stay..." no longer
                                                   spans both columns — it now sits in column 1,
@@ -2405,8 +2366,7 @@ export default function ReviewPage() {
                                         </div>
                                          
                                       
-                                  
-
+                          
                                         {/* @ts-ignore */}
                                         {item.mealNotes && (
                                           <div
@@ -2991,7 +2951,119 @@ export default function ReviewPage() {
                                                 {item.serviceDescription ||
                                                   "--"}
                                               </div>
+                                            {/* </div> */}
+                                          {/* </div>
+                                        ) : (
+                                    
+                                          <div
+                                            style={{
+                                              marginTop: "12px",
+                                              display: "grid",
+                                              gridTemplateColumns:
+                                                item.subType === "transfer"
+                                                  ? "1fr 1fr 1fr 1fr"
+                                                  : "1fr 1fr 1fr",
+                                              gap: "12px",
+                                              padding: "12px",
+                                            }}
+                                          >
+
+                                          
+                                        
+                                            <div> */}
+
+                                                                                        </div>
+                                          </div>
+                                        ) : item.subType === "multi-stop" ? (
+                                          /* 🔧 NEW: Multi-Stop Route */
+                                          <div style={{ marginTop: "12px", padding: "12px" }}>
+                                            <div
+                                              style={{
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "center",
+                                                marginBottom: "8px",
+                                              }}
+                                            >
+                                              <div
+                                                style={{
+                                                  fontSize: "12px",
+                                                  fontWeight: "bold",
+                                                  color: "#374151",
+                                                }}
+                                              >
+                                                {item.routeName || "Multi-Stop Route"}
+                                              </div>
+                                              <div
+                                                style={{
+                                                  fontSize: "11px",
+                                                  fontWeight: "bold",
+                                                  color: "#15803d",
+                                                }}
+                                              >
+                                                {/* Total: {(item.totalDistance || 0).toFixed(1)} {item.distanceUnit || "mi"} */}
+                                              </div>
                                             </div>
+
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                                              {(item.stops || []).map((stop: any, idx: number) => (
+                                                <div
+                                                  key={stop.id || idx}
+                                                  style={{
+                                                    border: "1px solid #d1d5db",
+                                                    borderRadius: "4px",
+                                                    padding: "6px 10px",
+                                                    minWidth: "110px",
+                                                  }}
+                                                >
+                                                  <div
+                                                    style={{
+                                                      fontSize: "9px",
+                                                      fontWeight: "bold",
+                                                      color: "#9ca3af",
+                                                      textTransform: "uppercase",
+                                                    }}
+                                                  >
+                                                    Stop {idx + 1}
+                                                  </div>
+                                                  <div
+                                                    style={{
+                                                      fontSize: "12px",
+                                                      fontWeight: "bold",
+                                                      color: "#374151",
+                                                    }}
+                                                  >
+                                                    {stop.stopName || "Not Set"}
+                                                  </div>
+                                                  <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "2px" }}>
+                                                    <span style={{ color: "#15803d", fontWeight: "bold" }}>
+                                                      {(stop.cumulativeDistance || 0).toFixed(1)} {item.distanceUnit || "mi"}
+                                                    </span>
+                                                    {" • "}
+                                                    {stop.departTime || "--:--"}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                              {(!item.stops || item.stops.length === 0) && (
+                                                <div style={{ fontSize: "11px", color: "#9ca3af", fontStyle: "italic" }}>
+                                                  No stops added
+                                                </div>
+                                              )}
+                                            </div>
+
+                                            {item.serviceDescription && (
+                                              <div
+                                                style={{
+                                                  marginTop: "8px",
+                                                  paddingTop: "6px",
+                                                  borderTop: "1px solid #e5e7eb",
+                                                  fontSize: "11px",
+                                                  color: "#555555",
+                                                }}
+                                              >
+                                                <strong>Journey Info:</strong> {item.serviceDescription}
+                                              </div>
+                                            )}
                                           </div>
                                         ) : (
                                           /* Vehicle Mode */
@@ -3008,7 +3080,9 @@ export default function ReviewPage() {
                                               padding: "12px",
                                             }}
                                           >
-                                            {/* Col 1: Pickup */}
+
+                                          
+                                            
 
                                             <div>
                                               <div

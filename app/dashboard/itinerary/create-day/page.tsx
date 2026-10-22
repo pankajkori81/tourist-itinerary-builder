@@ -801,7 +801,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Key } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Camera, Hotel, Bus, Utensils, 
@@ -1656,35 +1656,6 @@ export default function DaywisePage() {
                                     </div>
 
 
-                                    
-                                {/* <div className="flex justify-between items-start">
-                                    <div>
-                                        <div className="flex items-center gap-3">
-                                           
-                                            <h4 className="font-bold text-xl text-gray-800 flex items-center gap-2">
-                                                {item.vehicleType || 'Transport'}
-                                                {item.mode !== 'vehicle' && item.flightNumber && (
-                                                    <span className="text-gray-400 font-medium text-base"> • <span className="text-blue-600">{item.flightNumber}</span></span>
-                                                )}
-                                            </h4>
-                                            <StatusBadge status={item.inclusionType} />
-                                        </div>
-                                        
-                                        <div className="flex items-center gap-2 mt-1">
-                                            {supplierName && <div className="inline-flex items-center gap-1 bg-green-50 text-green-800 px-2 py-0.5 rounded text-[10px] border border-green-100"><Briefcase size={10} /><span className="font-bold">By: {supplierName}</span></div>}
-                                            {['flight', 'rail', 'ferry'].includes(item.mode) ? (
-                                                <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 font-bold uppercase">Transit Ticket</span>
-                                            ) : (
-                                                <span className="text-[10px] bg-gray-100 text-gray-600 px-3 py-0.5 rounded-full border border-gray-200 font-bold uppercase">{item.subType}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => openEdit(item, 'add_transport')} className="text-green-600 hover:bg-green-50 p-1.5 rounded-md"><Edit size={16}/></button>
-                                            <button onClick={() => handleDeleteItem('transport', item.id)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16}/></button>
-                                    </div>
-                                </div> */}
 
                                 {/* Dynamic Logistics Block */}
                                 <div className="mt-4">
@@ -1797,11 +1768,100 @@ export default function DaywisePage() {
                                                 </div>
                                             </div>
                                         </div>
+
+                                                                            ) : item.subType === 'multi-stop' ? (
+                                        // ============================================
+                                        // 🔧 NEW: MULTI-STOP ROUTE UI (compact, scrollable)
+                                        // ============================================
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="text-[11px] font-bold text-gray-700 truncate" title={item.routeName}>
+                                                    {item.routeName || 'Multi-Stop Route'}
+                                                </div>
+                                                {/* <div className="text-[10px] font-bold text-green-700 bg-green-100/60 px-1.5 py-0.5 rounded shrink-0 ml-2">
+                                                    Total: {(item.totalDistance || 0).toFixed(1)} {item.distanceUnit || 'mi'}
+                                                </div> */}
+                                            </div>
+
+
+                                                                                        {/* 🔧 CHANGED: flex-nowrap forces stops + Journey Info to
+                                                stay on one row; Journey Info uses shrink-0 so it never
+                                                gets squeezed or pushed to a new line */}
+                                            <div className="flex flex-nowrap gap-3 items-start">
+                                                <div className="flex gap-2 overflow-x-auto pb-1 flex-1 min-w-0">
+                                                    {(item.stops || []).map((stop: { id: Key | null | undefined; stopName: string | undefined; cumulativeDistance: any; departTime: any; }, idx: number) => (
+                                                        <div
+                                                            key={stop.id}
+                                                            className="flex-shrink-0 bg-white border border-gray-200 rounded-md px-2 py-1.5 min-w-[110px]"
+                                                        >
+                                                            <div className="text-[9px] font-bold text-gray-400 uppercase">Stop {idx + 1}</div>
+                                                            <div className="text-[11px] font-bold text-gray-800 truncate max-w-[100px]" title={stop.stopName}>
+                                                                {stop.stopName || 'Not Set'}
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 mt-0.5 text-[9px] font-semibold text-gray-500">
+                                                                <span className="text-green-700">{(stop.cumulativeDistance || 0).toFixed(1)} {item.distanceUnit || 'mi'}</span>
+                                                                <span>•</span>
+                                                                <span>{stop.departTime || '--:--'}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {(!item.stops || item.stops.length === 0) && (
+                                                        <div className="text-[10px] text-gray-400 italic px-1 py-1.5">No stops added</div>
+                                                    )}
+                                                </div>
+
+                                                <div className="shrink-0 w-40 border-l border-gray-200 pl-3">
+                                                    <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Journey Info</div>
+                                                    <div className="text-[11px] font-semibold text-gray-600 line-clamp-2" title={item.serviceDescription}>
+                                                        {item.serviceDescription || 'No details added'}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* <div className="flex gap-2 overflow-x-auto pb-1">
+                                                {(item.stops || []).map((stop: { id: Key | null | undefined; stopName: string | undefined; cumulativeDistance: any; departTime: any; }, idx: number) => (
+                                                    <div
+                                                        key={stop.id}
+                                                        className="flex-shrink-0 bg-white border border-gray-200 rounded-md px-2 py-1.5 min-w-[110px]"
+                                                    >
+                                                        <div className="text-[9px] font-bold text-gray-400 uppercase">Stop {idx + 1}</div>
+                                                        <div className="text-[11px] font-bold text-gray-800 truncate max-w-[100px]" title={stop.stopName}>
+                                                            {stop.stopName || 'Not Set'}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 mt-0.5 text-[9px] font-semibold text-gray-500">
+                                                            <span className="text-green-700">{(stop.cumulativeDistance || 0).toFixed(1)} {item.distanceUnit || 'mi'}</span>
+                                                            <span>•</span>
+                                                            <span>{stop.departTime || '--:--'}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {(!item.stops || item.stops.length === 0) && (
+                                                    <div className="text-[10px] text-gray-400 italic px-1 py-1.5">No stops added</div>
+                                                )}
+                                            </div> */}
+
+
+                                                                                           {/* 🔧 CHANGED: pushed to the far right edge of the card
+                                                    with ml-auto, matching where Journey Info sits on the
+                                                    Private Transfer card above */}
+                                                {/* <div className="flex-shrink-0 w-40 ml-auto border-l border-gray-200 pl-3">
+                                                    <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Journey Info</div>
+                                                    <div className="text-[11px] font-semibold text-gray-600 line-clamp-2" title={item.serviceDescription}>
+                                                        {item.serviceDescription || 'No details added'}
+                                                    </div>
+                                                </div> */}
+
+                                           
+                                            
+                                        </div>
                                     ) : (
                                         // ============================================
                                         // VEHICLE MODE UI (Car Transfer / Disposal)
                                         // ============================================
                               <div className={`grid grid-cols-1 ${item.subType === 'transfer' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100`}>
+                              {/*        ) : ( */}
+                             
+                              {/*  <div className={`grid grid-cols-1 ${item.subType === 'transfer' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100`}> */}
                                             
                                             {/* Col 1: Pickup Block */}
                                             <div>

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const ActivitySchema = new mongoose.Schema({
+  activityId: { type: String, unique: true, sparse: true, trim: true },
   name: { type: String, required: true },
   type: String,
   city: { type: String, required: true },
@@ -11,8 +12,6 @@ const ActivitySchema = new mongoose.Schema({
   startTime: String,
   pickupLocation: String,
   isGuideRequired: { type: Boolean, default: false },
-  rating: { type: Number, default: 5 },
-  reviewsCount: { type: Number, default: 0 },
   providerLink: String,
   description: String,
 

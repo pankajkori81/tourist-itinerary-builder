@@ -7,11 +7,7 @@ const MealSchema = new mongoose.Schema({
   city: { type: String, required: true },
   country: String,
   address: String,
-  rating: String,
   images: [String],
-  menuType: String,
-  dietaryOptions: [String],
-  inclusions: String,
   description: String,
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
   linkedSupplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' } // RELATIONAL LINK

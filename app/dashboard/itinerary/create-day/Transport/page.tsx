@@ -647,7 +647,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   MapPin, Clock, Users, Briefcase, Car, 
   CheckCircle2, Ban, PlusSquare, 
-  Phone, Mail, DollarSign, Train, Plane, Ship
+  Phone, Mail, DollarSign, Train, Plane, Ship , Trash2, Route 
 } from 'lucide-react';
 import { 
   Transport, 
@@ -655,7 +655,8 @@ import {
   VEHICLE_TYPES, 
   VEHICLE_SPECS,
   Stay, 
-  Activity
+  Activity,
+    RouteStop 
 } from '../constants/daywiseConstants';
 import { useItinerary } from '@/app/context/ItineraryContext';
 import { useSRM } from '@/app/context/SRMContext'; 
@@ -720,6 +721,9 @@ export default function TransportForm({
   // Track which tab is active (Defaults to 'vehicle' or the mode being edited)
   const [activeTab, setActiveTab] = useState<string>(initialData?.mode || 'vehicle');
 
+  // getting wiped by the parseFloat-then-rerender cycle)
+  const [distanceDrafts, setDistanceDrafts] = useState<Record<string, string>>({});
+
   // Store independent objects for each tab
   const [tabData, setTabData] = useState<Record<string, Transport>>(() => {
       const basePickup = currentStay ? currentStay.hotelName : '';
@@ -775,10 +779,6 @@ export default function TransportForm({
     return ['flight', 'rail', 'ferry'].includes(activeTab);
   }, [activeTab]);
 
-  // SMART AUTO-DURATION CALCULATOR FOR TICKETS (Updates only the active locker)
-
-  // 🌟 SMART AUTO-DURATION CALCULATOR FOR TICKETS (Updates only the active locker)
-
   // 🌟 SMART AUTO-DURATION CALCULATOR (Now works for Vehicle Transfers too!)
   useEffect(() => {
     // 👇 Added "|| formData.subType === 'transfer'" so cars calculate automatically
@@ -832,6 +832,43 @@ export default function TransportForm({
             [field]: value 
         }
     }));
+  };
+
+
+  // --- MULTI-STOP ROUTE HANDLERS ---
+
+  const addStop = () => {
+    const newStop: RouteStop = {
+      id: `stop-${Date.now()}`,
+      stopName: '',
+      departTime: '09:00',
+      stopTimeMinutes: 0,
+      cumulativeDistance: 0,
+    };
+    updateField('stops', [...(formData.stops || []), newStop]);
+  };
+
+  const removeStop = (stopId: string) => {
+    const newStops = (formData.stops || []).filter(s => s.id !== stopId);
+    updateField('stops', newStops);
+    const lastStop = newStops[newStops.length - 1];
+    updateField('totalDistance', lastStop?.cumulativeDistance || 0);
+  };
+
+  const updateStopField = (stopId: string, field: keyof RouteStop, value: any) => {
+    const newStops = (formData.stops || []).map(s => s.id === stopId ? { ...s, [field]: value } : s);
+    updateField('stops', newStops);
+  };
+
+  // "Cumulative Dist." is the ONLY manual distance field per stop.
+  // Total Distance = whatever is entered on the last stop. No API, no rollup math.
+  const updateCumulativeDistance = (stopId: string, cumulativeDist: number) => {
+    const stops = formData.stops || [];
+    const updatedStops = stops.map(s => s.id === stopId ? { ...s, cumulativeDistance: cumulativeDist } : s);
+    updateField('stops', updatedStops);
+
+    const lastStop = updatedStops[updatedStops.length - 1];
+    updateField('totalDistance', lastStop?.cumulativeDistance || 0);
   };
 
   const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -897,7 +934,7 @@ export default function TransportForm({
       {/* --- SCROLLABLE BODY --- */}
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
         
-        {/* 1. SERVICE CONFIGURATION (Transfer vs Disposal) - HIDDEN IF TICKET MODE */}
+                {/* 1. SERVICE CONFIGURATION (Transfer vs Disposal vs Multi-Stop) - HIDDEN IF TICKET MODE */}
         {!isTicketMode && (
         <section>
             <div className="flex gap-6 border-b border-gray-100 pb-4 mb-4">
@@ -920,6 +957,18 @@ export default function TransportForm({
                     <div>
                         <div className="text-sm font-bold text-gray-800">Disposal (Full Day)</div>
                         <div className="text-[10px] text-gray-400">Vehicle stays with client (e.g. 8 Hrs / 80 Km)</div>
+                    </div>
+                </label>
+
+                {/* 🔧 NEW: Multi-Stop Route option */}
+                <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.subType === 'multi-stop' ? 'border-green-600' : 'border-gray-300'}`}>
+                        {formData.subType === 'multi-stop' && <div className="w-2.5 h-2.5 rounded-full bg-green-600" />}
+                    </div>
+                    <input type="radio" className="hidden" checked={formData.subType === 'multi-stop'} onChange={() => updateField('subType', 'multi-stop')} />
+                    <div>
+                        <div className="text-sm font-bold text-gray-800">Multi-Stop Route</div>
+                        <div className="text-[10px] text-gray-400">Several stops in sequence (e.g. City Tour)</div>
                     </div>
                 </label>
             </div>
@@ -1241,6 +1290,185 @@ export default function TransportForm({
                     </p>
                 </section>
 
+
+
+                                 {formData.subType === 'multi-stop' ? (
+                <section className="bg-gray-50 rounded-xl p-5 border border-gray-200 mt-6">
+                    <h3 className="text-xs font-bold text-gray-600 uppercase mb-4 flex items-center gap-2">
+                        <Route size={14}/> Multi-Stop Route
+                    </h3>
+
+                    <div className="mb-4">
+                        <label className="block text-xs font-bold text-gray-500 mb-1">Route Name</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. Route 101: Downtown Express"
+                            value={formData.routeName || ''}
+                            onChange={(e) => updateField('routeName', e.target.value)}
+                            className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold outline-none focus:border-green-500"
+                        />
+                    </div>
+
+                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-100 text-[10px] font-bold text-gray-500 uppercase">
+                            <div className="col-span-1">Stop #</div>
+                            <div className="col-span-4">Stop Name</div>
+                            <div className="col-span-2">Cumulative Dist.</div>
+                            <div className="col-span-2">Depart Time</div>
+                            <div className="col-span-2">Stop Time (min)</div>
+                            <div className="col-span-1"></div>
+                        </div>
+
+                        {(formData.stops || []).map((stop, idx) => (
+                            <div key={stop.id} className="grid grid-cols-12 gap-2 px-3 py-2 border-t border-gray-100 items-center">
+                                {/* <div className="col-span-1 text-sm font-bold text-gray-600">{idx + 1}</div> */}
+                                <div className="col-span-1 text-sm font-bold text-gray-600">Stop {idx + 1}</div>
+                                <div className="col-span-4">
+                                    <input
+                                        type="text"
+                                        placeholder="Stop location"
+                                        value={stop.stopName}
+                                        onChange={(e) => updateStopField(stop.id, 'stopName', e.target.value)}
+                                        className="w-full p-1.5 border border-gray-300 rounded text-sm outline-none focus:border-green-500"
+                                    />
+                                </div>
+                                {/* <div className="col-span-2 text-sm font-bold text-green-700">
+                                    {stop.cumulativeDistance.toFixed(1)} {formData.distanceUnit || 'mi'}
+                                </div> */}
+
+                                                                {/* Manual Cumulative Dist. input — this is the ONLY distance field */}
+                                {/* <div className="col-span-2">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        placeholder="0.0"
+                                        value={stop.cumulativeDistance || ''}
+                                        onChange={(e) => updateCumulativeDistance(stop.id, parseFloat(e.target.value) || 0)}
+                                        className="w-full p-1.5 border border-gray-300 rounded text-sm font-bold text-green-700 outline-none focus:border-green-500"
+                                    />
+                                </div> */}
+
+                                    <div className="col-span-2 relative">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        placeholder="0.0"
+                                        // 🔧 CHANGED: display comes from the draft string while
+                                        // the user is typing, NOT from the re-parsed number —
+                                        // this is what lets "0.0", "1.2" etc. type cleanly.
+                                        value={
+                                            distanceDrafts[stop.id] !== undefined
+                                                ? distanceDrafts[stop.id]
+                                                : (stop.cumulativeDistance === 0 ? '' : String(stop.cumulativeDistance))
+                                        }
+                                        onChange={(e) => {
+                                            const raw = e.target.value;
+                                            setDistanceDrafts(prev => ({ ...prev, [stop.id]: raw }));
+                                            const parsed = parseFloat(raw);
+                                            // still updates Total live as they type, without touching the input's own display
+                                            updateCumulativeDistance(stop.id, isNaN(parsed) ? 0 : parsed);
+                                        }}
+                                        onBlur={() => {
+                                            // once they're done editing, drop the draft so the field
+                                            // falls back to the clean committed value
+                                            setDistanceDrafts(prev => {
+                                                const next = { ...prev };
+                                                delete next[stop.id];
+                                                return next;
+                                            });
+                                        }}
+                                        className="w-full p-1.5 pr-8 border border-gray-300 rounded text-sm font-bold text-green-700 outline-none focus:border-green-500"
+                                    />
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 font-semibold pointer-events-none">
+                                        {formData.distanceUnit || 'mi'}
+                                    </span>
+                                </div>
+                                {/* <div className="col-span-2">
+                                    <input
+                                        type="time"
+                                        value={stop.departTime}
+                                        onChange={(e) => updateStopField(stop.id, 'departTime', e.target.value)}
+                                        className="w-full p-1.5 border border-gray-300 rounded text-sm outline-none focus:border-green-500"
+                                    />
+                                </div> */}
+
+
+                                                                {/* 🔧 CHANGED: AM/PM overlay shown inline, same pattern used
+                                    on the Routing page's date pickers (transparent native input
+                                    + absolutely positioned formatted text on top) */}
+                                <div className="col-span-2 relative">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-800 pointer-events-none z-10">
+                                        {stop.departTime
+                                            ? new Date(`2000-01-01T${stop.departTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                                            : '--:-- --'}
+                                    </span>
+                                    <input
+                                        type="time"
+                                        value={stop.departTime}
+                                        onChange={(e) => updateStopField(stop.id, 'departTime', e.target.value)}
+                                        className="w-full p-1.5 border border-gray-300 rounded text-sm outline-none focus:border-green-500 relative z-20"
+                                        style={{ color: 'transparent' }}
+                                    />
+                                </div>
+
+
+                                {/* <div className="col-span-2">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={stop.stopTimeMinutes}
+                                        onChange={(e) => updateStopField(stop.id, 'stopTimeMinutes', parseInt(e.target.value) || 0)}
+                                        className="w-full p-1.5 border border-gray-300 rounded text-sm outline-none focus:border-green-500"
+                                    />
+                                </div> */}
+
+                                                                <div className="col-span-2 relative">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={stop.stopTimeMinutes}
+                                        onChange={(e) => updateStopField(stop.id, 'stopTimeMinutes', parseInt(e.target.value) || 0)}
+                                        className="w-full p-1.5 pr-9 border border-gray-300 rounded text-sm outline-none focus:border-green-500"
+                                    />
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-semibold pointer-events-none">
+                                        min
+                                    </span>
+                                    {stop.stopTimeMinutes >= 60 && (
+                                        <div className="text-[10px] text-gray-400 mt-0.5">
+                                            {Math.floor(stop.stopTimeMinutes / 60)} h {stop.stopTimeMinutes % 60} min
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="col-span-1 text-center">
+                                    <button onClick={() => removeStop(stop.id)} className="text-red-500 hover:text-red-500">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-4">
+                        <button onClick={addStop} className="text-sm font-bold text-green-600 hover:text-green-700 flex items-center gap-1">
+                            + Add Stop
+                        </button>
+                          {/* <span className="text-sm font-bold text-gray-700">
+                            Total: {(formData.totalDistance || 0).toFixed(1)} {formData.distanceUnit || 'mi'}
+                        </span> */}
+                        {/* <div className="flex items-center gap-3">
+                            <button onClick={handleCalculateDistances} className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg">
+                                Calculate Distances
+                            </button>
+                            <span className="text-sm font-bold text-gray-700">
+                                Total: {(formData.totalDistance || 0).toFixed(1)} {formData.distanceUnit || 'mi'}
+                            </span>
+                        </div> */}
+                    </div>
+                </section>
+                ) : (
+
                 <section className="bg-gray-50 rounded-xl p-5 border border-gray-200 mt-6">
                     <h3 className="text-xs font-bold text-gray-600 uppercase mb-4 flex items-center gap-2">
                         <MapPin size={14}/> Logistics Details
@@ -1334,6 +1562,7 @@ export default function TransportForm({
                         </div>
                     </div>
                 </section>
+                )}
             </>
         )}
      

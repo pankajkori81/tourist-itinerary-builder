@@ -4,20 +4,33 @@ import { cookies } from "next/headers";
 import dbConnect from "@/app/lib/dbconnect";
 import CustomField from "@/app/models/CustomField";
 
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getServerSession } from "next-auth/next";
+
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
 
 // 1. GET: Fetch all active custom fields to display in the UI
-export const GET = async () => {
-  await dbConnect();
-  try {
-    // We only fetch active fields, sorted by when they were created
-    const fields = await CustomField.find({ isActive: true }).sort({ createdAt: 1 }).lean();
-    return NextResponse.json({ success: true, data: fields });
-  } catch (error) {
-    console.error("Fetch Custom Fields Error:", error);
-    return NextResponse.json({ success: false, message: "Server Error" }, { status: 500 });
-  }
-};
+// export const GET = async () => {
+//   await dbConnect();
+//   try {
+//     // We only fetch active fields, sorted by when they were created
+//     const fields = await CustomField.find({ isActive: true }).sort({ createdAt: 1 }).lean();
+//     return NextResponse.json({ success: true, data: fields });
+//   } catch (error) {
+//     console.error("Fetch Custom Fields Error:", error);
+//     return NextResponse.json({ success: false, message: "Server Error" }, { status: 500 });
+//   }
+// };
+
+async function getUser() {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return null;
+  
+  return { 
+    userId: (session.user as any).id, 
+    role: (session.user as any).role || 'admin' 
+  };
+}
 
 // 2. POST: Create a new custom field (e.g., adding a "Dietary Needs" dropdown)
 export const POST = async (req: NextRequest) => {

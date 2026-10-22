@@ -8,6 +8,18 @@ const RoomCategorySchema = new mongoose.Schema({
 });
 
 
+// Sub-schema for amenities (Wi-Fi, Breakfast hours, Parking...).
+// _id:false stops Mongoose from creating an id for every amenity line.
+const KeyAmenitySchema = new mongoose.Schema({
+  key: { type: String, required: true },
+  details: { type: String, default: '' }
+}, { _id: false });
+
+
+const BaseRateSchema = new mongoose.Schema({
+  period: { type: String, required: true }, // e.g. "Jan 2027"
+  price: { type: Number, required: true }   // e.g. 195
+}, { _id: false });
 
 const StaySchema = new mongoose.Schema({
   stayId: String,
@@ -33,6 +45,14 @@ mealNotes: { type: String, default: '' },
   zipPostal: { type: String, default: '' },
   phone: { type: String, default: '' },
   propertyOverview: { type: String, default: '' },
+
+   // NEW: guest review score, separate from `rating` (which is the star rating)
+  reviewRating: { type: Number },
+
+  // NEW: optional list of { key, details }
+  keyAmenities: { type: [KeyAmenitySchema], default: [] },
+
+  monthlyBaseRates: { type: [BaseRateSchema], default: [] },
   gdsLocation: { type: String, default: '' }, // e.g., Suburban, Resort, Downtown
   totalUnits: { type: Number, default: 0 },
   nonSmokingRooms: { type: Number, default: 0 },

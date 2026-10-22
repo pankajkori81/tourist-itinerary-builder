@@ -1021,6 +1021,10 @@ export interface PricingMatrix { [month: string]: { [itemId: string]: number } }
 export interface StoredItineraryData {
     _id: string | undefined;
   startDate?: any; id?: string; tripId: string; tripName: string; numberOfTravelers: number; isMasterItinerary: boolean; tripType: string; tripStyle: string; packageType: string; creatingFor: string; showFlightDetails: boolean; showTravelerDetails: boolean; selectedCountries: string[]; selectedCurrency?: string; roundingMode?: string; flights: any[]; travelers: any[]; agentTravelers: any[]; routingData?: RoutingData; dayWiseActivities?: DayPlan[]; markupPercentage?: number; taxPercentage?: number; adultCount?: number; childCount?: number; bookingStatus?: 'quote' | 'confirmed' | 'cancelled' | 'completed'; leadGuestName?: string; finalSellPrice?: number; assignedAgentId?: string; operations?: OperationsData; isFixedDeparture?: boolean; fixedDepartures?: FixedDeparture[]; useFixedPrice?: boolean; selectedDepartureId?: string; lastSaved?: string; createdAt?: string; updatedAt?: string; status?: 'draft' | 'pending_costing' | 'approved' | 'reedit_requested' | 'active' | 'archived'; adminComment?: string; reEditReason?: string; pricingMatrix?: PricingMatrix; seasonStartDate?: string; seasonEndDate?: string; simulationDate?: string; currentVersion?: string; auditLog?: any[];
+  linkedLeadId?: string;
+  linkedClientName?: string;
+   sourceTemplateId?: string; 
+
 }
 
 export const parseDate = (dateStr: string | undefined): Date | null => {
@@ -1084,42 +1088,6 @@ export const getLibrary = async (): Promise<StoredItineraryData[]> => {
 
 
 
-// export const saveToLibrary = async (data: StoredItineraryData): Promise<boolean> => {
-//   try {
-//     const payload = { ...data, _id: data.id }; // Map for backend
-    
-//     // 👇 FIX: Check if the ID is a legacy local-storage ID (not a 24-character Mongo ID)
-//     const isLegacyId = payload._id && payload._id.length !== 24;
-
-//     // If it's a legacy ID or missing entirely, strip it so Mongo treats it as a NEW entry
-//     if (!payload._id || isLegacyId) { 
-//         delete payload._id; 
-//     }
-
-//     // If it has a valid Mongo _id, we UPDATE (PUT). Otherwise, we CREATE (POST).
-//     const method = payload._id ? 'PUT' : 'POST';
-
-//     const res = await fetch('/api/itineraries', {
-//       method: method,
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify(payload)
-//     });
-    
-//     const json = await res.json();
-    
-//     // If successful, bind the true MongoDB ID back to our local draft
-//     if (json.success && json.data) {
-//        data.id = json.data._id;
-//        saveItineraryToStorage(data);
-//     }
-//     return json.success;
-//   } catch (error) { 
-//     console.error(error); 
-//     return false; 
-//   }
-// };
-
-
 // 🔧 CHANGED: return type now carries the real Mongo _id back to the caller,
 // instead of just true/false. This is what lets the ItineraryContext sync the
 // real id into React state right after saving.
@@ -1179,27 +1147,144 @@ export const deleteFromLibrary = async (id: string): Promise<boolean> => {
 };
 export const deleteItinerary = deleteFromLibrary;
 
+
+// File: utils/itineraryStorage.ts  (replaces the old cloneItinerary function)
+
+// 🧹 Removes any trailing "(Copy)" so names never stack as "(Copy) (Copy)"
+const stripCopySuffix = (name: string): string =>
+  (name || '').replace(/(\s*\(Copy\))+\s*$/i, '').trim();
+
+// 🆕 Short unique Trip ID for copies
+const newCopyTripId = (): string => `COPY-${Date.now().toString().slice(-8)}`;
+
+// 💾 Saves a prepared copy as a NEW document and never returns the original by mistake
+const postCopy = async (cloned: StoredItineraryData, originalId: string): Promise<StoredItineraryData | null> => {
+  delete cloned.id;
+  delete (cloned as any)._id; // Strip old ID so Mongo makes a new one
+
+  const res = await fetch('/api/itineraries', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cloned)
+  });
+  const json = await res.json();
+  if (!json.success) return null;
+
+  // 🛡️ The API returns the EXISTING document if an ID collides. Never hand the original back as the "copy".
+  if (String(json.data._id) === String(originalId)) return null;
+
+  return { ...json.data, id: json.data._id };
+};
+
+// 📋 TEMPLATE → QUOTE (used by "Use Template")
 export const cloneItinerary = async (id: string, asQuote = false, agentId?: string): Promise<StoredItineraryData | null> => {
   try {
     const original = await getItineraryById(id);
     if (!original) return null;
-    
-    const cloned: StoredItineraryData = {
-      ...original, tripId: `COPY-${Date.now().toString().slice(-6)}`, tripName: `${original.tripName} (Copy)`,
-      isMasterItinerary: asQuote ? false : original.isMasterItinerary, bookingStatus: 'quote', 
-      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), status: 'active',
-      selectedCurrency: original.selectedCurrency || 'USD', assignedAgentId: agentId
-    };
-    
-    delete cloned.id; 
-    delete (cloned as any)._id; // Strip old ID so Mongo makes a new one
 
-    const res = await fetch('/api/itineraries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cloned) });
-    const json = await res.json();
-    if (json.success) return { ...json.data, id: json.data._id };
-    return null;
+    const newTripId = newCopyTripId();
+
+    const cloned: StoredItineraryData = {
+      ...original,
+      tripId: newTripId,
+      tripName: `${stripCopySuffix(original.tripName)} (Copy)`,
+      isMasterItinerary: asQuote ? false : original.isMasterItinerary,
+      bookingStatus: 'quote',
+      status: 'draft', // ✅ Starts as a Draft. Save & Exit promotes it to Active.
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      selectedCurrency: original.selectedCurrency || 'USD',
+      assignedAgentId: agentId,
+
+      // 🔗 Remember which template this came from
+      sourceTemplateId: asQuote ? (original.isMasterItinerary ? original.id : original.sourceTemplateId) : undefined,
+
+      // 🧹 Fresh client: nothing from the template may carry over
+      linkedLeadId: undefined,
+      linkedClientName: '',
+      leadGuestName: '',
+      travelers: [],
+      agentTravelers: [],
+      operations: undefined,
+    };
+
+    // Keep the stored itineraryCode in sync with the NEW Trip ID (not the original's)
+    (cloned as any).itineraryCode = newTripId;
+
+    return await postCopy(cloned, id);
   } catch (error) { console.error(error); return null; }
 };
+
+// 📋 QUOTE → QUOTE (new "Duplicate" action)
+// keepClient = true  → revision for the SAME client (keeps lead link + passenger names)
+// keepClient = false → a similar trip for a DIFFERENT client (default)
+export const duplicateItinerary = async (id: string, keepClient = false, agentId?: string): Promise<StoredItineraryData | null> => {
+  try {
+    const original = await getItineraryById(id);
+    if (!original) return null;
+
+    const newTripId = newCopyTripId();
+
+    const cloned: StoredItineraryData = {
+      ...original,
+      tripId: newTripId,
+      tripName: `${stripCopySuffix(original.tripName)} (Copy)`,
+      isMasterItinerary: false,
+      bookingStatus: 'quote',
+      status: 'draft',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      selectedCurrency: original.selectedCurrency || 'USD',
+      assignedAgentId: agentId ?? original.assignedAgentId,
+      sourceTemplateId: original.sourceTemplateId, // stays pointing at the original template
+
+      // 📅 Dates cleared so "Date Missing" forces fresh dates
+      routingData: original.routingData
+        ? {
+            ...original.routingData,
+            startDate: '',
+            endDate: '',
+            routes: (original.routingData.routes || []).map(r => ({ ...r, date: '' }))
+          }
+        : original.routingData,
+
+      operations: undefined,
+
+      // 👤 Client data only survives for a same-client revision
+      linkedLeadId: keepClient ? original.linkedLeadId : undefined,
+      linkedClientName: keepClient ? original.linkedClientName : '',
+      leadGuestName: keepClient ? original.leadGuestName : '',
+      travelers: keepClient ? original.travelers : [],
+      agentTravelers: keepClient ? original.agentTravelers : [],
+    };
+
+    (cloned as any).itineraryCode = newTripId;
+
+    return await postCopy(cloned, id);
+  } catch (error) { console.error(error); return null; }
+};
+
+// export const cloneItinerary = async (id: string, asQuote = false, agentId?: string): Promise<StoredItineraryData | null> => {
+//   try {
+//     const original = await getItineraryById(id);
+//     if (!original) return null;
+    
+//     const cloned: StoredItineraryData = {
+//       ...original, tripId: `COPY-${Date.now().toString().slice(-6)}`, tripName: `${original.tripName} (Copy)`,
+//       isMasterItinerary: asQuote ? false : original.isMasterItinerary, bookingStatus: 'quote', 
+//       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), status: 'active',
+//       selectedCurrency: original.selectedCurrency || 'USD', assignedAgentId: agentId
+//     };
+    
+//     delete cloned.id; 
+//     delete (cloned as any)._id; // Strip old ID so Mongo makes a new one
+
+//     const res = await fetch('/api/itineraries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cloned) });
+//     const json = await res.json();
+//     if (json.success) return { ...json.data, id: json.data._id };
+//     return null;
+//   } catch (error) { console.error(error); return null; }
+// };
 
 export const updateItineraryStatus = async (id: string, status: 'confirmed' | 'cancelled' | 'completed', extraData?: Partial<StoredItineraryData>): Promise<boolean> => {
   try {

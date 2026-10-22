@@ -51,6 +51,11 @@ const ItinerarySchema = new mongoose.Schema({
   bookingStatus: { type: String, default: 'quote' }, // quote, confirmed, cancelled, completed
   leadGuestName: { type: String, default: '' },
   assignedAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
+  linkedLeadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', default: null },
+  linkedClientName: { type: String, default: '' },
+  sourceTemplateId: { type: String, default: null },
+
   adultCount: { type: Number },
   childCount: { type: Number },
   operations: { type: mongoose.Schema.Types.Mixed },
@@ -79,6 +84,7 @@ const ItinerarySchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+ItinerarySchema.index({ linkedLeadId: 1 });
 // Prevent Mongoose from recompiling the model if it already exists
 const Itinerary = mongoose.models.Itinerary || mongoose.model("Itinerary", ItinerarySchema);
 export default Itinerary;

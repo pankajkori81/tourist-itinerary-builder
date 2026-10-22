@@ -659,6 +659,17 @@ export interface RoomCategory {
   inclusions: string[];
 }
 
+export interface KeyAmenity {
+  key: string;      // e.g. "Wi-Fi access/passwords", "Breakfast hours"
+  details?: string; // e.g. "Free Wi-Fi is available throughout the hotel."
+}
+
+export interface BaseRate {
+  period: string;
+  price: number;
+}
+
+
 export interface StayData {
   id?: string;
   _id?: string;
@@ -675,13 +686,24 @@ export interface StayData {
   roomCategories: RoomCategory[];
 
 
-  // 🌟 NEW OTA / GDS PROPERTY SPECS 🌟
+   // OTA / property specs (kept)
   chainCode?: string;
   brand?: string;
   stateProvince?: string;
   zipPostal?: string;
   phone?: string;
   propertyOverview?: string;
+
+  // NEW: guest review score (separate from `rating`, which is the star rating)
+  reviewRating?: number;
+
+  // NEW: optional for now, UI/export will be added later
+  keyAmenities?: KeyAmenity[];
+
+  monthlyBaseRates?: BaseRate[];
+
+  // DEPRECATED: no longer used by UI, import or export.
+  // Kept optional so existing DB records don't break.
   gdsLocation?: string;
   totalUnits?: number;
   nonSmokingRooms?: number;
@@ -696,7 +718,8 @@ export interface StayData {
 }
 
 export interface AttractionData {
-  id?: string;
+  // id?: string;
+  activityId?: string;
   _id?: string;
   name: string;
   type: 'Monument' | 'Attraction' | 'Museum' | 'Adventure' | 'Show';
@@ -708,8 +731,6 @@ export interface AttractionData {
   startTime: string;
   pickupLocation: string;
   isGuideRequired: boolean;
-  rating: number;
-  reviewsCount: number;
   providerLink: string;
   description: string;
   status: 'Active' | 'Inactive';
@@ -723,7 +744,9 @@ export interface TransportData {
   _id?: string;
   transportMode: 'Vehicle' | 'Rail' | 'Flight' | 'Ferry';
   vehicleType: string;
-  serviceType: 'Transfer' | 'Disposal';
+  serviceType: 'Transfer' | 'Disposal' | 'Multi-Stop';
+  routeName?: string;
+  routeStops?: any[];
   city: string;
   country: string;
   maxGuests: number;
@@ -754,11 +777,7 @@ export interface MealData {
   city: string;
   country: string;
   address?: string;
-  rating: string;
   images: string[];
-  menuType: 'Buffet' | 'Fixed Menu' | 'A La Carte';
-  dietaryOptions: string[];
-  inclusions?: string;
   description?: string;
   status: 'Active' | 'Inactive';
   linkedSupplierId?: string;
@@ -857,18 +876,44 @@ export const getAttractions = async (): Promise<AttractionData[]> => {
   } catch { return []; }
 };
 
-export const saveAttraction = async (data: AttractionData): Promise<boolean> => {
+// export const saveAttraction = async (data: AttractionData): Promise<boolean> => {
+//   try {
+//     const payload = data.activityId ? { ...data, _id: data.activityId } : data;
+//     const method = data.activityId ? 'PUT' : 'POST';
+//     const res = await fetch('/api/srm/activities', {
+//       method,
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify(payload)
+//     });
+//     return res.ok;
+//   } catch { return false; }
+// };
+
+
+export const saveAttraction = async (data: AttractionData) => {
   try {
-    const payload = data.id ? { ...data, _id: data.id } : data;
-    const method = data.id ? 'PUT' : 'POST';
+    // 🌟 FIX 1: Only use _id to determine if it's an update (PUT) or new (POST).
+    // Because agents can now type manual activityIds, we can't use them to check if it exists!
+    const isUpdate = !!data._id; 
+    
     const res = await fetch('/api/srm/activities', {
-      method,
+      method: isUpdate ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(data),
     });
-    return res.ok;
-  } catch { return false; }
+    
+    const json = await res.json();
+    if (!json.success) {
+      console.error("Save failed:", json.message);
+      // Optional: alert(json.message) to show the duplicate ID error to the user
+    }
+    return json.success;
+  } catch (error) {
+    console.error("Save Error:", error);
+    return false;
+  }
 };
+
 
 export const deleteAttraction = async (id: string): Promise<boolean> => {
   try {

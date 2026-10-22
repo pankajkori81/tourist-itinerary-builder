@@ -12,6 +12,11 @@ export interface RouteCity {
   state?: string;
 }
 
+export interface Traveler {
+  id: string;
+  name: string;
+}
+
 export interface RouteDay {
   id: number;
   day: number;
@@ -127,6 +132,19 @@ export interface Stay {
 
 
 
+// 🔧 NEW: a single stop within a Multi-Stop Route.
+// Distance fields are calculated (via Distance Matrix API), never user-typed.
+export interface RouteStop {
+  id: string;
+  stopName: string;              // location input (e.g. "Gateway of India")
+  placeId?: string;               // Google Place ID, if selected from search
+  lat?: number;
+  lng?: number;
+  departTime: string;             // "07:00" — user-entered
+  stopTimeMinutes: number;        // waiting time at this stop, 0 for last stop
+  legDistanceFromPrev?: number;     // calculated, NOT shown in UI (mi/km from previous stop)
+  cumulativeDistance: number;     // calculated, SHOWN in UI (running total)
+}
 
 // --- UPDATED TRANSPORT INTERFACE ---
 export interface Transport {
@@ -137,7 +155,8 @@ export interface Transport {
   
   // 1. Service Config
   mode: 'vehicle' | 'flight' | 'rail' | 'ferry';
-  subType: 'transfer' | 'disposal'; // New Toggle
+  // 🔧 CHANGED: added 'multi-stop' as a third subType option
+  subType: 'transfer' | 'disposal' | 'multi-stop';
   // serviceType: 'Planned' | 'Optional'; // Status
   inclusionType: 'included' | 'excluded' | 'optional';
 
@@ -166,7 +185,58 @@ export interface Transport {
   price: number;
 
   linkedSupplierId?: string;
+
+  // 🔧 NEW: Multi-Stop Route fields — all optional, only populated when
+  // subType === 'multi-stop'. Existing Transfer/Disposal transports are
+  // completely unaffected since these fields simply stay undefined for them.
+  routeName?: string;             // e.g. "Route 101: Downtown Express"
+  stops?: RouteStop[];            // ordered list of stops — this IS the route
+  // ratePerMile?: number;           // flat rate input
+  distanceUnit?: 'mi' | 'km';
+  totalDistance?: number;         // = last stop's cumulativeDistance
 }
+
+
+
+// // --- UPDATED TRANSPORT INTERFACE ---
+// export interface Transport {
+
+//   id: number;
+//   type: 'transport';
+//   serviceType?: string;
+  
+//   // 1. Service Config
+//   mode: 'vehicle' | 'flight' | 'rail' | 'ferry';
+//   subType: 'transfer' | 'disposal'; // New Toggle
+//   // serviceType: 'Planned' | 'Optional'; // Status
+//   inclusionType: 'included' | 'excluded' | 'optional';
+
+//   // 2. Vehicle Details
+//   vehicleType: string;
+//   vehicleCount: number; // New Multiplier
+
+//   // --- [THIS IS THE REQUIRED CHANGE] ---
+//   paxCount: number; // Required for Flight/Rail/Ferry costing
+//   // ------------------------------------
+
+//   flightNumber?: string; // Optional for Flight/Train
+//   // This is where "From Barcelona, journey to Montserrat..." goes.
+//   serviceDescription?: string;
+
+//   // 3. Logistics
+//   pickupLocation: string;
+//   pickupTime: string;
+  
+//   // Conditional Fields
+//   dropoffLocation?: string; // Only for Transfer
+//   dropoffTime?: string;     // Only for Transfer
+//   duration?: string;        // Only for Disposal
+  
+//   // 4. Costing
+//   price: number;
+
+//   linkedSupplierId?: string;
+// }
 
 
 

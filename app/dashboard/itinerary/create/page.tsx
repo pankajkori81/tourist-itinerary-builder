@@ -500,7 +500,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Users, ArrowRight } from "lucide-react"; 
+import { Users, ArrowRight, CheckCircle2 } from "lucide-react"; 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useItinerary } from "@/app/context/ItineraryContext";
 import { getLibrary } from "@/utils/itineraryStorage"; // 👈 Added this to fetch existing trips!
@@ -538,26 +538,162 @@ const COUNTRY_CODES: Record<string, string> = {
 export default function CreateItineraryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { itineraryData, updateItineraryData, completeStep } = useItinerary();
+  // const { itineraryData, updateItineraryData, completeStep } = useItinerary();
+  // File: app/dashboard/itinerary/create/page.tsx  (inside CreateItineraryPage, replaces the existing useItinerary line)
+  const { itineraryData, updateItineraryData, completeStep, loadItineraryForEdit, clearSavedItinerary } = useItinerary();
+  const handledParamsRef = useRef<string | null>(null); // 🆕 stops the same URL params from running twice
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+
+  // const [leadSearch, setLeadSearch] = useState('');
+  // const [leadResults, setLeadResults] = useState<any[]>([]);
+  // const [showLeadDropdown, setShowLeadDropdown] = useState(false);
+  // const [isCreatingLead, setIsCreatingLead] = useState(false);
+  // const [newLeadForm, setNewLeadForm] = useState({ customerName: '', phone: '', destination: '' });
+  // const leadDropdownRef = useRef<HTMLDivElement>(null);
    
+  // const countryDropdownRef = useRef<HTMLDivElement>(null);
+
+// 🌟 ADD THIS MISSING LINE:
   const countryDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Pre-fill data from CRM Magic Button
-  useEffect(() => {
-     const clientName = searchParams.get('clientName');
-     const pax = searchParams.get('pax');
-     const dest = searchParams.get('dest');
+  // 🌟 FIX 1: Enhanced State to hold ALL leads and the FULL form data
+  const [allLeads, setAllLeads] = useState<any[]>([]);
+  const [leadSearch, setLeadSearch] = useState('');
+  const [leadResults, setLeadResults] = useState<any[]>([]);
+  const [showLeadDropdown, setShowLeadDropdown] = useState(false);
+  const [isCreatingLead, setIsCreatingLead] = useState(false);
+  const [newLeadForm, setNewLeadForm] = useState({ 
+    customerName: '', phone: '', email: '', destination: '', 
+    travelDates: '', numberOfTravelers: 2, budget: 0, notes: '' 
+  });
+  const leadDropdownRef = useRef<HTMLDivElement>(null);
 
-     if ((clientName || pax || dest) && !itineraryData.tripName) {
-         updateItineraryData({
-             tripName: clientName ? `${clientName}'s Trip` : '',
-             creatingFor: 'guest',
-             leadGuestName: clientName || '', 
-             numberOfTravelers: pax ? parseInt(pax) : 2,
-             selectedCountries: dest ? [dest] : []
-         });
-     }
+
+
+  // Fetch ALL leads exactly once when the page loads
+  useEffect(() => {
+    const fetchAllLeads = async () => {
+      try {
+        const res = await fetch('/api/leads');
+        const json = await res.json();
+        if (json.success) {
+          setAllLeads(json.data);
+          setLeadResults(json.data.slice(0, 5)); // Show 5 most recent by default
+        }
+      } catch (e) { console.error(e); }
+    };
+    fetchAllLeads();
+  }, []);
+
+  // Instant Local Search (No more waiting for API requests while typing)
+  useEffect(() => {
+    if (!leadSearch.trim()) {
+      setLeadResults(allLeads.slice(0, 5)); // Reset to recent if search is empty
+      return;
+    }
+    const matches = allLeads.filter(l =>
+      (l.customerName || '').toLowerCase().includes(leadSearch.toLowerCase()) ||
+      (l.phone || '').includes(leadSearch) ||
+      (l.email || '').toLowerCase().includes(leadSearch.toLowerCase())
+    );
+    setLeadResults(matches);
+  }, [leadSearch, allLeads]);
+
+  // Pre-fill data from CRM Magic Button
+  // useEffect(() => {
+  //    const clientName = searchParams.get('clientName');
+  //    const pax = searchParams.get('pax');
+  //    const dest = searchParams.get('dest');
+
+  //    if ((clientName || pax || dest) && !itineraryData.tripName) {
+  //        updateItineraryData({
+  //            tripName: clientName ? `${clientName}'s Trip` : '',
+  //            creatingFor: 'guest',
+  //            leadGuestName: clientName || '', 
+  //            numberOfTravelers: pax ? parseInt(pax) : 2,
+  //            selectedCountries: dest ? [dest] : []
+  //        });
+  //    }
+  // }, [searchParams]);
+
+
+  //   useEffect(() => {
+  //    const clientName = searchParams.get('clientName');
+  //    const pax = searchParams.get('pax');
+  //    const dest = searchParams.get('dest');
+  //    // 🔧 NEW: capture the CRM Lead this trip came from (via "Build Trip")
+  //    const leadId = searchParams.get('leadId');
+
+  //    if ((clientName || pax || dest) && !itineraryData.tripName) {
+  //        updateItineraryData({
+  //            tripName: clientName ? `${clientName}'s Trip` : '',
+  //            creatingFor: 'guest',
+  //            leadGuestName: clientName || '', 
+  //            numberOfTravelers: pax ? parseInt(pax) : 2,
+  //            selectedCountries: dest ? [dest] : [],
+  //            // 🔧 NEW: pre-link to the CRM Lead automatically, so no manual
+  //            // search is needed when arriving via "Build Trip" from the CRM
+  //            ...(leadId ? { linkedLeadId: leadId, linkedClientName: clientName || '' } : {})
+  //        });
+  //    }
+  // }, [searchParams]);
+
+
+
+  // File: app/dashboard/itinerary/create/page.tsx  (replaces the active "CRM Magic Button" prefill effect)
+  useEffect(() => {
+    const paramKey = searchParams.toString();
+    if (!paramKey || handledParamsRef.current === paramKey) return;
+
+    const editId = searchParams.get('editId');
+    const isNew = searchParams.get('new') === '1';
+    const clientName = searchParams.get('clientName');
+    const pax = searchParams.get('pax');
+    const dest = searchParams.get('dest');
+    const leadId = searchParams.get('leadId');
+
+    // Details taken from the CRM lead
+    const leadPrefill = {
+      tripName: clientName ? `${clientName}'s Trip` : '',
+      creatingFor: 'guest',
+      leadGuestName: clientName || '',
+      numberOfTravelers: pax ? parseInt(pax) : 2,
+      selectedCountries: dest ? [dest] : [],
+      ...(leadId ? { linkedLeadId: leadId, linkedClientName: clientName || '' } : {})
+    };
+
+    // ➊ "Build Trip" on a lead that already has a quote → open THAT quote
+    if (editId) {
+      handledParamsRef.current = paramKey;
+      (async () => {
+        if (itineraryData.id !== editId) {
+          const ok = await loadItineraryForEdit(editId);
+          if (!ok) alert("Could not load that quote. Please open it from the Library.");
+        }
+        router.replace('/dashboard/itinerary/create'); // clean URL so F5 doesn't repeat this
+      })();
+      return;
+    }
+
+    // ➋ "Build Trip" on a lead with NO quote yet → fresh itinerary, ignoring any stale draft
+    if (isNew && (clientName || pax || dest)) {
+      handledParamsRef.current = paramKey;
+      // setTimeout lets the provider finish loading its own local draft first, so it can't overwrite this reset
+      setTimeout(() => {
+        clearSavedItinerary(); // asks before discarding an unsaved draft
+        // If the backup still exists, the user chose "recover": keep that draft, don't overwrite it
+        const keptOldDraft = !!localStorage.getItem('emergency_itinerary_backup');
+        if (!keptOldDraft) updateItineraryData(leadPrefill);
+        router.replace('/dashboard/itinerary/create');
+      }, 0);
+      return;
+    }
+
+    // ➌ Old-style links (no editId / new) keep the original behavior
+    if ((clientName || pax || dest) && !itineraryData.tripName) {
+      handledParamsRef.current = paramKey;
+      updateItineraryData(leadPrefill);
+    }
   }, [searchParams]);
 
 
@@ -581,19 +717,15 @@ export default function CreateItineraryPage() {
   };
 
 
-  // 🌟 1. THE SMART ID GENERATOR HELPER
-  // const generateSmartId = async (primaryCountry: string) => {
-  //     const year = new Date().getFullYear();
-  //     const code = COUNTRY_CODES[primaryCountry] || "XX";
-  //     const library = await getLibrary(); 
-  //     const existingCount = library.filter((t: any) =>
-  //         t.selectedCountries?.[0] === primaryCountry &&
-  //         t.tripId?.includes(year.toString()) &&
-  //         t.id !== itineraryData.id 
-  //     ).length;
-  //     return `${existingCount + 1}-${code}50-${year}`;
-  // };
-
+    useEffect(() => {
+    function handleClickOutsideLead(event: MouseEvent) {
+      if (leadDropdownRef.current && !leadDropdownRef.current.contains(event.target as Node)) {
+        setShowLeadDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutsideLead);
+    return () => document.removeEventListener("mousedown", handleClickOutsideLead);
+  }, []);
 
   const generateSmartId = async (primaryCountry: string) => {
     const year = new Date().getFullYear();
@@ -618,19 +750,6 @@ export default function CreateItineraryPage() {
     return `${highestNumber + 1}-${code}50-${year}`;
 };
 
-  // 🌟 2. THE DRAFT AUTO-FIXER (Fixes bad IDs on load)
-  // useEffect(() => {
-  //     const autoFixId = async () => {
-  //         const currentId = itineraryData.tripId || '';
-  //         // If the DB forced a dummy 'TRIP-' ID, and we have a country selected, fix it instantly!
-  //         if (currentId.startsWith('TRIP-') && itineraryData.selectedCountries?.length > 0) {
-  //             const smartId = await generateSmartId(itineraryData.selectedCountries[0]);
-  //             updateItineraryData({ tripId: smartId });
-  //         }
-  //     };
-  //     autoFixId();
-  // }, [itineraryData.tripId, itineraryData.selectedCountries]);
-
 
     // 🌟 2. THE DRAFT AUTO-FIXER (Fixes bad IDs on load)
   useEffect(() => {
@@ -652,6 +771,90 @@ export default function CreateItineraryPage() {
       autoFixId();
   }, [itineraryData.tripId, itineraryData.selectedCountries]);
 
+
+
+
+    // 🔧 NEW: search existing Leads as the user types
+  useEffect(() => {
+    if (leadSearch.trim().length < 2) { setLeadResults([]); return; }
+    const delay = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/leads');
+        const json = await res.json();
+        if (json.success) {
+          const matches = json.data.filter((l: any) =>
+            l.customerName.toLowerCase().includes(leadSearch.toLowerCase()) ||
+            l.phone.includes(leadSearch)
+          );
+          setLeadResults(matches);
+        }
+      } catch (e) { console.error(e); }
+    }, 300);
+    return () => clearTimeout(delay);
+  }, [leadSearch]);
+
+  const selectLead = (lead: any) => {
+    updateItineraryData({ linkedLeadId: lead._id, linkedClientName: lead.customerName });
+    setLeadSearch(lead.customerName);
+    setShowLeadDropdown(false);
+  };
+
+  // const createNewLeadInline = async () => {
+  //   if (!newLeadForm.customerName || !newLeadForm.phone || !newLeadForm.destination) {
+  //     alert('Full Name, Phone, and Destination are required.');
+  //     return;
+  //   }
+  //   try {
+  //     const res = await fetch('/api/leads', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify(newLeadForm)
+  //     });
+  //     const json = await res.json();
+  //     if (json.success) {
+  //       selectLead(json.data);
+  //       setIsCreatingLead(false);
+  //       setNewLeadForm({ customerName: '', phone: '', destination: '' });
+  //     } else {
+  //       alert(json.message);
+  //     }
+  //   } catch (e) {
+  //     alert('Failed to create lead.');
+  //   }
+  // };
+
+  // 🌟 FIX 2: Save the full CRM Lead profile accurately
+  const createNewLeadInline = async () => {
+    if (!newLeadForm.customerName || !newLeadForm.phone || !newLeadForm.destination) {
+      alert('Full Name, Phone, and Destination are required.');
+      return;
+    }
+    try {
+      const payload = {
+        ...newLeadForm,
+        numberOfTravelers: Number(newLeadForm.numberOfTravelers) || 2,
+        budget: Number(newLeadForm.budget) || 0
+      };
+
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      
+      if (json.success) {
+        selectLead(json.data);
+        setIsCreatingLead(false);
+        setAllLeads([json.data, ...allLeads]); // Instantly add to local list
+        setNewLeadForm({ customerName: '', phone: '', email: '', destination: '', travelDates: '', numberOfTravelers: 2, budget: 0, notes: '' });
+      } else {
+        alert(json.message);
+      }
+    } catch (e) {
+      alert('Failed to create lead.');
+    }
+  };
 
   // 🌟 3. THE UPDATED COUNTRY TOGGLE
   const toggleCountry = async (country: string) => {
@@ -680,6 +883,26 @@ export default function CreateItineraryPage() {
 
     updateItineraryData({ selectedCountries: newList, tripId: newTripId });
   };
+
+
+    // 🔧 NEW: updates one traveler's name by index. Creates the array entry
+  // if it doesn't exist yet (so typing into box #2 before box #1 is filled
+  // doesn't break anything).
+  const updateTravelerName = (index: number, name: string) => {
+    const current = itineraryData.travelers || [];
+    const updated = [...current];
+    while (updated.length <= index) {
+      updated.push({ id: `traveler-${Date.now()}-${updated.length}`, name: '' });
+    }
+    updated[index] = { ...updated[index], name };
+    updateItineraryData({ travelers: updated });
+  };
+
+
+
+
+
+  // const handleMasterItineraryChange = (isMaster: boolean) => {
 
   const handleMasterItineraryChange = (isMaster: boolean) => {
     if (isMaster) {
@@ -856,8 +1079,187 @@ export default function CreateItineraryPage() {
                 
                 <span className="absolute right-3 top-2 min-[1700px]:top-2.5 text-xs text-gray-400 font-medium">Pax</span>
               </div>
+
+              
             </div>
           </div>
+
+                    {itineraryData.showTravelerDetails && (itineraryData.numberOfTravelers || 0) > 0 && (
+            <div className="mb-4 min-[1700px]:mb-6">
+              <label className="block text-xs font-semibold text-gray-300 mb-1 min-[1700px]:mb-1.5 uppercase tracking-wider">
+                Passenger Names <span className="text-gray-500 normal-case font-normal">(up to 4)</span>
+              </label>
+              {/* grid-cols-1 (mobile) → md:grid-cols-2 (Windows-class, <1700px,
+                  2 inputs per row) → min-[1700px]:grid-cols-4 (Linux-class
+                  wide screens, all 4 in one row) — same tiering pattern used
+                  throughout this file */}
+              <div className="grid grid-cols-1 md:grid-cols-2 min-[1700px]:grid-cols-4 gap-3 min-[1700px]:gap-4">
+                {Array.from({ length: Math.min(itineraryData.numberOfTravelers || 0, 4) }).map((_, idx) => (
+                  <input
+                    key={idx}
+                    type="text"
+                    value={itineraryData.travelers?.[idx]?.name || ''}
+                    onChange={(e) => updateTravelerName(idx, e.target.value)}
+                    placeholder={`Passenger ${idx + 1} Name`}
+                    className="w-full px-3 py-2 min-[1700px]:py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 text-sm font-medium"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+
+                    {itineraryData.showTravelerDetails && (itineraryData.numberOfTravelers || 0) > 0 && (
+            <>
+              {/* Passenger Names — existing */}
+              {/* <div className="mb-4 min-[1700px]:mb-6"> ... existing block ... </div> */}
+
+             {/* 🌟 FIX 3: Redesigned CRM Link Dropdown and Inline Creation Form */}
+              <div className="mb-4 min-[1700px]:mb-6 relative" ref={leadDropdownRef}>
+                <label className="block text-xs font-semibold text-gray-300 mb-1 min-[1700px]:mb-1.5 uppercase tracking-wider">
+                  Link to Client (CRM)
+                </label>
+
+                {itineraryData.linkedLeadId ? (
+                  <div className="w-full px-4 py-3 bg-green-500/10 border border-green-500/40 rounded-xl flex items-center justify-between shadow-sm">
+                    <span className="text-sm text-green-400 font-bold flex items-center gap-2">
+                      <CheckCircle2 size={16} /> Linked to: {itineraryData.linkedClientName || 'Client'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateItineraryData({ linkedLeadId: undefined, linkedClientName: '' })}
+                      className="text-xs font-bold text-gray-400 hover:text-white px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                      Change Client
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={leadSearch}
+                    onChange={(e) => { setLeadSearch(e.target.value); setShowLeadDropdown(true); setIsCreatingLead(false); }}
+                    onFocus={() => setShowLeadDropdown(true)}
+                    placeholder="Search client by name, email, or phone..."
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 text-sm font-medium shadow-sm"
+                  />
+                )}
+
+                {showLeadDropdown && !itineraryData.linkedLeadId && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl w-full overflow-hidden">
+                    
+                    {/* The Search Results List */}
+                    {!isCreatingLead && (
+                      <div className="max-h-60 overflow-y-auto">
+                        {leadResults.length > 0 ? leadResults.map((lead) => (
+                          <div
+                            key={lead._id}
+                            onClick={() => selectLead(lead)}
+                            className="px-5 py-3 hover:bg-indigo-50/60 cursor-pointer border-b border-gray-100 transition-colors group"
+                          >
+                            <div className="flex justify-between items-center mb-0.5">
+                              <span className="text-sm font-bold text-gray-900 group-hover:text-indigo-700">{lead.customerName}</span>
+                              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">${lead.budget || 0}</span>
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center gap-2">
+                              <span>{lead.phone}</span> • <span>{lead.destination}</span>
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="px-5 py-6 text-sm text-gray-400 text-center bg-gray-50/50">
+                            No clients found matching "{leadSearch}"
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* The Toggle / Creation Area */}
+                    {/* {!isCreatingLead ? (
+                      <div
+                        onClick={() => setIsCreatingLead(true)}
+                        className="px-5 py-3.5 bg-indigo-50 hover:bg-indigo-100 cursor-pointer text-indigo-700 text-sm font-bold text-center border-t border-indigo-200 transition-colors"
+                      >
+                        + Create New CRM Lead
+                      </div>
+                    ) : (
+                      <div className="p-5 bg-gray-50 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">New Client Details</h4>
+                          <button type="button" onClick={() => setIsCreatingLead(false)} className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <input type="text" placeholder="Full Name *" value={newLeadForm.customerName} onChange={(e) => setNewLeadForm(prev => ({ ...prev, customerName: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <input type="text" placeholder="Phone Number *" value={newLeadForm.phone} onChange={(e) => setNewLeadForm(prev => ({ ...prev, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <input type="email" placeholder="Email Address" value={newLeadForm.email} onChange={(e) => setNewLeadForm(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <input type="text" placeholder="Destination *" value={newLeadForm.destination} onChange={(e) => setNewLeadForm(prev => ({ ...prev, destination: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <input type="text" placeholder="Travel Dates (e.g. Mid Oct)" value={newLeadForm.travelDates} onChange={(e) => setNewLeadForm(prev => ({ ...prev, travelDates: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <div className="flex gap-3">
+                            <input type="number" placeholder="Pax" min="1" value={newLeadForm.numberOfTravelers || ''} onChange={(e) => setNewLeadForm(prev => ({ ...prev, numberOfTravelers: parseInt(e.target.value) }))} className="w-1/3 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" title="Number of Travelers" />
+                            <input type="number" placeholder="Budget ($)" min="0" value={newLeadForm.budget || ''} onChange={(e) => setNewLeadForm(prev => ({ ...prev, budget: parseInt(e.target.value) }))} className="w-2/3 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" title="Estimated Budget" />
+                          </div>
+                        </div>
+                        
+                        <textarea placeholder="Additional Notes or Requirements..." value={newLeadForm.notes} onChange={(e) => setNewLeadForm(prev => ({ ...prev, notes: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm mb-4 h-20 resize-none" />
+
+                        <button
+                          type="button"
+                          onClick={createNewLeadInline}
+                          className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                        >
+                          Save Lead & Link to Quote
+                        </button>
+                      </div>
+                    )} */}
+
+                    {/* The Toggle / Creation Area */}
+                    {!isCreatingLead ? (
+                      <div
+                        onClick={() => setIsCreatingLead(true)}
+                        className="px-5 py-3.5 bg-indigo-50 hover:bg-indigo-100 cursor-pointer text-indigo-700 text-sm font-bold text-center border-t border-indigo-200 transition-colors"
+                      >
+                        + Create New CRM Lead
+                      </div>
+                    ) : (
+                      /* 🌟 FIX: Added max-h-[350px] and overflow-y-auto to make the form scrollable! */
+                      <div className="p-5 bg-gray-50 border-t border-gray-200 max-h-[350px] overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">New Client Details</h4>
+                          <button type="button" onClick={() => setIsCreatingLead(false)} className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <input type="text" placeholder="Full Name *" value={newLeadForm.customerName} onChange={(e) => setNewLeadForm(prev => ({ ...prev, customerName: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <input type="text" placeholder="Phone Number *" value={newLeadForm.phone} onChange={(e) => setNewLeadForm(prev => ({ ...prev, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <input type="email" placeholder="Email Address" value={newLeadForm.email} onChange={(e) => setNewLeadForm(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <input type="text" placeholder="Destination *" value={newLeadForm.destination} onChange={(e) => setNewLeadForm(prev => ({ ...prev, destination: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <input type="text" placeholder="Travel Dates (e.g. Mid Oct)" value={newLeadForm.travelDates} onChange={(e) => setNewLeadForm(prev => ({ ...prev, travelDates: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" />
+                          <div className="flex gap-3">
+                            <input type="number" placeholder="Pax" min="1" value={newLeadForm.numberOfTravelers || ''} onChange={(e) => setNewLeadForm(prev => ({ ...prev, numberOfTravelers: parseInt(e.target.value) }))} className="w-1/3 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" title="Number of Travelers" />
+                            <input type="number" placeholder="Budget ($)" min="0" value={newLeadForm.budget || ''} onChange={(e) => setNewLeadForm(prev => ({ ...prev, budget: parseInt(e.target.value) }))} className="w-2/3 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm" title="Estimated Budget" />
+                          </div>
+                        </div>
+                        
+                        <textarea placeholder="Additional Notes or Requirements..." value={newLeadForm.notes} onChange={(e) => setNewLeadForm(prev => ({ ...prev, notes: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm mb-4 h-20 resize-none" />
+
+                        <button
+                          type="button"
+                          onClick={createNewLeadInline}
+                          className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                        >
+                          Save Lead & Link to Quote
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
 
 
 
@@ -886,6 +1288,8 @@ export default function CreateItineraryPage() {
                 <option value="">Select Experience</option>
                 {TRIP_EXPERIENCES.map((exp) => <option key={exp} value={exp}>{exp}</option>)}
               </select>
+
+              
             </div>
           </div>
 

@@ -722,6 +722,7 @@ import {
   getLibrary, 
   deleteFromLibrary, 
   cloneItinerary, 
+  duplicateItinerary,  
   getItineraryById, 
   StoredItineraryData,
   updateItineraryStatus,
@@ -873,6 +874,7 @@ export default function LibraryPage() {
   const [libraries, setLibraries] = useState<StoredItineraryData[]>([]);
   const [pendingCount, setPendingCount] = useState(0); // Track pending requests
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, itinerary: StoredItineraryData | null}>({isOpen: false, itinerary: null});
   const [isManageDatesOpen, setIsManageDatesOpen] = useState(false);
@@ -944,6 +946,18 @@ const loadLibraries = async () => {
 
   };
 
+    // Destination Country, case-insensitive.
+  const displayedLibraries = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return libraries;
+    return libraries.filter((item) => {
+      const nameMatch = item.tripName?.toLowerCase().includes(q);
+      const idMatch = item.tripId?.toLowerCase().includes(q);
+      const countryMatch = item.selectedCountries?.some(c => c.toLowerCase().includes(q));
+      return nameMatch || idMatch || countryMatch;
+    });
+  }, [libraries, searchQuery]);
+
   const handleOpenManager = (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); 
     setActiveManagerId(id);
@@ -970,20 +984,42 @@ const handleSaveDates = async (departures: FixedDeparture[]) => {
 
 
 
+// const handleUseTemplate = async (item: StoredItineraryData) => {
+//     if (item.fixedDepartures && item.fixedDepartures.length > 0) {
+//         setSelectedTemplate(item);
+//         setIsDateSelectorOpen(true);
+//     } else {
+//         // 👇 Await the clone from the database
+//         const cloned = await cloneItinerary(item.id!, true, user?._id); 
+//         if (cloned) {
+//              alert(`Template copied to Active Quotes! Please set dates.`);
+//              setActiveTab('quotes'); 
+//              await loadLibraries();
+//         }
+//     }
+//   };
+
+
+
+// File: app/dashboard/itinerary/library/page.tsx  (replaces the old handleUseTemplate)
+
+// 🆕 Only B2B agents become the "owner" of a clone. Staff clones stay Internal.
+const ownerAgentId = user?.role === 'agent' ? user?._id : undefined;
+
 const handleUseTemplate = async (item: StoredItineraryData) => {
     if (item.fixedDepartures && item.fixedDepartures.length > 0) {
         setSelectedTemplate(item);
         setIsDateSelectorOpen(true);
     } else {
-        // 👇 Await the clone from the database
-        const cloned = await cloneItinerary(item.id!, true, user?._id); 
+        const cloned = await cloneItinerary(item.id!, true, ownerAgentId);
         if (cloned) {
-             alert(`Template copied to Active Quotes! Please set dates.`);
-             setActiveTab('quotes'); 
-             await loadLibraries();
+             alert(`Template copied to Drafts! Open it, add the client and dates, then Save & Exit to move it to Active Quotes.`);
+             setActiveTab('drafts'); // the tab change reloads the list by itself
+        } else {
+             alert("Failed to copy the template. Check terminal for errors.");
         }
     }
-  };
+};
 
 
 
@@ -992,7 +1028,8 @@ const handleConfirmDateSelection = async (exactDate: string, specificDepartureId
      
      try {
          // 1. Await the clone from the fixed backend
-         const cloned = await cloneItinerary(selectedTemplate.id!, true, user?._id); 
+        //  const cloned = await cloneItinerary(selectedTemplate.id!, true, user?._id); 
+        const cloned = await cloneItinerary(selectedTemplate.id!, true, ownerAgentId);
          
          if (cloned) {
              const startDateObj = new Date(exactDate); 
@@ -1017,10 +1054,14 @@ const handleConfirmDateSelection = async (exactDate: string, specificDepartureId
              await saveToLibrary(cloned);
 
              // 3. SUCCESS! Close modal and switch tabs safely
+            //  setIsDateSelectorOpen(false); 
+            //  setSelectedTemplate(null); 
+            //  setActiveTab('quotes'); 
+            //  await loadLibraries(); 
+
              setIsDateSelectorOpen(false); 
              setSelectedTemplate(null); 
-             setActiveTab('quotes'); 
-             await loadLibraries(); 
+             setActiveTab('drafts'); // clone is a Draft until Save & Exit
          } else {
              alert("Failed to copy the template. Check terminal for errors.");
          }
@@ -1030,21 +1071,90 @@ const handleConfirmDateSelection = async (exactDate: string, specificDepartureId
      }
   };
 
-const handleConfirmTrip = async (guestName: string, calculatedPrice: number, pax: number) => {
-      if (!confirmModal.itinerary?.id) return;
-      
-      // 👇 Await status update
-      const success = await updateItineraryStatus(confirmModal.itinerary.id, 'confirmed', { leadGuestName: guestName, finalSellPrice: calculatedPrice, numberOfTravelers: pax });
-      
-      if(success) { 
-          setConfirmModal({isOpen: false, itinerary: null}); 
-          await loadLibraries(); 
-          router.push('/dashboard/trips'); 
-      } else { 
-          alert("Failed to confirm trip."); 
-      }
-  };
 
+  // File: app/dashboard/itinerary/library/page.tsx  (new function, place after handleConfirmDateSelection)
+const handleDuplicate = async (item: StoredItineraryData) => {
+    // Only ask if this quote is linked to a client; otherwise there is nothing to keep
+    const sameClient = item.linkedLeadId
+        ? window.confirm(
+            `Duplicate "${item.tripName}"\n\nOK = revision for the SAME client (keeps lead link & passenger names)\nCancel = copy for a DIFFERENT client (client details cleared)`
+          )
+        : false;
+
+    const copy = await duplicateItinerary(item.id!, sameClient, ownerAgentId);
+
+    if (copy) {
+        alert('Duplicate created in Drafts. Set the dates and review the price, then Save & Exit.');
+        if (activeTab === 'drafts') {
+            await loadLibraries();   // already on Drafts, so reload manually
+        } else {
+            setActiveTab('drafts');  // switching tab reloads the list
+        }
+    } else {
+        alert('Failed to duplicate. Check terminal for errors.');
+    }
+};
+
+// const handleConfirmTrip = async (guestName: string, calculatedPrice: number, pax: number) => {
+//       if (!confirmModal.itinerary?.id) return;
+      
+//       // 👇 Await status update
+//       const success = await updateItineraryStatus(confirmModal.itinerary.id, 'confirmed', { leadGuestName: guestName, finalSellPrice: calculatedPrice, numberOfTravelers: pax });
+      
+//       if(success) { 
+//           setConfirmModal({isOpen: false, itinerary: null}); 
+//           await loadLibraries(); 
+//           router.push('/dashboard/trips'); 
+//       } else { 
+//           alert("Failed to confirm trip."); 
+//       }
+//   };
+
+
+
+// File: app/dashboard/itinerary/library/page.tsx  (replaces the old handleConfirmTrip)
+const handleConfirmTrip = async (guestName: string, calculatedPrice: number, pax: number) => {
+      const itinerary = confirmModal.itinerary;
+      if (!itinerary?.id) return;
+
+      // 🛑 Safety net (the button is already disabled without dates)
+      if (!itinerary.routingData?.startDate) {
+          alert("Cannot confirm: the trip start date is missing. Click Edit and set the dates first.");
+          return;
+      }
+
+      // ⚠️ A $0 total usually means the price wasn't calculated: ask before saving it
+      if (!(calculatedPrice > 0) && !window.confirm("The total price is 0. Confirm this booking anyway?")) {
+          return;
+      }
+
+      try {
+          const res = await fetch('/api/itineraries', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  _id: itinerary.id,
+                  bookingStatus: 'confirmed',
+                  leadGuestName: guestName,
+                  finalSellPrice: calculatedPrice,
+                  numberOfTravelers: pax
+              })
+          });
+          const json = await res.json();
+
+          if (json.success) {
+              setConfirmModal({ isOpen: false, itinerary: null });
+              await loadLibraries();
+              router.push('/dashboard/trips');
+          } else {
+              // ✅ Show the server's real reason (missing dates, template, etc.)
+              alert(json.message || "Failed to confirm trip.");
+          }
+      } catch (error) {
+          console.error("Confirm trip error:", error);
+          alert("Failed to confirm trip. Please check your connection and try again.");
+      }
+};
 
   
   const calculateDuration = (itinerary: StoredItineraryData) => {
@@ -1110,6 +1220,30 @@ const handleDelete = async (id: string) => {
            </h1>
            <p className="text-gray-200 text-xs mt-1">Manage Master Templates and Open Client Quotes</p>
         </div>
+
+           {/* 🔧 NEW: Search bar — centered between title and tabs */}
+        <div className="flex-1 max-w-md mx-auto">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by Trip Name, Trip ID, or Country..."
+              className="w-full pl-9 pr-8 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-white placeholder-gray-400 outline-none focus:border-blue-400 focus:bg-white/20 transition-all"
+            />
+            <svg className="absolute left-3 top-2.5 text-gray-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </div>
         
         <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shrink-0">
             <button 
@@ -1168,15 +1302,24 @@ const handleDelete = async (id: string) => {
                </button>
            )}
 
-            <div className="space-y-4">
+            {/* <div className="space-y-4">
                 <div className="p-4 bg-blue-900/40 rounded-xl border border-blue-500/30">
                     <p className="text-xs font-bold text-center text-blue-200 uppercase">{activeTab.replace('_', ' ')}</p>
                     <p className="text-2xl font-bold text-center text-white">{libraries.length}</p>
                 </div>
+            </div> */}
+             <div className="space-y-4">
+                <div className="p-4 bg-blue-900/40 rounded-xl border border-blue-500/30">
+                    <p className="text-xs font-bold text-center text-blue-200 uppercase">{activeTab.replace('_', ' ')}</p>
+                    <p className="text-2xl font-bold text-center text-white">{displayedLibraries.length}</p>
+                    {searchQuery && (
+                        <p className="text-[10px] text-blue-300 text-center mt-1">of {libraries.length} total</p>
+                    )}
+                </div>
             </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 z-10 relative">
+        {/* <div className="flex-1 overflow-y-auto p-8 z-10 relative">
             {libraries.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-white/50 border-2 border-dashed border-white/20 rounded-2xl bg-white/5 backdrop-blur-sm">
                     {activeTab === 'pending' ? <Bell size={48} className="mb-4 opacity-50"/> : <FileText size={48} className="mb-4 opacity-50"/>}
@@ -1185,7 +1328,28 @@ const handleDelete = async (id: string) => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {libraries.map((item) => {
+                    {libraries.map((item) => { */}
+
+                            <div className="flex-1 overflow-y-auto p-8 z-10 relative">
+            {displayedLibraries.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-white/50 border-2 border-dashed border-white/20 rounded-2xl bg-white/5 backdrop-blur-sm">
+                    {searchQuery ? (
+                        <>
+                            <FileText size={48} className="mb-4 opacity-50"/>
+                            <p className="text-lg font-bold text-white">No results for "{searchQuery}"</p>
+                            <button onClick={() => setSearchQuery('')} className="text-blue-300 font-bold hover:text-blue-200 hover:underline mt-2">Clear Search</button>
+                        </>
+                    ) : (
+                        <>
+                            {activeTab === 'pending' ? <Bell size={48} className="mb-4 opacity-50"/> : <FileText size={48} className="mb-4 opacity-50"/>}
+                            <p className="text-lg font-bold text-white">No {activeTab.replace('_', ' ')} Found</p>
+                            {activeTab === 'templates' && user?.role !== 'agent' && <button onClick={handleCreateNew} className="text-blue-300 font-bold hover:text-blue-200 hover:underline mt-2">Create One Now</button>}
+                        </>
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {displayedLibraries.map((item) => {
                         const isPending = item.status === 'pending_costing' || item.status === 'reedit_requested';
                         const isApproved = item.status === 'approved';
 
@@ -1308,22 +1472,56 @@ const handleDelete = async (id: string) => {
                                             <button onClick={() => handleEdit(item.id!)} className="flex-1 py-2 text-xs font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center gap-1">
                                                 <Edit size={14}/> {isPending || isApproved ? 'View' : 'Edit'}
                                             </button>
-                                            <button 
+                        
+<button 
+    onClick={() => handleDuplicate(item)} 
+    className="w-10 flex items-center justify-center bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-lg border border-gray-200 transition-colors" 
+    title="Duplicate this quote"
+>
+    <Copy size={16}/>
+</button>
+                                            {/* <button 
                                                 onClick={() => setConfirmModal({isOpen: true, itinerary: item})}
                                                 disabled={isPending}
                                                 className={`flex-1 py-2 text-xs font-bold text-white rounded-lg transition-colors flex items-center justify-center gap-1 shadow-md ${isPending ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
                                             >
                                                 <CheckCircle size={14}/> Confirm
-                                            </button>
+                                            </button> */}
+
+                                   
+<button 
+    onClick={() => setConfirmModal({isOpen: true, itinerary: item})}
+    disabled={isPending || !item.routingData?.startDate}
+    title={!item.routingData?.startDate ? 'Set the trip dates first (click Edit)' : ''}
+    className={`flex-1 py-2 text-xs font-bold text-white rounded-lg transition-colors flex items-center justify-center gap-1 shadow-md ${(isPending || !item.routingData?.startDate) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+>
+    <CheckCircle size={14}/> Confirm
+</button>
                                         </>
                                     )}
 
                                     {/* 👇 NEW: DRAFTS ACTION BAR */}
-                                    {activeTab === 'drafts' && (
+                                    {/* {activeTab === 'drafts' && (
                                         <button onClick={() => handleEdit(item.id!)} className="w-full py-2 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-2 border border-gray-200">
                                             <Edit size={14}/> Continue Editing
                                         </button>
-                                    )}
+                                    )} */}
+
+                                
+{activeTab === 'drafts' && (
+    <>
+        <button onClick={() => handleEdit(item.id!)} className="flex-1 py-2 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-2 border border-gray-200">
+            <Edit size={14}/> Continue Editing
+        </button>
+        <button 
+            onClick={() => handleDuplicate(item)} 
+            className="w-10 flex items-center justify-center bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-lg border border-gray-200 transition-colors" 
+            title="Duplicate this draft"
+        >
+            <Copy size={16}/>
+        </button>
+    </>
+)}
 
                                     {/* PENDING APPROVALS ACTION BAR (ADMIN ONLY) */}
                                     {activeTab === 'pending' && (
